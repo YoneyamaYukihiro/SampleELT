@@ -1,0 +1,95 @@
+<Window x:Class="SampleELT.Dialogs.ExcelInputDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Excel Input 設定"
+        Width="480" Height="280"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Step Name -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="ステップ名" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
+        </StackPanel>
+
+        <!-- File Path -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="ファイルパス" FontWeight="Bold" Margin="0,0,0,4"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="90"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="FilePathBox" Grid.Column="0" Height="28" Padding="6,4"
+                         TextChanged="FilePathBox_TextChanged"/>
+                <Button Grid.Column="2" Content="参照..." Height="28"
+                        Click="Browse_Click"
+                        Style="{StaticResource PrimaryButtonStyle}"/>
+            </Grid>
+        </StackPanel>
+
+        <!-- Sheet Name -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="シート名" FontWeight="Bold" Margin="0,0,0,4"/>
+            <ComboBox x:Name="SheetNameCombo" Height="28" IsEditable="True"/>
+        </StackPanel>
+
+        <!-- Has Header -->
+        <CheckBox Grid.Row="3"
+                  x:Name="HasHeaderCheck"
+                  Content="先頭行をヘッダーとして使用"
+                  IsChecked="True"
+                  Margin="0,0,0,10"/>
+
+        <!-- OK / Cancel -->
+        <StackPanel Grid.Row="5"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="OK"
+                    Width="80" Height="30"
+                    Margin="0,0,8,0"
+                    Click="OK_Click"
+                    Style="{StaticResource PrimaryButtonStyle}"/>
+            <Button Content="キャンセル"
+                    Width="80" Height="30"
+                    Click="Cancel_Click">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#EEEEEE"/>
+                        <Setter Property="Foreground" Value="#333333"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4" Padding="12,6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#E0E0E0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>
