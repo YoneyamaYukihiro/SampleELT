@@ -78,9 +78,6 @@ namespace SampleELT.Steps
                     if (updateCols.Count == 0) continue;
 
                     // Build parameterized UPDATE
-                    var paramList = new List<string>();
-                    var allParams = updateCols.Concat(keyFields).ToList();
-
                     var setClauses = updateCols.Select((c, i) => $"{c} = :p{i}").ToList();
                     var whereClauses = keyFields.Select((k, i) => $"{k} = :p{updateCols.Count + i}").ToList();
 

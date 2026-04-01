@@ -64,7 +64,7 @@ namespace SampleELT.Steps
         private static Dictionary<string, object?> ExecuteScript(
             string script, Dictionary<string, object?> inputRow)
         {
-            var engine = new Jint.Engine();
+            var engine = new Engine();
 
             // Expose input fields as JS variables
             foreach (var kv in inputRow)
