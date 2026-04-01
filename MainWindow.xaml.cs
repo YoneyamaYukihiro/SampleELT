@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -39,6 +40,8 @@ namespace SampleELT
 
             _vm.LogMessages.CollectionChanged += LogMessages_CollectionChanged;
             _vm.OpenSettingsRequested += OpenStepSettingsDialog;
+
+            LoadHelpContent();
         }
 
         private void LogMessages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -710,6 +713,18 @@ namespace SampleELT
                 s.IsConnectionTarget = false;
             }
         }
+
+        // ==================== HELP CONTENT ====================
+
+        private void LoadHelpContent()
+        {
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            UsageTextBox.Text = ReadDoc(Path.Combine(baseDir, "docs", "使い方.md"));
+            SpecTextBox.Text  = ReadDoc(Path.Combine(baseDir, "docs", "仕様書.md"));
+        }
+
+        private static string ReadDoc(string path) =>
+            File.Exists(path) ? File.ReadAllText(path, System.Text.Encoding.UTF8) : $"({Path.GetFileName(path)} が見つかりません)";
 
         // ==================== PALETTE DOUBLE CLICK ====================
 

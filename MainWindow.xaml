@@ -427,70 +427,47 @@
             <!-- Splitter -->
             <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="#DDDDDD"/>
 
-            <!-- ==================== RIGHT PROPERTIES PANEL ==================== -->
+            <!-- ==================== RIGHT HELP PANEL ==================== -->
             <Border Grid.Column="4"
                     Background="#FAFAFA"
                     BorderBrush="#DDDDDD"
                     BorderThickness="1,0,0,0">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Background="#ECEFF1" Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
-                        <TextBlock Text="プロパティ" FontWeight="Bold" FontSize="13" Foreground="#424242"/>
+                        <TextBlock Text="ヘルプ" FontWeight="Bold" FontSize="13" Foreground="#424242"/>
                     </Border>
-
-                    <!-- No selection state -->
-                    <Border Visibility="{Binding SelectedStep, Converter={StaticResource NullToVisibilityConverter}}">
-                        <TextBlock Text="ステップを選択してください"
-                                   Foreground="#9E9E9E"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontSize="12"
-                                   TextWrapping="Wrap"
-                                   Margin="12"/>
-                    </Border>
-
-                    <!-- Selected step properties -->
-                    <Border Visibility="{Binding SelectedStep, Converter={StaticResource NotNullToVisibilityConverter}}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="{Binding SelectedStep.DisplayIcon}"
-                                           FontSize="32"
-                                           HorizontalAlignment="Center"
-                                           Margin="0,8,0,4"/>
-                                <TextBlock Text="{Binding SelectedStep.DisplayName}"
-                                           FontWeight="Bold"
-                                           FontSize="14"
-                                           TextAlignment="Center"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding SelectedStep.TypeLabel}"
-                                           Foreground="#757575"
-                                           FontSize="12"
-                                           TextAlignment="Center"
-                                           Margin="0,0,0,16"/>
-                                <Separator/>
-                                <Button Content="⚙ 設定を開く"
-                                        Margin="0,12,0,4"
-                                        Height="32"
-                                        Command="{Binding OpenStepSettingsCommand}"
-                                        CommandParameter="{Binding SelectedStep}"
-                                        Style="{StaticResource PrimaryButtonStyle}"/>
-                                <Button Content="🗑 削除"
-                                        Height="32"
-                                        Command="{Binding DeleteSelectedStepCommand}">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                                            <Setter Property="Background" Value="#F44336"/>
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#C62828"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Border>
+                    <TabControl x:Name="HelpTabControl" SelectedIndex="0"
+                                Background="Transparent"
+                                BorderThickness="0">
+                        <TabItem Header="使い方">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Auto">
+                                <TextBox x:Name="UsageTextBox"
+                                         IsReadOnly="True"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         FontFamily="Meiryo UI, Yu Gothic UI, sans-serif"
+                                         FontSize="11"
+                                         TextWrapping="Wrap"
+                                         Padding="8"
+                                         AcceptsReturn="True"/>
+                            </ScrollViewer>
+                        </TabItem>
+                        <TabItem Header="仕様書">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Auto">
+                                <TextBox x:Name="SpecTextBox"
+                                         IsReadOnly="True"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         FontFamily="Meiryo UI, Yu Gothic UI, sans-serif"
+                                         FontSize="11"
+                                         TextWrapping="Wrap"
+                                         Padding="8"
+                                         AcceptsReturn="True"/>
+                            </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
                 </DockPanel>
             </Border>
         </Grid>
