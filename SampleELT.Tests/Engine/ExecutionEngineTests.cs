@@ -11,11 +11,11 @@ namespace SampleELT.Tests.Engine
 {
     public class ExecutionEngineTests
     {
-        private static async Task<List<string>> Execute(Pipeline pipeline, CancellationToken ct = default)
+        private static async Task<List<string>> Execute(
+            Pipeline pipeline, CancellationToken ct = default)
         {
             var log = new List<string>();
-            await new ExecutionEngine().ExecuteAsync(
-                pipeline, new Progress<string>(m => log.Add(m)), ct);
+            await new ExecutionEngine().ExecuteAsync(pipeline, new SyncProgress(log), ct);
             return log;
         }
 
@@ -38,6 +38,7 @@ namespace SampleELT.Tests.Engine
 
             var log = await Execute(pipeline);
 
+            // ExecutionEngine: "[Gen] 完了 (3行)"
             Assert.Contains(log, m => m.Contains("Gen") && m.Contains("3行"));
         }
 

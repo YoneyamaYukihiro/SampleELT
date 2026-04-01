@@ -17,7 +17,7 @@ namespace SampleELT.Tests.Steps
             step.Settings["DateFormat"] = dateFormat;
             return await step.ExecuteAsync(
                 new List<Dictionary<string, object?>>(),
-                new Progress<string>(),
+                new SyncProgress(),
                 CancellationToken.None);
         }
 

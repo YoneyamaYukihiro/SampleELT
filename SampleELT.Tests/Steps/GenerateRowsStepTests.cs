@@ -16,7 +16,7 @@ namespace SampleELT.Tests.Steps
             step.Settings["RowCount"] = rowCount;
             return await step.ExecuteAsync(
                 new List<Dictionary<string, object?>>(),
-                new Progress<string>(),
+                new SyncProgress(),
                 CancellationToken.None);
         }
 

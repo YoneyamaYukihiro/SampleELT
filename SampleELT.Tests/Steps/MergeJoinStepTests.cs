@@ -29,7 +29,7 @@ namespace SampleELT.Tests.Steps
             step.Settings["JoinType"]  = joinType;
             step.Settings["KeyFields"] = keyFields;
             step.AllInputStreams = new List<List<Dictionary<string, object?>>> { left, right };
-            return await step.ExecuteAsync(left, new Progress<string>(), CancellationToken.None);
+            return await step.ExecuteAsync(left, new SyncProgress(), CancellationToken.None);
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace SampleELT.Tests.Steps
             step.Settings["JoinType"]  = "INNER";
             step.Settings["KeyFields"] = "";
             step.AllInputStreams = new List<List<Dictionary<string, object?>>> { left, right };
-            var result = await step.ExecuteAsync(left, new Progress<string>(), CancellationToken.None);
+            var result = await step.ExecuteAsync(left, new SyncProgress(), CancellationToken.None);
 
             Assert.Equal(4, result.Count); // 2×2 cross join
         }
