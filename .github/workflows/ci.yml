@@ -27,7 +27,7 @@ jobs:
       - name: Test
         run: >
           dotnet test SampleELT.Tests/SampleELT.Tests.csproj
-          --no-restore -c Release
+          -c Release
           --verbosity normal
           --logger "trx;LogFileName=test-results.trx"
 
