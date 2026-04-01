@@ -21,13 +21,13 @@ jobs:
       - name: Restore
         run: dotnet restore SampleELT.sln
 
-      - name: Build
-        run: dotnet build SampleELT.sln --no-restore -c Release
+      - name: Build (main project)
+        run: dotnet build SampleELT.csproj --no-restore -c Release
 
       - name: Test
         run: >
           dotnet test SampleELT.Tests/SampleELT.Tests.csproj
-          --no-build -c Release
+          --no-restore -c Release
           --verbosity normal
           --logger "trx;LogFileName=test-results.trx"
 
