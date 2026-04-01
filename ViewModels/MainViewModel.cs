@@ -72,11 +72,12 @@ namespace SampleELT.ViewModels
 
             foreach (var entry in registry.Schedules.Where(s => s.IsEnabled))
             {
-                var next = registry.CalcNextRunTime(entry);
-                if (next == null || next > now) continue;
+                // 直近の実行予定時刻（now 以前）を取得
+                var lastDue = registry.CalcLastDueTime(entry, now);
+                if (lastDue == null) continue; // インターバルがまだ期限前
 
-                // すでにこの実行タイミングで実行済みならスキップ
-                if (entry.LastRunTime.HasValue && entry.LastRunTime.Value >= next.Value) continue;
+                // この実行タイミングですでに実行済みならスキップ
+                if (entry.LastRunTime.HasValue && entry.LastRunTime.Value >= lastDue.Value) continue;
 
                 await RunScheduledPipelineAsync(entry);
                 anySaved = true;
