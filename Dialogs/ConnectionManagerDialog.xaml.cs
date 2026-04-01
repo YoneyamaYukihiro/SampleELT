@@ -75,17 +75,24 @@ namespace SampleELT.Dialogs
         private void DbTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_suppressChangeEvents) return;
-            // InitializeComponent() 中はまだ名前付き要素が null のためガード
             if (OracleSection == null || MySQLSection == null) return;
 
             var isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
             OracleSection.Visibility = isOracle ? Visibility.Visible : Visibility.Collapsed;
             MySQLSection.Visibility = isOracle ? Visibility.Collapsed : Visibility.Visible;
+
+            // DbType をリアルタイム更新 → DisplayName (🔶/🐬) も即座に反映
+            if (_currentConnection != null)
+                _currentConnection.DbType = isOracle ? DbType.Oracle : DbType.MySQL;
         }
 
         private void EditField_Changed(object sender, EventArgs e)
         {
-            // No-op: changes are written only on SaveConnection_Click
+            if (_suppressChangeEvents || _currentConnection == null) return;
+
+            // 接続名をリアルタイム更新 → ListBox の表示が入力と同時に変わる
+            if (sender == ConnNameBox)
+                _currentConnection.Name = ConnNameBox.Text;
         }
 
         private void AddConnection_Click(object sender, RoutedEventArgs e)
@@ -152,11 +159,6 @@ namespace SampleELT.Dialogs
             }
 
             ConnectionRegistry.Instance.Save();
-
-            // リストを更新するため一旦再選択
-            var saved = _currentConnection;
-            ConnectionListBox.SelectedItem = null;
-            ConnectionListBox.SelectedItem = saved;
 
             MessageBox.Show("保存しました。", "完了",
                 MessageBoxButton.OK, MessageBoxImage.Information);

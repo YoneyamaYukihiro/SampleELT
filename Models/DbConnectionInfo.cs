@@ -1,4 +1,5 @@
 using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace SampleELT.Models
 {
@@ -8,12 +9,20 @@ namespace SampleELT.Models
         MySQL
     }
 
-    public class DbConnectionInfo
+    public partial class DbConnectionInfo : ObservableObject
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = "";
-        public DbType DbType { get; set; } = DbType.Oracle;
-        public string ConnectionString { get; set; } = "";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayName))]
+        private string _name = "";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayName))]
+        private DbType _dbType = DbType.Oracle;
+
+        [ObservableProperty]
+        private string _connectionString = "";
 
         public string DisplayName => $"{(DbType == DbType.Oracle ? "🔶" : "🐬")} {Name}";
     }
