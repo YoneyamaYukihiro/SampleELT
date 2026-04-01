@@ -38,6 +38,9 @@
                 <MenuItem Header="スケジュール管理(_S)..." Click="ScheduleManager_Click"/>
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)">
+                <MenuItem Header="使い方(_U)..." Click="HelpUsage_Click"/>
+                <MenuItem Header="仕様書(_S)..." Click="HelpSpec_Click"/>
+                <Separator/>
                 <MenuItem Header="バージョン情報" Click="About_Click"/>
             </MenuItem>
         </Menu>
@@ -433,47 +436,43 @@
             <!-- Splitter -->
             <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="#DDDDDD"/>
 
-            <!-- ==================== RIGHT HELP PANEL ==================== -->
+            <!-- ==================== RIGHT SCHEDULE STATUS PANEL ==================== -->
             <Border Grid.Column="4"
                     Background="#FAFAFA"
                     BorderBrush="#DDDDDD"
                     BorderThickness="1,0,0,0">
                 <DockPanel>
-                    <Border DockPanel.Dock="Top" Background="#ECEFF1" Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
-                        <TextBlock Text="ヘルプ" FontWeight="Bold" FontSize="13" Foreground="#424242"/>
+                    <!-- Header -->
+                    <Border DockPanel.Dock="Top" Background="#ECEFF1" Padding="8,5"
+                            BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
+                        <DockPanel>
+                            <TextBlock Text="📅 スケジュール" FontWeight="Bold" FontSize="13"
+                                       Foreground="#424242" VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right" Content="🔄"
+                                    HorizontalAlignment="Right"
+                                    ToolTip="一覧を更新"
+                                    Click="RefreshSchedule_Click"
+                                    Height="22" Padding="6,0" FontSize="12">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Foreground" Value="#424242"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#DDDDDD"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </DockPanel>
                     </Border>
-                    <TabControl x:Name="HelpTabControl" SelectedIndex="0"
-                                Background="Transparent"
-                                BorderThickness="0">
-                        <TabItem Header="使い方">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Auto">
-                                <TextBox x:Name="UsageTextBox"
-                                         IsReadOnly="True"
-                                         BorderThickness="0"
-                                         Background="Transparent"
-                                         FontFamily="Meiryo UI, Yu Gothic UI, sans-serif"
-                                         FontSize="11"
-                                         TextWrapping="Wrap"
-                                         Padding="8"
-                                         AcceptsReturn="True"/>
-                            </ScrollViewer>
-                        </TabItem>
-                        <TabItem Header="仕様書">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Auto">
-                                <TextBox x:Name="SpecTextBox"
-                                         IsReadOnly="True"
-                                         BorderThickness="0"
-                                         Background="Transparent"
-                                         FontFamily="Meiryo UI, Yu Gothic UI, sans-serif"
-                                         FontSize="11"
-                                         TextWrapping="Wrap"
-                                         Padding="8"
-                                         AcceptsReturn="True"/>
-                            </ScrollViewer>
-                        </TabItem>
-                    </TabControl>
+                    <!-- Schedule cards list -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="ScheduleStatusPanel" Margin="6,6"/>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
         </Grid>

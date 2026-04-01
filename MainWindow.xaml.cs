@@ -4,6 +4,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using SampleELT.Controls;
 using SampleELT.Dialogs;
 using SampleELT.Models;
@@ -41,8 +43,9 @@ namespace SampleELT
             _vm.LogMessages.CollectionChanged += LogMessages_CollectionChanged;
             _vm.OpenSettingsRequested += OpenStepSettingsDialog;
             _vm.OpenScheduleManagerRequested += OpenScheduleManagerDialog;
+            _vm.ScheduleStatusChanged += () => Dispatcher.InvokeAsync(RefreshSchedulePanel);
 
-            LoadHelpContent();
+            RefreshSchedulePanel();
         }
 
         private void LogMessages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -751,17 +754,175 @@ namespace SampleELT
             }
         }
 
-        // ==================== HELP CONTENT ====================
+        // ==================== SCHEDULE STATUS PANEL ====================
 
-        private void LoadHelpContent()
+        private void RefreshSchedulePanel()
         {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            UsageTextBox.Text = ReadDoc(Path.Combine(baseDir, "docs", "使い方.md"));
-            SpecTextBox.Text  = ReadDoc(Path.Combine(baseDir, "docs", "仕様書.md"));
+            ScheduleStatusPanel.Children.Clear();
+            var schedules = ScheduleRegistry.Instance.Schedules;
+
+            if (schedules.Count == 0)
+            {
+                ScheduleStatusPanel.Children.Add(new TextBlock
+                {
+                    Text = "スケジュールがありません\n「スケジュール管理」から追加してください",
+                    FontSize = 11,
+                    Foreground = Brushes.Gray,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(4, 8, 4, 0)
+                });
+                return;
+            }
+
+            foreach (var entry in schedules)
+                ScheduleStatusPanel.Children.Add(BuildScheduleCard(entry));
         }
 
-        private static string ReadDoc(string path) =>
-            File.Exists(path) ? File.ReadAllText(path, System.Text.Encoding.UTF8) : $"({Path.GetFileName(path)} が見つかりません)";
+        private UIElement BuildScheduleCard(ScheduleEntry entry)
+        {
+            // ステータス色の決定
+            Color dotColor;
+            if (!entry.IsEnabled)
+                dotColor = Color.FromRgb(0x9E, 0x9E, 0x9E);      // gray
+            else if (entry.LastRunSuccess == false)
+                dotColor = Color.FromRgb(0xF4, 0x43, 0x36);      // red
+            else if (entry.LastRunSuccess == true)
+                dotColor = Color.FromRgb(0x4C, 0xAF, 0x50);      // green
+            else
+                dotColor = Color.FromRgb(0x21, 0x96, 0xF3);      // blue (未実行)
+
+            // スケジュール種別の説明
+            var typeDesc = entry.Type switch
+            {
+                ScheduleType.Daily    => $"毎日 {entry.TimeHour:D2}:{entry.TimeMinute:D2}",
+                ScheduleType.Weekly   => $"毎週{GetWeekDayName(entry.WeekDay)} {entry.TimeHour:D2}:{entry.TimeMinute:D2}",
+                ScheduleType.Hourly   => $"毎時 {entry.HourlyMinute:D2}分",
+                ScheduleType.Interval => $"{entry.IntervalMinutes}分ごと",
+                _                     => ""
+            };
+
+            // 次回実行時刻（有効時のみ）
+            string nextStr = "";
+            if (entry.IsEnabled)
+            {
+                var next = ScheduleRegistry.Instance.CalcNextRunTime(entry);
+                if (next.HasValue)
+                    nextStr = $"次回: {next.Value:MM/dd HH:mm}";
+            }
+
+            // 前回実行情報
+            string lastRunStr;
+            Color lastRunColor;
+            if (entry.LastRunTime.HasValue)
+            {
+                var icon = entry.LastRunSuccess == true ? "✓" : "✗";
+                lastRunStr  = $"{icon} {entry.LastRunTime.Value:MM/dd HH:mm}";
+                lastRunColor = entry.LastRunSuccess == true
+                    ? Color.FromRgb(0x4C, 0xAF, 0x50)
+                    : Color.FromRgb(0xF4, 0x43, 0x36);
+            }
+            else
+            {
+                lastRunStr  = "未実行";
+                lastRunColor = Color.FromRgb(0x9E, 0x9E, 0x9E);
+            }
+
+            var fg = new SolidColorBrush(
+                entry.IsEnabled ? Color.FromRgb(0x21, 0x21, 0x21) : Color.FromRgb(0x75, 0x75, 0x75));
+
+            var content = new StackPanel();
+
+            // 名前行（ドット + 名前）
+            var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
+            nameRow.Children.Add(new Ellipse
+            {
+                Width = 8, Height = 8,
+                Fill = new SolidColorBrush(dotColor),
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            nameRow.Children.Add(new TextBlock
+            {
+                Text = entry.Name,
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 12,
+                Foreground = fg,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            if (!entry.IsEnabled)
+                nameRow.Children.Add(new TextBlock
+                {
+                    Text = " (無効)",
+                    FontSize = 10,
+                    Foreground = Brushes.Gray,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+            content.Children.Add(nameRow);
+
+            // 種別
+            content.Children.Add(new TextBlock
+            {
+                Text = typeDesc,
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x75, 0x75, 0x75)),
+                Margin = new Thickness(14, 2, 0, 0)
+            });
+
+            // 次回
+            if (!string.IsNullOrEmpty(nextStr))
+                content.Children.Add(new TextBlock
+                {
+                    Text = nextStr,
+                    FontSize = 10,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x61, 0x61, 0x61)),
+                    Margin = new Thickness(14, 1, 0, 0)
+                });
+
+            // 前回
+            content.Children.Add(new TextBlock
+            {
+                Text = lastRunStr,
+                FontSize = 10,
+                Foreground = new SolidColorBrush(lastRunColor),
+                Margin = new Thickness(14, 1, 0, 0)
+            });
+
+            // エラーメッセージ（失敗時）
+            if (entry.LastRunSuccess == false && !string.IsNullOrEmpty(entry.LastRunMessage))
+                content.Children.Add(new TextBlock
+                {
+                    Text = entry.LastRunMessage,
+                    FontSize = 9,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36)),
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(14, 1, 0, 0)
+                });
+
+            return new Border
+            {
+                Background = new SolidColorBrush(
+                    entry.IsEnabled ? Colors.White : Color.FromRgb(0xF5, 0xF5, 0xF5)),
+                BorderBrush = new SolidColorBrush(
+                    entry.IsEnabled ? Color.FromRgb(0xDD, 0xDD, 0xDD) : Color.FromRgb(0xE8, 0xE8, 0xE8)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Margin = new Thickness(0, 0, 0, 6),
+                Padding = new Thickness(8, 6, 8, 6),
+                Child = content
+            };
+        }
+
+        private static string GetWeekDayName(DayOfWeek day) => day switch
+        {
+            DayOfWeek.Monday    => "月曜",
+            DayOfWeek.Tuesday   => "火曜",
+            DayOfWeek.Wednesday => "水曜",
+            DayOfWeek.Thursday  => "木曜",
+            DayOfWeek.Friday    => "金曜",
+            DayOfWeek.Saturday  => "土曜",
+            DayOfWeek.Sunday    => "日曜",
+            _                   => ""
+        };
 
         // ==================== PALETTE DOUBLE CLICK ====================
 
@@ -802,11 +963,29 @@ namespace SampleELT
         {
             var dialog = new ScheduleManagerDialog { Owner = this };
             dialog.ShowDialog();
+            RefreshSchedulePanel(); // ダイアログで追加・変更された内容を反映
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void RefreshSchedule_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshSchedulePanel();
+        }
+
+        private void HelpUsage_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new HelpDialog(0) { Owner = this };
+            dialog.Show();
+        }
+
+        private void HelpSpec_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new HelpDialog(1) { Owner = this };
+            dialog.Show();
         }
 
         private void About_Click(object sender, RoutedEventArgs e)
