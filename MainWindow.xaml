@@ -35,6 +35,7 @@
             </MenuItem>
             <MenuItem Header="ツール(_T)">
                 <MenuItem Header="DB 接続設定(_C)..." Click="ConnectionManager_Click"/>
+                <MenuItem Header="スケジュール管理(_S)..." Click="ScheduleManager_Click"/>
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)">
                 <MenuItem Header="バージョン情報" Click="About_Click"/>
@@ -94,6 +95,21 @@
             <Button ToolTip="キャンバスをクリア" Command="{Binding ClearCanvasCommand}"
                     Style="{StaticResource PrimaryButtonStyle}" Padding="8,4">
                 <TextBlock Text="🗑 クリア"/>
+            </Button>
+            <Separator/>
+            <Button ToolTip="スケジュール管理" Command="{Binding OpenScheduleManagerCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                        <Setter Property="Background" Value="#7B1FA2"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#4A148C"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <TextBlock Text="⏰ スケジュール"/>
             </Button>
         </ToolBar>
 
