@@ -38,7 +38,7 @@
                  Height="120"
                  Padding="6,4"
                  AcceptsReturn="True"
-                 TextWrapping="Off"
+                 TextWrapping="NoWrap"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
