@@ -98,7 +98,7 @@
             </Button>
             <Separator/>
             <Button ToolTip="スケジュール管理" Command="{Binding OpenScheduleManagerCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4">
+                    Padding="8,4">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
                         <Setter Property="Background" Value="#7B1FA2"/>
