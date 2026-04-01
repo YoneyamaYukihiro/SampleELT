@@ -1,8 +1,8 @@
 <Window x:Class="SampleELT.Dialogs.ExcelInputDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Excel Input 設定"
-        Width="480"
+        Title="File Input 設定"
+        Width="500"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
@@ -13,22 +13,37 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Step Name -->
+        <!-- ステップ名 -->
         <StackPanel Grid.Row="0" Margin="0,0,0,10">
             <TextBlock Text="ステップ名" FontWeight="Bold" Margin="0,0,0,4"/>
             <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
         </StackPanel>
 
-        <!-- File Path -->
+        <!-- フォーマット -->
         <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="入力フォーマット" FontWeight="Bold" Margin="0,0,0,4"/>
+            <ComboBox x:Name="FormatCombo" Height="28"
+                      SelectionChanged="FormatCombo_SelectionChanged">
+                <ComboBoxItem Content="Excel (.xlsx)" Tag="Excel" IsSelected="True"/>
+                <ComboBoxItem Content="CSV (.csv)" Tag="CSV"/>
+                <ComboBoxItem Content="TSV (.tsv)" Tag="TSV"/>
+                <ComboBoxItem Content="テキスト (.txt)" Tag="TXT"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- ファイルパス -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
             <TextBlock Text="ファイルパス" FontWeight="Bold" Margin="0,0,0,4"/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="8"/>
-                    <ColumnDefinition Width="90"/>
+                    <ColumnDefinition Width="80"/>
                 </Grid.ColumnDefinitions>
                 <TextBox x:Name="FilePathBox" Grid.Column="0" Height="28" Padding="6,4"
                          TextChanged="FilePathBox_TextChanged"/>
@@ -38,31 +53,48 @@
             </Grid>
         </StackPanel>
 
-        <!-- Sheet Name -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+        <!-- シート名 (Excel のみ) -->
+        <StackPanel x:Name="SheetNameSection" Grid.Row="3" Margin="0,0,0,10">
             <TextBlock Text="シート名" FontWeight="Bold" Margin="0,0,0,4"/>
             <ComboBox x:Name="SheetNameCombo" Height="28" IsEditable="True"/>
         </StackPanel>
 
-        <!-- Has Header -->
-        <CheckBox Grid.Row="3"
-                  x:Name="HasHeaderCheck"
+        <!-- 区切り文字 (CSV/TSV/TXT のみ) -->
+        <StackPanel x:Name="DelimiterSection" Grid.Row="4" Margin="0,0,0,10" Visibility="Collapsed">
+            <TextBlock Text="区切り文字" FontWeight="Bold" Margin="0,0,0,4"/>
+            <ComboBox x:Name="DelimiterCombo" Height="28"
+                      SelectionChanged="DelimiterCombo_SelectionChanged">
+                <ComboBoxItem Content="カンマ  (,)" Tag=","/>
+                <ComboBoxItem Content="タブ    (\t)" Tag="&#9;"/>
+                <ComboBoxItem Content="パイプ  (|)" Tag="|"/>
+                <ComboBoxItem Content="カスタム" Tag="custom"/>
+            </ComboBox>
+            <TextBox x:Name="CustomDelimiterBox" Height="28" Padding="6,4" Margin="0,4,0,0"
+                     Visibility="Collapsed" MaxLength="10"/>
+        </StackPanel>
+
+        <!-- エンコーディング (CSV/TSV/TXT のみ) -->
+        <StackPanel x:Name="EncodingSection" Grid.Row="5" Margin="0,0,0,10" Visibility="Collapsed">
+            <TextBlock Text="文字エンコーディング" FontWeight="Bold" Margin="0,0,0,4"/>
+            <ComboBox x:Name="EncodingCombo" Height="28">
+                <ComboBoxItem Content="UTF-8（BOM なし）" Tag="UTF-8" IsSelected="True"/>
+                <ComboBoxItem Content="UTF-8（BOM あり）" Tag="UTF-8 BOM"/>
+                <ComboBoxItem Content="Shift-JIS" Tag="Shift-JIS"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- ヘッダー -->
+        <CheckBox x:Name="HasHeaderCheck"
+                  Grid.Row="6"
                   Content="先頭行をヘッダーとして使用"
                   IsChecked="True"
-                  Margin="0,0,0,10"/>
+                  Margin="0,0,0,12"/>
 
-        <!-- OK / Cancel -->
-        <StackPanel Grid.Row="4"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right">
-            <Button Content="OK"
-                    Width="80" Height="30"
-                    Margin="0,0,8,0"
-                    Click="OK_Click"
-                    Style="{StaticResource PrimaryButtonStyle}"/>
-            <Button Content="キャンセル"
-                    Width="80" Height="30"
-                    Click="Cancel_Click">
+        <!-- ボタン -->
+        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" Width="80" Height="30" Margin="0,0,8,0"
+                    Click="OK_Click" Style="{StaticResource PrimaryButtonStyle}"/>
+            <Button Content="キャンセル" Width="80" Height="30" Click="Cancel_Click">
                 <Button.Style>
                     <Style TargetType="Button">
                         <Setter Property="Background" Value="#EEEEEE"/>

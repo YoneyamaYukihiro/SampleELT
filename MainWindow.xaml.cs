@@ -323,18 +323,28 @@ namespace SampleELT
         {
             var step = stepVm.Step;
             var dialog = new ExcelInputDialog { Owner = this };
+
+            var hhRaw = step.Settings.TryGetValue("HasHeader", out var hh) ? hh?.ToString() : null;
+            bool hasHeader = hhRaw == null || !bool.TryParse(hhRaw, out var hhBool) ? true : hhBool;
+
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("FilePath", out var fp) ? fp?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("SheetName", out var sn) ? sn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("HasHeader", out var hh) && hh is bool b ? b : true);
+                step.Settings.TryGetValue("FilePath",  out var fp)  ? fp?.ToString()  ?? "" : "",
+                step.Settings.TryGetValue("SheetName", out var sn)  ? sn?.ToString()  ?? "" : "",
+                hasHeader,
+                step.Settings.TryGetValue("Format",    out var fmt) ? fmt?.ToString() ?? "Excel" : "Excel",
+                step.Settings.TryGetValue("Delimiter", out var dl)  ? dl?.ToString()  ?? "," : ",",
+                step.Settings.TryGetValue("Encoding",  out var enc) ? enc?.ToString() ?? "UTF-8" : "UTF-8");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["FilePath"] = dialog.FilePath;
+                step.Settings["FilePath"]  = dialog.FilePath;
+                step.Settings["Format"]    = dialog.Format;
                 step.Settings["SheetName"] = dialog.SheetName;
-                step.Settings["HasHeader"] = dialog.HasHeader;
+                step.Settings["HasHeader"] = dialog.HasHeader.ToString();
+                step.Settings["Delimiter"] = dialog.Delimiter;
+                step.Settings["Encoding"]  = dialog.Encoding;
                 stepVm.NotifyNameChanged();
             }
         }
