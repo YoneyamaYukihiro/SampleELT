@@ -246,6 +246,21 @@ namespace SampleELT
                 case StepType.ExecSQL:
                     OpenExecSQLDialog(stepVm);
                     break;
+                case StepType.Dummy:
+                    OpenDummyStepDialog(stepVm);
+                    break;
+                case StepType.GenerateRows:
+                    OpenGenerateRowsDialog(stepVm);
+                    break;
+                case StepType.MergeJoin:
+                    OpenMergeJoinDialog(stepVm);
+                    break;
+                case StepType.DBUpdate:
+                    OpenDBUpdateDialog(stepVm);
+                    break;
+                case StepType.JavaScript:
+                    OpenJavaScriptDialog(stepVm);
+                    break;
             }
         }
 
@@ -506,6 +521,101 @@ namespace SampleELT
                 step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenDummyStepDialog(StepNodeViewModel stepVm)
+        {
+            var dialog = new DummyStepDialog { Owner = this };
+            dialog.Initialize(stepVm.Step.Name);
+            if (dialog.ShowDialog() == true)
+            {
+                stepVm.Step.Name = dialog.StepName;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenGenerateRowsDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new GenerateRowsDialog { Owner = this };
+            dialog.Initialize(
+                step.Name,
+                step.Settings.TryGetValue("Fields", out var f) ? f?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("RowCount", out var rc) ? rc?.ToString() ?? "1" : "1");
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["Fields"] = dialog.Fields;
+                step.Settings["RowCount"] = dialog.RowCount;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenMergeJoinDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new MergeJoinDialog { Owner = this };
+            dialog.Initialize(
+                step.Name,
+                step.Settings.TryGetValue("JoinType", out var jt) ? jt?.ToString() ?? "INNER" : "INNER",
+                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "");
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["JoinType"] = dialog.JoinType;
+                step.Settings["KeyFields"] = dialog.KeyFields;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenDBUpdateDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new DBUpdateDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
+            dialog.Initialize(
+                step.Name,
+                connId,
+                step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "");
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
+                step.Settings["TableName"] = dialog.TableName;
+                step.Settings["KeyFields"] = dialog.KeyFields;
+                step.Settings["UpdateFields"] = dialog.UpdateFields;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenJavaScriptDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new JavaScriptDialog { Owner = this };
+            bool runPerRow = !step.Settings.TryGetValue("RunPerRow", out var rpr)
+                || rpr?.ToString()?.Equals("false", StringComparison.OrdinalIgnoreCase) != true;
+
+            dialog.Initialize(
+                step.Name,
+                step.Settings.TryGetValue("Script", out var sc) ? sc?.ToString() ?? "" : "",
+                runPerRow);
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["Script"] = dialog.Script;
+                step.Settings["RunPerRow"] = dialog.RunPerRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
             }
         }

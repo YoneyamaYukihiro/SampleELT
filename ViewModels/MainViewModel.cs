@@ -62,6 +62,11 @@ namespace SampleELT.ViewModels
                 StepType.DBDelete => new DBDeleteStep { Name = "DB Delete", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.InsertUpdate => new InsertUpdateStep { Name = "Insert/Update", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.ExecSQL => new ExecSQLStep { Name = "Exec SQL", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.Dummy => new DummyStep { Name = "Dummy", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.GenerateRows => new GenerateRowsStep { Name = "Generate Rows", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.MergeJoin => new MergeJoinStep { Name = "Merge Join", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBUpdate => new DBUpdateStep { Name = "DB Update", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.JavaScript => new JavaScriptStep { Name = "JavaScript", CanvasX = offsetX, CanvasY = offsetY },
                 _ => throw new ArgumentOutOfRangeException(nameof(stepType))
             };
 
@@ -257,6 +262,11 @@ namespace SampleELT.ViewModels
                         "DBDelete" => new DBDeleteStep(),
                         "InsertUpdate" => new InsertUpdateStep(),
                         "ExecSQL" => new ExecSQLStep(),
+                        "Dummy" => new DummyStep(),
+                        "GenerateRows" => new GenerateRowsStep(),
+                        "MergeJoin" => new MergeJoinStep(),
+                        "DBUpdate" => new DBUpdateStep(),
+                        "JavaScript" => new JavaScriptStep(),
                         _ => null
                     };
 

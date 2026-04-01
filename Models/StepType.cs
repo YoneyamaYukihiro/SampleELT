@@ -13,6 +13,11 @@ namespace SampleELT.Models
         SelectValues,
         DBDelete,
         InsertUpdate,
-        ExecSQL
+        ExecSQL,
+        Dummy,
+        GenerateRows,
+        MergeJoin,
+        DBUpdate,
+        JavaScript
     }
 }

@@ -1,0 +1,85 @@
+<Window x:Class="SampleELT.Dialogs.MergeJoinDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Merge Join 設定"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ステップ名 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="ステップ名" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
+        </StackPanel>
+
+        <!-- 結合タイプ -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="結合タイプ" FontWeight="Bold" Margin="0,0,0,4"/>
+            <ComboBox x:Name="JoinTypeCombo" Height="28">
+                <ComboBoxItem Content="INNER" IsSelected="True"/>
+                <ComboBoxItem Content="LEFT OUTER"/>
+                <ComboBoxItem Content="RIGHT OUTER"/>
+                <ComboBoxItem Content="FULL OUTER"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- キーフィールド -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="キーフィールド（カンマ区切り）" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBlock Text="例: ROWNUM,WP_ID" Foreground="#555555" FontSize="11" Margin="0,0,0,4"/>
+            <TextBox x:Name="KeyFieldsBox" Height="28" Padding="6,4"/>
+        </StackPanel>
+
+        <!-- 注意書き -->
+        <Border Grid.Row="3" Background="#FFF8E1" BorderBrush="#FFE082" BorderThickness="1"
+                CornerRadius="4" Padding="8,6" Margin="0,0,0,12">
+            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#5D4037">
+                ⚠ 最初に接続したストリームが Left、2番目が Right になります。
+                接続の順序はキャンバスで接続した順番で決まります。
+            </TextBlock>
+        </Border>
+
+        <!-- ボタン -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" Width="80" Height="30" Margin="0,0,8,0"
+                    Click="OK_Click" Style="{StaticResource PrimaryButtonStyle}"/>
+            <Button Content="キャンセル" Width="80" Height="30" Click="Cancel_Click">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#EEEEEE"/>
+                        <Setter Property="Foreground" Value="#333333"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4" Padding="12,6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#E0E0E0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

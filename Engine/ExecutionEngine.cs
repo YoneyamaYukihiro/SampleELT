@@ -111,6 +111,11 @@ namespace SampleELT.Engine
                     }
                 }
 
+                // Provide all input streams for multi-input steps (e.g. MergeJoin)
+                step.AllInputStreams = predecessors
+                    .Select(pid => stepOutputs.TryGetValue(pid, out var po) ? po : new List<Dictionary<string, object?>>())
+                    .ToList();
+
                 progress.Report($"[{step.Name}] 実行中...");
 
                 try

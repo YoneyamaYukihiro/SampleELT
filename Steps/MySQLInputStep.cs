@@ -29,14 +29,12 @@ namespace SampleELT.Steps
 
             if (executeEachRow && inputData.Count > 0)
             {
-                // 前ステップの各行の値を順番に ? パラメータとして渡す
+                // 前ステップの各行の値を順番にパラメータとして渡す（行ごとに実行）
                 foreach (var row in inputData)
                 {
                     ct.ThrowIfCancellationRequested();
                     using var cmd = new MySqlCommand(sql, conn);
-                    var values = row.Values.ToList();
-                    for (int i = 0; i < values.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{i}", values[i] ?? DBNull.Value);
+                    AddParameters(cmd.Parameters, row.Values.ToList());
 
                     using var reader = await cmd.ExecuteReaderAsync(ct);
                     while (await reader.ReadAsync(ct))
@@ -48,6 +46,22 @@ namespace SampleELT.Steps
                     }
                 }
                 progress.Report($"MySQL Input (行ごと実行): {result.Count}行 読み込み完了");
+            }
+            else if (!executeEachRow && inputData.Count > 0 && sql.Contains('?'))
+            {
+                // 最初の行の値を ? パラメータとして使用（lookup パターン）
+                using var cmd = new MySqlCommand(sql, conn);
+                AddParameters(cmd.Parameters, inputData[0].Values.ToList());
+
+                using var reader = await cmd.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                {
+                    var outRow = new Dictionary<string, object?>();
+                    for (int i = 0; i < reader.FieldCount; i++)
+                        outRow[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    result.Add(outRow);
+                }
+                progress.Report($"MySQL Input (パラメータ実行): {result.Count}行 読み込み完了");
             }
             else
             {
@@ -64,6 +78,12 @@ namespace SampleELT.Steps
             }
 
             return result;
+        }
+
+        private static void AddParameters(MySqlParameterCollection p, List<object?> values)
+        {
+            for (int i = 0; i < values.Count; i++)
+                p.AddWithValue($"@p{i}", values[i] ?? DBNull.Value);
         }
 
         public override string GetDisplayIcon() => "🐬";

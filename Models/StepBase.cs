@@ -14,6 +14,13 @@ namespace SampleELT.Models
         public double CanvasY { get; set; }
         public Dictionary<string, object?> Settings { get; set; } = new();
 
+        /// <summary>
+        /// ExecutionEngine が実行前にセットする複数入力ストリーム。
+        /// AllInputStreams[0] = 最初に接続されたストリーム (Left)
+        /// AllInputStreams[1] = 2番目のストリーム (Right) ← MergeJoin で使用
+        /// </summary>
+        public List<List<Dictionary<string, object?>>> AllInputStreams { get; set; } = new();
+
         public abstract Task<List<Dictionary<string, object?>>> ExecuteAsync(
             List<Dictionary<string, object?>> inputData,
             IProgress<string> progress,

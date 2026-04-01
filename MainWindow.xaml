@@ -197,9 +197,34 @@
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.InsertUpdate}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="✏️ DB Update"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.DBUpdate}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="⚡ Exec SQL"
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.ExecSQL}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+
+                        <!-- Utility Group -->
+                        <Border Background="#EDE7F6" CornerRadius="4" Padding="6,4" Margin="0,10,0,6">
+                            <TextBlock Text="Utility" FontWeight="Bold" FontSize="12" Foreground="#4527A0"/>
+                        </Border>
+                        <Button Content="🔢 Generate Rows"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.GenerateRows}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="🔗 Merge Join"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.MergeJoin}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="📜 JavaScript"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.JavaScript}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="⬜ Dummy"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.Dummy}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                     </StackPanel>
                 </ScrollViewer>
