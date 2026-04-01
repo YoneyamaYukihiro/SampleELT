@@ -257,8 +257,8 @@ namespace SampleELT
                 case StepType.DBUpdate:
                     OpenDBUpdateDialog(stepVm);
                     break;
-                case StepType.JavaScript:
-                    OpenJavaScriptDialog(stepVm);
+                case StepType.SetVariable:
+                    OpenSetVariableDialog(stepVm);
                     break;
             }
         }
@@ -618,23 +618,20 @@ namespace SampleELT
             }
         }
 
-        private void OpenJavaScriptDialog(StepNodeViewModel stepVm)
+        private void OpenSetVariableDialog(StepNodeViewModel stepVm)
         {
             var step = stepVm.Step;
-            var dialog = new JavaScriptDialog { Owner = this };
-            bool runPerRow = !step.Settings.TryGetValue("RunPerRow", out var rpr)
-                || rpr?.ToString()?.Equals("false", StringComparison.OrdinalIgnoreCase) != true;
-
+            var dialog = new SetVariableDialog { Owner = this };
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("Script", out var sc) ? sc?.ToString() ?? "" : "",
-                runPerRow);
+                step.Settings.TryGetValue("Fields",     out var flds) ? flds?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("DateFormat", out var df)   ? df?.ToString()   ?? "yyyy/MM/dd" : "yyyy/MM/dd");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["Script"] = dialog.Script;
-                step.Settings["RunPerRow"] = dialog.RunPerRow ? "true" : "false";
+                step.Settings["Fields"]     = dialog.Fields;
+                step.Settings["DateFormat"] = dialog.DateFormat;
                 stepVm.NotifyNameChanged();
             }
         }

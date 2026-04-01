@@ -23,6 +23,6 @@ namespace SampleELT.ViewModels
         public static StepType GenerateRows => StepType.GenerateRows;
         public static StepType MergeJoin => StepType.MergeJoin;
         public static StepType DBUpdate => StepType.DBUpdate;
-        public static StepType JavaScript => StepType.JavaScript;
+        public static StepType SetVariable => StepType.SetVariable;
     }
 }

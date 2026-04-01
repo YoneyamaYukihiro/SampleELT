@@ -18,6 +18,6 @@ namespace SampleELT.Models
         GenerateRows,
         MergeJoin,
         DBUpdate,
-        JavaScript
+        SetVariable
     }
 }

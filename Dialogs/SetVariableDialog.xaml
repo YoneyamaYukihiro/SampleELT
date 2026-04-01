@@ -1,13 +1,12 @@
-<Window x:Class="SampleELT.Dialogs.JavaScriptDialog"
+<Window x:Class="SampleELT.Dialogs.SetVariableDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JavaScript 設定"
-        Width="560" Height="480"
+        Title="変数セット 設定"
+        Width="500" Height="520"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
     <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -21,43 +20,66 @@
             <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
         </StackPanel>
 
-        <!-- 実行モード -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,8">
-            <CheckBox x:Name="RunPerRowCheck"
-                      Content="入力の各行に対して実行（チェックなしの場合は1回のみ実行）"
-                      IsChecked="True" FontSize="11"/>
+        <!-- 日付フォーマット -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="日付フォーマット" FontWeight="Bold" Margin="0,0,0,4"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="DateFormatCombo" Grid.Column="0" Height="28" IsEditable="True">
+                    <ComboBoxItem Content="yyyy/MM/dd" IsSelected="True"/>
+                    <ComboBoxItem Content="yyyy-MM-dd"/>
+                    <ComboBoxItem Content="yyyyMMdd"/>
+                    <ComboBoxItem Content="yyyy/MM/dd HH:mm:ss"/>
+                </ComboBox>
+                <TextBlock Grid.Column="2" Text="(日付式で使用)" VerticalAlignment="Center"
+                           Foreground="#666" FontSize="11"/>
+            </Grid>
         </StackPanel>
 
-        <!-- JS コード -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,4">
-            <TextBlock Text="JavaScript コード" FontWeight="Bold" Margin="0,0,0,4"/>
-            <TextBlock FontSize="10" Foreground="#555555" TextWrapping="Wrap" Margin="0,0,0,4">
-                入力フィールドは変数として参照可能。出力は $out オブジェクトに設定してください。&#10;例: $out.NEW_FIELD = FIELD_A + FIELD_B;
-            </TextBlock>
+        <!-- フィールド定義 -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="変数定義  (フィールド名=式　を1行1件で記述)" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="FieldsBox"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto"
+                     FontFamily="Consolas,Courier New"
+                     FontSize="13"
+                     Padding="6,4"
+                     MinHeight="140"
+                     Height="140"/>
         </StackPanel>
-        <TextBox Grid.Row="3"
-                 x:Name="ScriptBox"
-                 Padding="6,4"
-                 AcceptsReturn="True"
-                 TextWrapping="Off"
-                 VerticalScrollBarVisibility="Auto"
-                 HorizontalScrollBarVisibility="Auto"
-                 FontFamily="Consolas"
-                 FontSize="12"
-                 Margin="0,0,0,8"/>
 
-        <!-- 注意書き -->
-        <Border Grid.Row="4" Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1"
-                CornerRadius="4" Padding="8,6" Margin="0,0,0,12">
-            <TextBlock FontSize="10" Foreground="#1B5E20" TextWrapping="Wrap">
-                💡 使用例:&#10;
-                var today = new Date();&#10;
-                $out.result_date = today.getFullYear() + '/' + (today.getMonth()+1) + '/' + today.getDate();
-            </TextBlock>
+        <!-- 式のヒント -->
+        <Border Grid.Row="3" Background="#F5F5F5" BorderBrush="#DDD" BorderThickness="1"
+                CornerRadius="4" Padding="10,8" Margin="0,0,0,12">
+            <TextBlock FontFamily="Consolas,Courier New" FontSize="11" Foreground="#555"
+                       TextWrapping="Wrap"><Run Text="使用できる式:"/><LineBreak/>
+<Run Text="  TODAY         … 今日"/>
+<LineBreak/>
+<Run Text="  YESTERDAY     … 昨日"/>
+<LineBreak/>
+<Run Text="  TODAY-7       … 7日前  (TODAY+N も可)"/>
+<LineBreak/>
+<Run Text="  MONTH_START   … 当月初日"/>
+<LineBreak/>
+<Run Text="  MONTH_END     … 当月末日"/>
+<LineBreak/>
+<Run Text="  YEAR_START    … 当年初日"/>
+<LineBreak/>
+<Run Text="  YEAR_END      … 当年末日"/>
+<LineBreak/>
+<Run Text="  NOW           … 現在日時"/>
+<LineBreak/>
+<Run Text="  その他        … そのまま文字列として使用"/>
+</TextBlock>
         </Border>
 
         <!-- ボタン -->
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="OK" Width="80" Height="30" Margin="0,0,8,0"
                     Click="OK_Click" Style="{StaticResource PrimaryButtonStyle}"/>
             <Button Content="キャンセル" Width="80" Height="30" Click="Cancel_Click">

@@ -218,9 +218,9 @@
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.MergeJoin}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="📜 JavaScript"
+                        <Button Content="📅 Set Variable"
                                 Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.JavaScript}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.SetVariable}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="⬜ Dummy"
                                 Command="{Binding AddStepCommand}"

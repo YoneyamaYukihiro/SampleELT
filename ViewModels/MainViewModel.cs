@@ -66,7 +66,7 @@ namespace SampleELT.ViewModels
                 StepType.GenerateRows => new GenerateRowsStep { Name = "Generate Rows", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.MergeJoin => new MergeJoinStep { Name = "Merge Join", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.DBUpdate => new DBUpdateStep { Name = "DB Update", CanvasX = offsetX, CanvasY = offsetY },
-                StepType.JavaScript => new JavaScriptStep { Name = "JavaScript", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.SetVariable => new SetVariableStep { Name = "Set Variable", CanvasX = offsetX, CanvasY = offsetY },
                 _ => throw new ArgumentOutOfRangeException(nameof(stepType))
             };
 
@@ -266,7 +266,7 @@ namespace SampleELT.ViewModels
                         "GenerateRows" => new GenerateRowsStep(),
                         "MergeJoin" => new MergeJoinStep(),
                         "DBUpdate" => new DBUpdateStep(),
-                        "JavaScript" => new JavaScriptStep(),
+                        "SetVariable" => new SetVariableStep(),
                         _ => null
                     };
 

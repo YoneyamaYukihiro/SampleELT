@@ -43,7 +43,7 @@ namespace SampleELT.ViewModels
             StepType.GenerateRows => "Generate Rows",
             StepType.MergeJoin => "Merge Join",
             StepType.DBUpdate => "DB Update",
-            StepType.JavaScript => "JavaScript",
+            StepType.SetVariable => "Set Variable",
             _ => "Unknown"
         };
 
