@@ -62,7 +62,7 @@ namespace SampleELT.Steps
             List<Dictionary<string, object?>> inputData,
             IProgress<string> progress, CancellationToken ct)
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelPackage.License.SetNonCommercialPersonal("SampleELT");
 
             await Task.Run(() =>
             {

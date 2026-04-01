@@ -17,7 +17,7 @@ namespace SampleELT.Steps
             IProgress<string> progress,
             CancellationToken ct)
         {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelPackage.License.SetNonCommercialPersonal("SampleELT");
 
             var filePath = Settings.TryGetValue("FilePath", out var fp) ? fp?.ToString() ?? "" : "";
             var sheetName = Settings.TryGetValue("SheetName", out var sn) ? sn?.ToString() ?? "" : "";

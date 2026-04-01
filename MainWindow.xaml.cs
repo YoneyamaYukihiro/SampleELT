@@ -26,7 +26,6 @@ namespace SampleELT
         private bool _isConnecting;
         private StepNodeViewModel? _connectionSourceStep;
         private StepNodeViewModel? _connectionTargetStep;
-        private Point _connectionStartPoint;
 
         // Step node size constants
         private const double NodeWidth = 132; // card width (150 total - 18 port)

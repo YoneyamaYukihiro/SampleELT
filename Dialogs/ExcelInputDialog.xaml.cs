@@ -63,7 +63,7 @@ namespace SampleELT.Dialogs
         {
             try
             {
-                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                ExcelPackage.License.SetNonCommercialPersonal("SampleELT");
                 SheetNameCombo.Items.Clear();
 
                 using var package = new ExcelPackage(new FileInfo(filePath));
