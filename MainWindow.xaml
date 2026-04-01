@@ -146,7 +146,7 @@
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.MySQLInput}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="📗 Excel Input"
+                        <Button Content="📂 File Input"
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.ExcelInput}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
@@ -163,7 +163,7 @@
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.MySQLOutput}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="📗 Excel Output"
+                        <Button Content="📄 File Output"
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.ExcelOutput}"
                                 Style="{StaticResource PaletteButtonStyle}"/>

@@ -29,10 +29,10 @@ namespace SampleELT.ViewModels
         {
             StepType.OracleInput => "Oracle Input",
             StepType.MySQLInput => "MySQL Input",
-            StepType.ExcelInput => "Excel Input",
+            StepType.ExcelInput => "File Input",
             StepType.OracleOutput => "Oracle Output",
             StepType.MySQLOutput => "MySQL Output",
-            StepType.ExcelOutput => "Excel Output",
+            StepType.ExcelOutput => "File Output",
             StepType.Filter => "Filter",
             StepType.Calculation => "Calculation",
             StepType.SelectValues => "Select Values",

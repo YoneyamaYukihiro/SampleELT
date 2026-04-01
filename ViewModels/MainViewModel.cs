@@ -52,10 +52,10 @@ namespace SampleELT.ViewModels
             {
                 StepType.OracleInput => new OracleInputStep { Name = "Oracle Input", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.MySQLInput => new MySQLInputStep { Name = "MySQL Input", CanvasX = offsetX, CanvasY = offsetY },
-                StepType.ExcelInput => new ExcelInputStep { Name = "Excel Input", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.ExcelInput => new ExcelInputStep { Name = "File Input", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.OracleOutput => new OracleOutputStep { Name = "Oracle Output", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.MySQLOutput => new MySQLOutputStep { Name = "MySQL Output", CanvasX = offsetX, CanvasY = offsetY },
-                StepType.ExcelOutput => new ExcelOutputStep { Name = "Excel Output", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.ExcelOutput => new ExcelOutputStep { Name = "File Output", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.Filter => new FilterStep { Name = "Filter", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.Calculation => new CalculationStep { Name = "Calculation", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.SelectValues => new SelectValuesStep { Name = "Select Values", CanvasX = offsetX, CanvasY = offsetY },
