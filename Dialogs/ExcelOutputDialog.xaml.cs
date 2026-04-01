@@ -19,7 +19,9 @@ namespace SampleELT.Dialogs
 
         public ExcelOutputDialog()
         {
+            _suppressEvents = true;
             InitializeComponent();
+            _suppressEvents = false;
         }
 
         public void Initialize(string stepName, string filePath, string format, string sheetName,
