@@ -1,13 +1,15 @@
 using System;
+using System.Linq;
 using System.Windows;
 using Oracle.ManagedDataAccess.Client;
+using SampleELT.Models;
 
 namespace SampleELT.Dialogs
 {
     public partial class OracleInputDialog : Window
     {
         public string StepName { get; private set; } = "";
-        public string ConnectionString { get; private set; } = "";
+        public Guid? ConnectionId { get; private set; }
         public string SQL { get; private set; } = "";
 
         public OracleInputDialog()
@@ -15,27 +17,56 @@ namespace SampleELT.Dialogs
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, string connectionString, string sql)
+        public void Initialize(string stepName, Guid? connectionId, string sql)
         {
             StepNameBox.Text = stepName;
-            ConnectionStringBox.Text = connectionString;
             SQLBox.Text = sql;
+            RefreshConnectionList(connectionId);
+        }
+
+        private void RefreshConnectionList(Guid? selectId)
+        {
+            var oracleConns = ConnectionRegistry.Instance.Connections
+                .Where(c => c.DbType == DbType.Oracle)
+                .ToList();
+
+            ConnectionCombo.ItemsSource = oracleConns;
+
+            if (oracleConns.Count == 0)
+            {
+                NoConnectionHint.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                NoConnectionHint.Visibility = Visibility.Collapsed;
+                var selected = selectId.HasValue
+                    ? oracleConns.FirstOrDefault(c => c.Id == selectId.Value)
+                    : null;
+                ConnectionCombo.SelectedItem = selected ?? oracleConns[0];
+            }
+        }
+
+        private void ManageConnections_Click(object sender, RoutedEventArgs e)
+        {
+            var currentId = (ConnectionCombo.SelectedItem as DbConnectionInfo)?.Id;
+            var dialog = new ConnectionManagerDialog { Owner = this };
+            dialog.ShowDialog();
+            RefreshConnectionList(currentId);
         }
 
         private async void TestConnection_Click(object sender, RoutedEventArgs e)
         {
-            var cs = ConnectionStringBox.Text.Trim();
-            if (string.IsNullOrEmpty(cs))
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn)
             {
-                MessageBox.Show("接続文字列を入力してください。", "入力エラー",
+                MessageBox.Show("接続を選択してください。", "接続テスト",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             try
             {
-                using var conn = new OracleConnection(cs);
-                await conn.OpenAsync();
+                using var c = new OracleConnection(conn.ConnectionString);
+                await c.OpenAsync();
                 MessageBox.Show("接続成功！", "接続テスト",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -55,9 +86,9 @@ namespace SampleELT.Dialogs
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(ConnectionStringBox.Text))
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn)
             {
-                MessageBox.Show("接続文字列を入力してください。", "入力エラー",
+                MessageBox.Show("DB接続を選択してください。\n[接続設定管理] で接続を追加してください。", "入力エラー",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -70,7 +101,7 @@ namespace SampleELT.Dialogs
             }
 
             StepName = StepNameBox.Text.Trim();
-            ConnectionString = ConnectionStringBox.Text.Trim();
+            ConnectionId = conn.Id;
             SQL = SQLBox.Text.Trim();
             DialogResult = true;
         }

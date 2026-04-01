@@ -271,15 +271,20 @@ namespace SampleELT
         {
             var step = stepVm.Step;
             var dialog = new OracleInputDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("ConnectionString", out var cs) ? cs?.ToString() ?? "" : "",
+                connId,
                 step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["ConnectionString"] = dialog.ConnectionString;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["SQL"] = dialog.SQL;
                 stepVm.NotifyNameChanged();
             }
@@ -289,15 +294,20 @@ namespace SampleELT
         {
             var step = stepVm.Step;
             var dialog = new MySQLInputDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("ConnectionString", out var cs) ? cs?.ToString() ?? "" : "",
+                connId,
                 step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["ConnectionString"] = dialog.ConnectionString;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["SQL"] = dialog.SQL;
                 stepVm.NotifyNameChanged();
             }
@@ -327,18 +337,21 @@ namespace SampleELT
         {
             var step = stepVm.Step;
             var dialog = new DBOutputDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("DBType", out var dt) ? dt?.ToString() ?? defaultDbType : defaultDbType,
-                step.Settings.TryGetValue("ConnectionString", out var cs) ? cs?.ToString() ?? "" : "",
+                connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
                 step.Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["DBType"] = dialog.DBType;
-                step.Settings["ConnectionString"] = dialog.ConnectionString;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["Mode"] = dialog.Mode;
                 stepVm.NotifyNameChanged();
@@ -431,6 +444,12 @@ namespace SampleELT
         }
 
         // ==================== MENU / TOOLBAR HANDLERS ====================
+
+        private void ConnectionManager_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ConnectionManagerDialog { Owner = this };
+            dialog.ShowDialog();
+        }
 
         private void Exit_Click(object sender, RoutedEventArgs e)
         {

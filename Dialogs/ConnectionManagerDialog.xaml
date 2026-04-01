@@ -1,0 +1,215 @@
+<Window x:Class="SampleELT.Dialogs.ConnectionManagerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DB 接続設定マネージャー"
+        Width="660"
+        SizeToContent="Height"
+        MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左: 接続一覧 -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="接続一覧" FontWeight="Bold" Margin="0,0,0,6"/>
+
+                <ListBox Grid.Row="1"
+                         x:Name="ConnectionListBox"
+                         SelectionChanged="ConnectionListBox_SelectionChanged"
+                         BorderBrush="#CCCCCC" BorderThickness="1">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayName}" Padding="4,2"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Content="＋ 追加" Width="90" Height="28"
+                            Click="AddConnection_Click"
+                            Style="{StaticResource PrimaryButtonStyle}"/>
+                    <Button Content="🗑 削除" Width="90" Height="28" Margin="8,0,0,0"
+                            Click="DeleteConnection_Click">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#FFEBEE"/>
+                                <Setter Property="Foreground" Value="#C62828"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="BorderBrush" Value="#EF9A9A"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="4" Padding="8,4">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#FFCDD2"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- 右: 編集フォーム -->
+            <Grid Grid.Column="2" x:Name="EditPanel" IsEnabled="False">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 接続名 -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                    <TextBlock Text="接続名" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBox x:Name="ConnNameBox" Height="28" Padding="6,4"
+                             TextChanged="EditField_Changed"/>
+                </StackPanel>
+
+                <!-- DB 種別 -->
+                <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                    <TextBlock Text="DB 種別" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="DbTypeCombo" Height="28"
+                              SelectionChanged="DbTypeCombo_SelectionChanged">
+                        <ComboBoxItem Content="🔶 Oracle" Tag="Oracle" IsSelected="True"/>
+                        <ComboBoxItem Content="🐬 MySQL" Tag="MySQL"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Oracle: 接続文字列 -->
+                <StackPanel Grid.Row="2" x:Name="OracleSection" Margin="0,0,0,10">
+                    <TextBlock Text="接続文字列 (Connection String)" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBox x:Name="OracleConnStrBox"
+                             Height="56"
+                             Padding="6,4"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             TextChanged="EditField_Changed"/>
+                    <TextBlock Text="例: Data Source=host:1521/ORCL;User Id=user;Password=pass;"
+                               Foreground="#9E9E9E" FontSize="11" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <!-- MySQL: 個別フィールド -->
+                <StackPanel Grid.Row="3" x:Name="MySQLSection" Visibility="Collapsed">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="サーバー" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="MySQLServerBox" Height="28" Padding="6,4"
+                                     Text="localhost" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="ポート" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="MySQLPortBox" Height="28" Padding="6,4"
+                                     Text="3306" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="データベース名" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="MySQLDatabaseBox" Height="28" Padding="6,4"
+                                 TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="ユーザー名" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="MySQLUserBox" Height="28" Padding="6,4"
+                                 Text="root" TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="パスワード" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <PasswordBox x:Name="MySQLPassBox" Height="28" Padding="6,4"
+                                     PasswordChanged="EditField_Changed"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 接続テストボタン -->
+                <Button Grid.Row="4"
+                        Content="🔗 接続テスト"
+                        HorizontalAlignment="Left"
+                        Width="120" Height="28"
+                        Margin="0,0,0,12"
+                        Click="TestConnection_Click"
+                        Style="{StaticResource PrimaryButtonStyle}"/>
+
+                <!-- 保存ボタン -->
+                <Button Grid.Row="5"
+                        x:Name="SaveConnButton"
+                        Content="💾 この接続を保存"
+                        HorizontalAlignment="Left"
+                        Width="140" Height="28"
+                        Click="SaveConnection_Click"
+                        Style="{StaticResource PrimaryButtonStyle}"/>
+            </Grid>
+        </Grid>
+
+        <!-- 閉じるボタン -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="閉じる" Width="80" Height="30"
+                    Click="Close_Click">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#EEEEEE"/>
+                        <Setter Property="Foreground" Value="#333333"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4" Padding="12,6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#E0E0E0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

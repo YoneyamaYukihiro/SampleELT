@@ -32,6 +32,9 @@
                 <Separator/>
                 <MenuItem Header="キャンバスをクリア" Command="{Binding ClearCanvasCommand}"/>
             </MenuItem>
+            <MenuItem Header="ツール(_T)">
+                <MenuItem Header="DB 接続設定(_C)..." Click="ConnectionManager_Click"/>
+            </MenuItem>
             <MenuItem Header="ヘルプ(_H)">
                 <MenuItem Header="バージョン情報" Click="About_Click"/>
             </MenuItem>

@@ -13,116 +13,103 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Step Name -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,8">
+        <!-- ステップ名 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
             <TextBlock Text="ステップ名" FontWeight="Bold" Margin="0,0,0,4"/>
             <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
         </StackPanel>
 
-        <!-- Server -->
-        <Grid Grid.Row="1" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="100"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="サーバー" FontWeight="Bold" Margin="0,0,0,4"/>
-                <TextBox x:Name="ServerBox" Height="28" Padding="6,4" Text="localhost"/>
-            </StackPanel>
-            <StackPanel Grid.Column="2">
-                <TextBlock Text="ポート" FontWeight="Bold" Margin="0,0,0,4"/>
-                <TextBox x:Name="PortBox" Height="28" Padding="6,4" Text="3306"/>
-            </StackPanel>
-        </Grid>
-
-        <!-- Database -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,8">
-            <TextBlock Text="データベース" FontWeight="Bold" Margin="0,0,0,4"/>
-            <TextBox x:Name="DatabaseBox" Height="28" Padding="6,4"/>
-        </StackPanel>
-
-        <!-- Username -->
-        <StackPanel Grid.Row="3" Margin="0,0,0,8">
-            <TextBlock Text="ユーザー名" FontWeight="Bold" Margin="0,0,0,4"/>
-            <TextBox x:Name="UsernameBox" Height="28" Padding="6,4" Text="root"/>
-        </StackPanel>
-
-        <!-- Password -->
-        <StackPanel Grid.Row="4" Margin="0,0,0,8">
-            <TextBlock Text="パスワード" FontWeight="Bold" Margin="0,0,0,4"/>
-            <PasswordBox x:Name="PasswordBox" Height="28" Padding="6,4"/>
+        <!-- 接続選択 -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="DB 接続" FontWeight="Bold" Margin="0,0,0,4"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="110"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="ConnectionCombo"
+                          Grid.Column="0" Height="28"
+                          DisplayMemberPath="DisplayName"/>
+                <Button Grid.Column="2"
+                        Content="⚙ 接続設定管理"
+                        Height="28"
+                        FontSize="11"
+                        Click="ManageConnections_Click"
+                        Style="{StaticResource PrimaryButtonStyle}"/>
+            </Grid>
+            <TextBlock x:Name="NoConnectionHint"
+                       Text="※ 接続が登録されていません。[接続設定管理] で追加してください。"
+                       Foreground="#E53935" FontSize="11" Margin="0,4,0,0"
+                       Visibility="Collapsed"/>
         </StackPanel>
 
         <!-- SQL -->
-        <StackPanel Grid.Row="5" Margin="0,0,0,4">
+        <StackPanel Grid.Row="2" Margin="0,0,0,4">
             <TextBlock Text="SQL クエリ" FontWeight="Bold" Margin="0,0,0,4"/>
         </StackPanel>
-        <TextBox Grid.Row="6"
+        <TextBox Grid.Row="3"
                  x:Name="SQLBox"
-                 Height="80"
+                 Height="100"
                  Padding="6,4"
                  AcceptsReturn="True"
                  TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
                  FontSize="12"
-                 Margin="0,0,0,8"/>
+                 Margin="0,0,0,10"/>
 
-        <!-- Test Connection -->
-        <Button Grid.Row="7"
-                Content="🔗 接続テスト"
-                HorizontalAlignment="Left"
-                Width="120"
-                Height="30"
-                Margin="0,0,0,10"
-                Click="TestConnection_Click"
-                Style="{StaticResource PrimaryButtonStyle}"/>
-
-        <!-- OK / Cancel -->
-        <StackPanel Grid.Row="8"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right">
-            <Button Content="OK"
-                    Width="80" Height="30"
-                    Margin="0,0,8,0"
-                    Click="OK_Click"
+        <!-- ボタン -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0"
+                    Content="🔗 接続テスト"
+                    Width="110" Height="30"
+                    Click="TestConnection_Click"
                     Style="{StaticResource PrimaryButtonStyle}"/>
-            <Button Content="キャンセル"
-                    Width="80" Height="30"
-                    Click="Cancel_Click">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Background" Value="#EEEEEE"/>
-                        <Setter Property="Foreground" Value="#333333"/>
-                        <Setter Property="BorderThickness" Value="1"/>
-                        <Setter Property="BorderBrush" Value="#CCCCCC"/>
-                        <Setter Property="Cursor" Value="Hand"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                            CornerRadius="4" Padding="12,6">
-                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#E0E0E0"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
-        </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Content="OK"
+                        Width="80" Height="30"
+                        Margin="0,0,8,0"
+                        Click="OK_Click"
+                        Style="{StaticResource PrimaryButtonStyle}"/>
+                <Button Content="キャンセル"
+                        Width="80" Height="30"
+                        Click="Cancel_Click">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#EEEEEE"/>
+                            <Setter Property="Foreground" Value="#333333"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="4" Padding="12,6">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#E0E0E0"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

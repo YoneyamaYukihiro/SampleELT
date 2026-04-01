@@ -17,7 +17,7 @@ namespace SampleELT.Steps
             IProgress<string> progress,
             CancellationToken ct)
         {
-            var connectionString = Settings.TryGetValue("ConnectionString", out var cs) ? cs?.ToString() ?? "" : "";
+            var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
             var tableName = Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "";
             var mode = Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT";
 

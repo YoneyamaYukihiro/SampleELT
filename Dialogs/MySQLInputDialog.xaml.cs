@@ -1,13 +1,15 @@
 using System;
+using System.Linq;
 using System.Windows;
 using MySqlConnector;
+using SampleELT.Models;
 
 namespace SampleELT.Dialogs
 {
     public partial class MySQLInputDialog : Window
     {
         public string StepName { get; private set; } = "";
-        public string ConnectionString { get; private set; } = "";
+        public Guid? ConnectionId { get; private set; }
         public string SQL { get; private set; } = "";
 
         public MySQLInputDialog()
@@ -15,59 +17,56 @@ namespace SampleELT.Dialogs
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, string connectionString, string sql)
+        public void Initialize(string stepName, Guid? connectionId, string sql)
         {
             StepNameBox.Text = stepName;
             SQLBox.Text = sql;
+            RefreshConnectionList(connectionId);
+        }
 
-            // Parse connection string if provided
-            if (!string.IsNullOrEmpty(connectionString))
+        private void RefreshConnectionList(Guid? selectId)
+        {
+            var mysqlConns = ConnectionRegistry.Instance.Connections
+                .Where(c => c.DbType == DbType.MySQL)
+                .ToList();
+
+            ConnectionCombo.ItemsSource = mysqlConns;
+
+            if (mysqlConns.Count == 0)
             {
-                try
-                {
-                    var builder = new MySqlConnectionStringBuilder(connectionString);
-                    ServerBox.Text = builder.Server;
-                    PortBox.Text = builder.Port.ToString();
-                    DatabaseBox.Text = builder.Database;
-                    UsernameBox.Text = builder.UserID;
-                    PasswordBox.Password = builder.Password;
-                }
-                catch
-                {
-                    // If parsing fails, leave defaults
-                }
+                NoConnectionHint.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                NoConnectionHint.Visibility = Visibility.Collapsed;
+                var selected = selectId.HasValue
+                    ? mysqlConns.FirstOrDefault(c => c.Id == selectId.Value)
+                    : null;
+                ConnectionCombo.SelectedItem = selected ?? mysqlConns[0];
             }
         }
 
-        private string BuildConnectionString()
+        private void ManageConnections_Click(object sender, RoutedEventArgs e)
         {
-            var server = ServerBox.Text.Trim();
-            var portStr = PortBox.Text.Trim();
-            var database = DatabaseBox.Text.Trim();
-            var username = UsernameBox.Text.Trim();
-            var password = PasswordBox.Password;
-
-            if (!uint.TryParse(portStr, out uint port)) port = 3306;
-
-            var builder = new MySqlConnectionStringBuilder
-            {
-                Server = server,
-                Port = port,
-                Database = database,
-                UserID = username,
-                Password = password
-            };
-
-            return builder.ConnectionString;
+            var currentId = (ConnectionCombo.SelectedItem as DbConnectionInfo)?.Id;
+            var dialog = new ConnectionManagerDialog { Owner = this };
+            dialog.ShowDialog();
+            RefreshConnectionList(currentId);
         }
 
         private async void TestConnection_Click(object sender, RoutedEventArgs e)
         {
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn)
+            {
+                MessageBox.Show("接続を選択してください。", "接続テスト",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             try
             {
-                var cs = BuildConnectionString();
-                using var conn = new MySqlConnection(cs);
-                await conn.OpenAsync();
+                using var c = new MySqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
                 MessageBox.Show("接続成功！", "接続テスト",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -87,9 +86,9 @@ namespace SampleELT.Dialogs
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(DatabaseBox.Text))
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn)
             {
-                MessageBox.Show("データベース名を入力してください。", "入力エラー",
+                MessageBox.Show("DB接続を選択してください。\n[接続設定管理] で接続を追加してください。", "入力エラー",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -102,7 +101,7 @@ namespace SampleELT.Dialogs
             }
 
             StepName = StepNameBox.Text.Trim();
-            ConnectionString = BuildConnectionString();
+            ConnectionId = conn.Id;
             SQL = SQLBox.Text.Trim();
             DialogResult = true;
         }
