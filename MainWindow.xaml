@@ -142,15 +142,10 @@
                         <Border Background="#E3F2FD" CornerRadius="4" Padding="6,4" Margin="0,0,0,6">
                             <TextBlock Text="Input" FontWeight="Bold" FontSize="12" Foreground="#1565C0"/>
                         </Border>
-                        <Button Content="🔶 Oracle Input"
-                                Tag="{x:Static vm:StepTypeHelper.OracleInput}"
+                        <Button Content="🔌 DB Input"
+                                Tag="{x:Static vm:StepTypeHelper.DBInput}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="🐬 MySQL Input"
-                                Tag="{x:Static vm:StepTypeHelper.MySQLInput}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
+                                ToolTip="ダブルクリックで追加（Oracle / MySQL 自動判別）"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📂 File Input"
                                 Tag="{x:Static vm:StepTypeHelper.ExcelInput}"
@@ -162,18 +157,23 @@
                         <Border Background="#E8F5E9" CornerRadius="4" Padding="6,4" Margin="0,10,0,6">
                             <TextBlock Text="Output" FontWeight="Bold" FontSize="12" Foreground="#1B5E20"/>
                         </Border>
-                        <Button Content="🔶 Oracle Output"
-                                Tag="{x:Static vm:StepTypeHelper.OracleOutput}"
+                        <Button Content="🔌 DB Output"
+                                Tag="{x:Static vm:StepTypeHelper.DBOutput}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="🐬 MySQL Output"
-                                Tag="{x:Static vm:StepTypeHelper.MySQLOutput}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
+                                ToolTip="ダブルクリックで追加（Oracle / MySQL 自動判別）"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📄 File Output"
                                 Tag="{x:Static vm:StepTypeHelper.ExcelOutput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="🔄 Insert/Update"
+                                Tag="{x:Static vm:StepTypeHelper.InsertUpdate}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="✏️ DB Update"
+                                Tag="{x:Static vm:StepTypeHelper.DBUpdate}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
                                 ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
@@ -204,16 +204,6 @@
                         </Border>
                         <Button Content="🗑 DB Delete"
                                 Tag="{x:Static vm:StepTypeHelper.DBDelete}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="🔄 Insert/Update"
-                                Tag="{x:Static vm:StepTypeHelper.InsertUpdate}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="✏️ DB Update"
-                                Tag="{x:Static vm:StepTypeHelper.DBUpdate}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
                                 ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>

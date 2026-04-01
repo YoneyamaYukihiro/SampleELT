@@ -24,5 +24,7 @@ namespace SampleELT.ViewModels
         public static StepType MergeJoin => StepType.MergeJoin;
         public static StepType DBUpdate => StepType.DBUpdate;
         public static StepType SetVariable => StepType.SetVariable;
+        public static StepType DBInput => StepType.DBInput;
+        public static StepType DBOutput => StepType.DBOutput;
     }
 }

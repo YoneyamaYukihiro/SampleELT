@@ -212,6 +212,9 @@ namespace SampleELT
 
             switch (step.StepType)
             {
+                case StepType.DBInput:
+                    OpenDBInputDialog(stepVm);
+                    break;
                 case StepType.OracleInput:
                     OpenOracleInputDialog(stepVm);
                     break;
@@ -220,6 +223,9 @@ namespace SampleELT
                     break;
                 case StepType.ExcelInput:
                     OpenExcelInputDialog(stepVm);
+                    break;
+                case StepType.DBOutput:
+                    OpenDBOutputDialog(stepVm, "");
                     break;
                 case StepType.OracleOutput:
                     OpenDBOutputDialog(stepVm, "Oracle");
@@ -263,6 +269,34 @@ namespace SampleELT
                 case StepType.SetVariable:
                     OpenSetVariableDialog(stepVm);
                     break;
+            }
+        }
+
+        private void OpenDBInputDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new DBInputDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
+            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
+                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+            dialog.Initialize(
+                step.Name,
+                connId,
+                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
+                executeEachRow);
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
+                step.Settings["SQL"] = dialog.SQL;
+                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
+                stepVm.NotifyNameChanged();
             }
         }
 
