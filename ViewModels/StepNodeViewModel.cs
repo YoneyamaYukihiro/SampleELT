@@ -16,6 +16,12 @@ namespace SampleELT.ViewModels
         [ObservableProperty]
         private bool _isSelected;
 
+        [ObservableProperty]
+        private bool _isConnectionTarget;
+
+        [ObservableProperty]
+        private bool _isConnectingMode;
+
         public string DisplayName => Step.Name;
         public string DisplayIcon => Step.GetDisplayIcon();
 

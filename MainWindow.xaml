@@ -1,4 +1,5 @@
 <Window x:Class="SampleELT.MainWindow"
+        KeyDown="Window_KeyDown"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:SampleELT.Controls"
@@ -268,10 +269,13 @@
                                                 x:Name="StepNode"
                                                 DataContext="{Binding}"
                                                 IsSelected="{Binding IsSelected}"
+                                                IsConnectionTarget="{Binding IsConnectionTarget}"
+                                                IsConnectingMode="{Binding IsConnectingMode}"
                                                 MouseLeftButtonDown="StepNode_MouseLeftButtonDown"
                                                 MouseLeftButtonUp="StepNode_MouseLeftButtonUp"
                                                 MouseMove="StepNode_MouseMove"
-                                                MouseRightButtonDown="StepNode_MouseRightButtonDown">
+                                                MouseRightButtonDown="StepNode_MouseRightButtonDown"
+                                                OutputPortDragStarted="StepNode_OutputPortDragStarted">
                                                 <controls:StepNodeControl.ContextMenu>
                                                     <ContextMenu>
                                                         <MenuItem Header="⚙ 設定"

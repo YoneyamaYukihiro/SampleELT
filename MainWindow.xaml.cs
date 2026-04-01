@@ -22,10 +22,15 @@ namespace SampleELT
         private double _dragStartNodeX;
         private double _dragStartNodeY;
 
-        // Connection drawing state (Shift+drag)
+        // Connection drawing state (port drag)
         private bool _isConnecting;
         private StepNodeViewModel? _connectionSourceStep;
+        private StepNodeViewModel? _connectionTargetStep;
         private Point _connectionStartPoint;
+
+        // Step node size constants
+        private const double NodeWidth = 132; // card width (150 total - 18 port)
+        private const double NodeHeight = 70;
 
         public MainWindow()
         {
@@ -62,35 +67,13 @@ namespace SampleELT
 
             if (e.ClickCount == 2)
             {
-                // Double-click: open settings
+                // ダブルクリック: 設定を開く
                 _vm.OpenStepSettingsCommand.Execute(stepVm);
                 e.Handled = true;
                 return;
             }
 
-            // Check Shift for connection mode
-            if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
-            {
-                _isConnecting = true;
-                _connectionSourceStep = stepVm;
-
-                // Calculate center of source node
-                var canvas = BackgroundCanvas;
-                var nodeCenter = new Point(stepVm.X + 70, stepVm.Y + 35);
-                _connectionStartPoint = nodeCenter;
-
-                TempConnectionLine.X1 = nodeCenter.X;
-                TempConnectionLine.Y1 = nodeCenter.Y;
-                TempConnectionLine.X2 = nodeCenter.X;
-                TempConnectionLine.Y2 = nodeCenter.Y;
-                TempConnectionLine.Visibility = Visibility.Visible;
-
-                fe.CaptureMouse();
-                e.Handled = true;
-                return;
-            }
-
-            // Normal drag
+            // 通常ドラッグ
             _isDragging = true;
             _draggingStep = stepVm;
             _dragStartMousePos = e.GetPosition(BackgroundCanvas);
@@ -124,6 +107,7 @@ namespace SampleELT
                 var currentPos = e.GetPosition(BackgroundCanvas);
                 TempConnectionLine.X2 = currentPos.X;
                 TempConnectionLine.Y2 = currentPos.Y;
+                UpdateConnectionTargetHighlight(currentPos);
                 e.Handled = true;
             }
         }
@@ -135,7 +119,6 @@ namespace SampleELT
 
             if (_isConnecting && _connectionSourceStep != null)
             {
-                // Find target step at mouse position
                 var mousePos = e.GetPosition(BackgroundCanvas);
                 var targetStep = FindStepAtPosition(mousePos, _connectionSourceStep);
 
@@ -145,10 +128,7 @@ namespace SampleELT
                         new Tuple<Guid, Guid>(_connectionSourceStep.Step.Id, targetStep.Step.Id));
                 }
 
-                // Reset connection drawing
-                _isConnecting = false;
-                _connectionSourceStep = null;
-                TempConnectionLine.Visibility = Visibility.Collapsed;
+                ClearConnectionMode();
                 fe.ReleaseMouseCapture();
                 e.Handled = true;
                 return;
@@ -190,18 +170,8 @@ namespace SampleELT
 
         private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (_isConnecting)
-            {
-                _isConnecting = false;
-                _connectionSourceStep = null;
-                TempConnectionLine.Visibility = Visibility.Collapsed;
-            }
-
-            if (_isDragging)
-            {
-                _isDragging = false;
-                _draggingStep = null;
-            }
+            if (_isConnecting) ClearConnectionMode();
+            if (_isDragging) { _isDragging = false; _draggingStep = null; }
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -426,24 +396,89 @@ namespace SampleELT
 
         private StepNodeViewModel? FindStepAtPosition(Point canvasPos, StepNodeViewModel? excludeStep)
         {
-            const double nodeW = 140.0;
-            const double nodeH = 70.0;
-
             foreach (var stepVm in _vm.Steps)
             {
                 if (stepVm == excludeStep) continue;
-
-                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + nodeW &&
-                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + nodeH)
-                {
+                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + NodeWidth &&
+                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + NodeHeight)
                     return stepVm;
-                }
             }
-
             return null;
         }
 
+        // ==================== 接続モード ヘルパー ====================
+
+        private void StepNode_OutputPortDragStarted(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement fe) return;
+            if (fe.DataContext is not StepNodeViewModel stepVm) return;
+
+            _isConnecting = true;
+            _connectionSourceStep = stepVm;
+
+            // 接続線の始点 = ステップ右端の中央
+            var startX = stepVm.X + NodeWidth;
+            var startY = stepVm.Y + NodeHeight / 2;
+
+            TempConnectionLine.X1 = startX;
+            TempConnectionLine.Y1 = startY;
+            TempConnectionLine.X2 = startX;
+            TempConnectionLine.Y2 = startY;
+            TempConnectionLine.Visibility = Visibility.Visible;
+
+            // 全ステップに「接続モード」を通知 → 入力ポート（左の丸）を表示
+            foreach (var s in _vm.Steps)
+                s.IsConnectingMode = true;
+
+            fe.CaptureMouse();
+            e.Handled = true;
+        }
+
+        private void UpdateConnectionTargetHighlight(Point canvasPos)
+        {
+            var newTarget = FindStepAtPosition(canvasPos, _connectionSourceStep);
+            if (newTarget == _connectionTargetStep) return;
+
+            if (_connectionTargetStep != null)
+                _connectionTargetStep.IsConnectionTarget = false;
+
+            _connectionTargetStep = newTarget;
+
+            if (_connectionTargetStep != null)
+                _connectionTargetStep.IsConnectionTarget = true;
+        }
+
+        private void ClearConnectionMode()
+        {
+            _isConnecting = false;
+            _connectionSourceStep = null;
+            TempConnectionLine.Visibility = Visibility.Collapsed;
+
+            if (_connectionTargetStep != null)
+            {
+                _connectionTargetStep.IsConnectionTarget = false;
+                _connectionTargetStep = null;
+            }
+
+            foreach (var s in _vm.Steps)
+            {
+                s.IsConnectingMode = false;
+                s.IsConnectionTarget = false;
+            }
+        }
+
         // ==================== MENU / TOOLBAR HANDLERS ====================
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape && _isConnecting)
+            {
+                ClearConnectionMode();
+                // マウスキャプチャを解放
+                Mouse.Captured?.ReleaseMouseCapture();
+                e.Handled = true;
+            }
+        }
 
         private void ConnectionManager_Click(object sender, RoutedEventArgs e)
         {
