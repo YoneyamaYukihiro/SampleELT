@@ -369,18 +369,28 @@ namespace SampleELT
         {
             var step = stepVm.Step;
             var dialog = new ExcelOutputDialog { Owner = this };
+
+            var ihRaw = step.Settings.TryGetValue("IncludeHeader", out var ih) ? ih?.ToString() : null;
+            bool includeHeader = ihRaw == null || !bool.TryParse(ihRaw, out var ihBool) ? true : ihBool;
+
             dialog.Initialize(
                 step.Name,
                 step.Settings.TryGetValue("FilePath", out var fp) ? fp?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("Format", out var fmt) ? fmt?.ToString() ?? "Excel" : "Excel",
                 step.Settings.TryGetValue("SheetName", out var sn) ? sn?.ToString() ?? "Sheet1" : "Sheet1",
-                step.Settings.TryGetValue("IncludeHeader", out var ih) && ih is bool b ? b : true);
+                step.Settings.TryGetValue("Delimiter", out var dl) ? dl?.ToString() ?? "," : ",",
+                step.Settings.TryGetValue("Encoding", out var enc) ? enc?.ToString() ?? "UTF-8" : "UTF-8",
+                includeHeader);
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
                 step.Settings["FilePath"] = dialog.FilePath;
+                step.Settings["Format"] = dialog.Format;
                 step.Settings["SheetName"] = dialog.SheetName;
-                step.Settings["IncludeHeader"] = dialog.IncludeHeader;
+                step.Settings["Delimiter"] = dialog.Delimiter;
+                step.Settings["Encoding"] = dialog.Encoding;
+                step.Settings["IncludeHeader"] = dialog.IncludeHeader.ToString();
                 stepVm.NotifyNameChanged();
             }
         }
