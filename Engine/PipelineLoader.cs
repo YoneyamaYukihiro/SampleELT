@@ -43,6 +43,8 @@ namespace SampleELT.Engine
                     "MergeJoin"    => new MergeJoinStep(),
                     "DBUpdate"     => new DBUpdateStep(),
                     "SetVariable"  => new SetVariableStep(),
+                    "DBInput"      => new DBInputStep(),
+                    "DBOutput"     => new DBOutputStep(),
                     _              => null
                 };
 

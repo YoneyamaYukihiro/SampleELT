@@ -143,6 +143,8 @@ namespace SampleELT.ViewModels
                 StepType.MergeJoin => new MergeJoinStep { Name = "Merge Join", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.DBUpdate => new DBUpdateStep { Name = "DB Update", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.SetVariable => new SetVariableStep { Name = "Set Variable", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBInput    => new DBInputStep  { Name = "DB Input",   CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBOutput   => new DBOutputStep { Name = "DB Output",  CanvasX = offsetX, CanvasY = offsetY },
                 _ => throw new ArgumentOutOfRangeException(nameof(stepType))
             };
 
@@ -343,6 +345,8 @@ namespace SampleELT.ViewModels
                         "MergeJoin" => new MergeJoinStep(),
                         "DBUpdate" => new DBUpdateStep(),
                         "SetVariable" => new SetVariableStep(),
+                        "DBInput"     => new DBInputStep(),
+                        "DBOutput"    => new DBOutputStep(),
                         _ => null
                     };
 
