@@ -40,6 +40,7 @@ namespace SampleELT
 
             _vm.LogMessages.CollectionChanged += LogMessages_CollectionChanged;
             _vm.OpenSettingsRequested += OpenStepSettingsDialog;
+            _vm.OpenScheduleManagerRequested += OpenScheduleManagerDialog;
 
             LoadHelpContent();
         }
@@ -753,6 +754,17 @@ namespace SampleELT
         private void ConnectionManager_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new ConnectionManagerDialog { Owner = this };
+            dialog.ShowDialog();
+        }
+
+        private void ScheduleManager_Click(object sender, RoutedEventArgs e)
+        {
+            OpenScheduleManagerDialog();
+        }
+
+        private void OpenScheduleManagerDialog()
+        {
+            var dialog = new ScheduleManagerDialog { Owner = this };
             dialog.ShowDialog();
         }
 
