@@ -20,6 +20,8 @@ namespace SampleELT.Dialogs
 
         private void ConnectionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (EditPanel == null) return;
+
             if (ConnectionListBox.SelectedItem is not DbConnectionInfo conn)
             {
                 EditPanel.IsEnabled = false;
@@ -73,6 +75,8 @@ namespace SampleELT.Dialogs
         private void DbTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_suppressChangeEvents) return;
+            // InitializeComponent() 中はまだ名前付き要素が null のためガード
+            if (OracleSection == null || MySQLSection == null) return;
 
             var isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
             OracleSection.Visibility = isOracle ? Visibility.Visible : Visibility.Collapsed;
