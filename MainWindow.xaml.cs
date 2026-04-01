@@ -711,6 +711,17 @@ namespace SampleELT
             }
         }
 
+        // ==================== PALETTE DOUBLE CLICK ====================
+
+        private void PaletteButton_DoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.Tag is StepType stepType)
+            {
+                _vm.AddStepCommand.Execute(stepType);
+                e.Handled = true;
+            }
+        }
+
         // ==================== MENU / TOOLBAR HANDLERS ====================
 
         private void Window_KeyDown(object sender, KeyEventArgs e)

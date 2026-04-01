@@ -132,6 +132,10 @@
                                    FontWeight="Bold"
                                    FontSize="13"
                                    Foreground="#424242"
+                                   Margin="0,0,0,2"/>
+                        <TextBlock Text="ダブルクリックで追加"
+                                   FontSize="10"
+                                   Foreground="#9E9E9E"
                                    Margin="0,0,0,10"/>
 
                         <!-- Input Group -->
@@ -139,16 +143,19 @@
                             <TextBlock Text="Input" FontWeight="Bold" FontSize="12" Foreground="#1565C0"/>
                         </Border>
                         <Button Content="🔶 Oracle Input"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.OracleInput}"
+                                Tag="{x:Static vm:StepTypeHelper.OracleInput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="🐬 MySQL Input"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.MySQLInput}"
+                                Tag="{x:Static vm:StepTypeHelper.MySQLInput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📂 File Input"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.ExcelInput}"
+                                Tag="{x:Static vm:StepTypeHelper.ExcelInput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
 
                         <!-- Output Group -->
@@ -156,16 +163,19 @@
                             <TextBlock Text="Output" FontWeight="Bold" FontSize="12" Foreground="#1B5E20"/>
                         </Border>
                         <Button Content="🔶 Oracle Output"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.OracleOutput}"
+                                Tag="{x:Static vm:StepTypeHelper.OracleOutput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="🐬 MySQL Output"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.MySQLOutput}"
+                                Tag="{x:Static vm:StepTypeHelper.MySQLOutput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📄 File Output"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.ExcelOutput}"
+                                Tag="{x:Static vm:StepTypeHelper.ExcelOutput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
 
                         <!-- Transform Group -->
@@ -173,16 +183,19 @@
                             <TextBlock Text="Transform" FontWeight="Bold" FontSize="12" Foreground="#E65100"/>
                         </Border>
                         <Button Content="🔍 Filter"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.Filter}"
+                                Tag="{x:Static vm:StepTypeHelper.Filter}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="🧮 Calculation"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.Calculation}"
+                                Tag="{x:Static vm:StepTypeHelper.Calculation}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📋 Select Values"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.SelectValues}"
+                                Tag="{x:Static vm:StepTypeHelper.SelectValues}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
 
                         <!-- DB Operation Group -->
@@ -190,20 +203,24 @@
                             <TextBlock Text="DB Operation" FontWeight="Bold" FontSize="12" Foreground="#880E4F"/>
                         </Border>
                         <Button Content="🗑 DB Delete"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.DBDelete}"
+                                Tag="{x:Static vm:StepTypeHelper.DBDelete}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="🔄 Insert/Update"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.InsertUpdate}"
+                                Tag="{x:Static vm:StepTypeHelper.InsertUpdate}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="✏️ DB Update"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.DBUpdate}"
+                                Tag="{x:Static vm:StepTypeHelper.DBUpdate}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="⚡ Exec SQL"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.ExecSQL}"
+                                Tag="{x:Static vm:StepTypeHelper.ExecSQL}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
 
                         <!-- Utility Group -->
@@ -211,20 +228,24 @@
                             <TextBlock Text="Utility" FontWeight="Bold" FontSize="12" Foreground="#4527A0"/>
                         </Border>
                         <Button Content="🔢 Generate Rows"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.GenerateRows}"
+                                Tag="{x:Static vm:StepTypeHelper.GenerateRows}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="🔗 Merge Join"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.MergeJoin}"
+                                Tag="{x:Static vm:StepTypeHelper.MergeJoin}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📅 Set Variable"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.SetVariable}"
+                                Tag="{x:Static vm:StepTypeHelper.SetVariable}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="⬜ Dummy"
-                                Command="{Binding AddStepCommand}"
-                                CommandParameter="{x:Static vm:StepTypeHelper.Dummy}"
+                                Tag="{x:Static vm:StepTypeHelper.Dummy}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                     </StackPanel>
                 </ScrollViewer>
