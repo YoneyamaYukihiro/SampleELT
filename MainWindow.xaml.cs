@@ -234,6 +234,18 @@ namespace SampleELT
                 case StepType.Calculation:
                     OpenCalculationDialog(stepVm);
                     break;
+                case StepType.SelectValues:
+                    OpenSelectValuesDialog(stepVm);
+                    break;
+                case StepType.DBDelete:
+                    OpenDBDeleteDialog(stepVm);
+                    break;
+                case StepType.InsertUpdate:
+                    OpenInsertUpdateDialog(stepVm);
+                    break;
+                case StepType.ExecSQL:
+                    OpenExecSQLDialog(stepVm);
+                    break;
             }
         }
 
@@ -246,16 +258,21 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
+                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
             dialog.Initialize(
                 step.Name,
                 connId,
-                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
+                executeEachRow);
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
                 step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["SQL"] = dialog.SQL;
+                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
             }
         }
@@ -269,16 +286,21 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
+                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
             dialog.Initialize(
                 step.Name,
                 connId,
-                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
+                executeEachRow);
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
                 step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["SQL"] = dialog.SQL;
+                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
             }
         }
@@ -388,6 +410,102 @@ namespace SampleELT
                 step.Settings["Field1"] = dialog.Field1;
                 step.Settings["Field2"] = dialog.Field2;
                 step.Settings["Constant"] = dialog.Constant;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenSelectValuesDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new SelectValuesDialog { Owner = this };
+            dialog.Initialize(
+                step.Name,
+                step.Settings.TryGetValue("FieldMappings", out var fm) ? fm?.ToString() ?? "" : "");
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["FieldMappings"] = dialog.FieldMappings;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenDBDeleteDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new DBDeleteDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
+            dialog.Initialize(
+                step.Name,
+                connId,
+                step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "");
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
+                step.Settings["TableName"] = dialog.TableName;
+                step.Settings["KeyFields"] = dialog.KeyFields;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenInsertUpdateDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new InsertUpdateDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
+            dialog.Initialize(
+                step.Name,
+                connId,
+                step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
+                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "");
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
+                step.Settings["TableName"] = dialog.TableName;
+                step.Settings["KeyFields"] = dialog.KeyFields;
+                step.Settings["UpdateFields"] = dialog.UpdateFields;
+                stepVm.NotifyNameChanged();
+            }
+        }
+
+        private void OpenExecSQLDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new ExecSQLDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
+            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
+                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+            dialog.Initialize(
+                step.Name,
+                connId,
+                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
+                executeEachRow);
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
+                step.Settings["SQL"] = dialog.SQL;
+                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
             }
         }

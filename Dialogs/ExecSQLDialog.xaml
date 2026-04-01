@@ -1,7 +1,7 @@
-<Window x:Class="SampleELT.Dialogs.MySQLInputDialog"
+<Window x:Class="SampleELT.Dialogs.ExecSQLDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MySQL Input 設定"
+        Title="Exec SQL 設定"
         Width="500"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
@@ -49,11 +49,11 @@
 
         <!-- SQL -->
         <StackPanel Grid.Row="2" Margin="0,0,0,4">
-            <TextBlock Text="SQL クエリ" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBlock Text="SQL" FontWeight="Bold" Margin="0,0,0,4"/>
         </StackPanel>
         <TextBox Grid.Row="3"
                  x:Name="SQLBox"
-                 Height="100"
+                 Height="120"
                  Padding="6,4"
                  AcceptsReturn="True"
                  TextWrapping="Wrap"
@@ -63,7 +63,7 @@
                  Margin="0,0,0,8"/>
 
         <!-- 行ごとに実行 -->
-        <StackPanel Grid.Row="4" Margin="0,0,0,10">
+        <StackPanel Grid.Row="4" Margin="0,0,0,12">
             <CheckBox x:Name="ExecuteEachRowCheck"
                       Content="行ごとに実行（前ステップの各行の値を ? パラメータとして渡す）"
                       FontSize="11"/>

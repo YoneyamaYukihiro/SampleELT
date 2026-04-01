@@ -58,6 +58,10 @@ namespace SampleELT.ViewModels
                 StepType.ExcelOutput => new ExcelOutputStep { Name = "Excel Output", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.Filter => new FilterStep { Name = "Filter", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.Calculation => new CalculationStep { Name = "Calculation", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.SelectValues => new SelectValuesStep { Name = "Select Values", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBDelete => new DBDeleteStep { Name = "DB Delete", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.InsertUpdate => new InsertUpdateStep { Name = "Insert/Update", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.ExecSQL => new ExecSQLStep { Name = "Exec SQL", CanvasX = offsetX, CanvasY = offsetY },
                 _ => throw new ArgumentOutOfRangeException(nameof(stepType))
             };
 
@@ -249,6 +253,10 @@ namespace SampleELT.ViewModels
                         "ExcelOutput" => new ExcelOutputStep(),
                         "Filter" => new FilterStep(),
                         "Calculation" => new CalculationStep(),
+                        "SelectValues" => new SelectValuesStep(),
+                        "DBDelete" => new DBDeleteStep(),
+                        "InsertUpdate" => new InsertUpdateStep(),
+                        "ExecSQL" => new ExecSQLStep(),
                         _ => null
                     };
 

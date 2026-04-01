@@ -35,6 +35,10 @@ namespace SampleELT.ViewModels
             StepType.ExcelOutput => "Excel Output",
             StepType.Filter => "Filter",
             StepType.Calculation => "Calculation",
+            StepType.SelectValues => "Select Values",
+            StepType.DBDelete => "DB Delete",
+            StepType.InsertUpdate => "Insert/Update",
+            StepType.ExecSQL => "Exec SQL",
             _ => "Unknown"
         };
 

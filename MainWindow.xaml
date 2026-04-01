@@ -180,6 +180,27 @@
                                 Command="{Binding AddStepCommand}"
                                 CommandParameter="{x:Static vm:StepTypeHelper.Calculation}"
                                 Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="📋 Select Values"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.SelectValues}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+
+                        <!-- DB Operation Group -->
+                        <Border Background="#FCE4EC" CornerRadius="4" Padding="6,4" Margin="0,10,0,6">
+                            <TextBlock Text="DB Operation" FontWeight="Bold" FontSize="12" Foreground="#880E4F"/>
+                        </Border>
+                        <Button Content="🗑 DB Delete"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.DBDelete}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="🔄 Insert/Update"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.InsertUpdate}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="⚡ Exec SQL"
+                                Command="{Binding AddStepCommand}"
+                                CommandParameter="{x:Static vm:StepTypeHelper.ExecSQL}"
+                                Style="{StaticResource PaletteButtonStyle}"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

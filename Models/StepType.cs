@@ -9,6 +9,10 @@ namespace SampleELT.Models
         MySQLOutput,
         ExcelOutput,
         Filter,
-        Calculation
+        Calculation,
+        SelectValues,
+        DBDelete,
+        InsertUpdate,
+        ExecSQL
     }
 }

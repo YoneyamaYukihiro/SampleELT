@@ -2,23 +2,24 @@ using System;
 using System.Linq;
 using System.Windows;
 using MySqlConnector;
+using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 
 namespace SampleELT.Dialogs
 {
-    public partial class MySQLInputDialog : Window
+    public partial class ExecSQLDialog : Window
     {
         public string StepName { get; private set; } = "";
         public Guid? ConnectionId { get; private set; }
         public string SQL { get; private set; } = "";
         public bool ExecuteEachRow { get; private set; }
 
-        public MySQLInputDialog()
+        public ExecSQLDialog()
         {
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, Guid? connectionId, string sql, bool executeEachRow = false)
+        public void Initialize(string stepName, Guid? connectionId, string sql, bool executeEachRow)
         {
             StepNameBox.Text = stepName;
             SQLBox.Text = sql;
@@ -28,13 +29,10 @@ namespace SampleELT.Dialogs
 
         private void RefreshConnectionList(Guid? selectId)
         {
-            var mysqlConns = ConnectionRegistry.Instance.Connections
-                .Where(c => c.DbType == DbType.MySQL)
-                .ToList();
+            var allConns = ConnectionRegistry.Instance.Connections.ToList();
+            ConnectionCombo.ItemsSource = allConns;
 
-            ConnectionCombo.ItemsSource = mysqlConns;
-
-            if (mysqlConns.Count == 0)
+            if (allConns.Count == 0)
             {
                 NoConnectionHint.Visibility = Visibility.Visible;
             }
@@ -42,9 +40,9 @@ namespace SampleELT.Dialogs
             {
                 NoConnectionHint.Visibility = Visibility.Collapsed;
                 var selected = selectId.HasValue
-                    ? mysqlConns.FirstOrDefault(c => c.Id == selectId.Value)
+                    ? allConns.FirstOrDefault(c => c.Id == selectId.Value)
                     : null;
-                ConnectionCombo.SelectedItem = selected ?? mysqlConns[0];
+                ConnectionCombo.SelectedItem = selected ?? allConns[0];
             }
         }
 
@@ -67,8 +65,16 @@ namespace SampleELT.Dialogs
 
             try
             {
-                using var c = new MySqlConnection(conn.ConnectionString);
-                await c.OpenAsync();
+                if (conn.DbType == DbType.Oracle)
+                {
+                    using var c = new OracleConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else
+                {
+                    using var c = new MySqlConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
                 MessageBox.Show("接続成功！", "接続テスト",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -97,7 +103,7 @@ namespace SampleELT.Dialogs
 
             if (string.IsNullOrWhiteSpace(SQLBox.Text))
             {
-                MessageBox.Show("SQLクエリを入力してください。", "入力エラー",
+                MessageBox.Show("SQLを入力してください。", "入力エラー",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

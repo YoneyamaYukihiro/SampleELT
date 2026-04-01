@@ -11,16 +11,18 @@ namespace SampleELT.Dialogs
         public string StepName { get; private set; } = "";
         public Guid? ConnectionId { get; private set; }
         public string SQL { get; private set; } = "";
+        public bool ExecuteEachRow { get; private set; }
 
         public OracleInputDialog()
         {
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, Guid? connectionId, string sql)
+        public void Initialize(string stepName, Guid? connectionId, string sql, bool executeEachRow = false)
         {
             StepNameBox.Text = stepName;
             SQLBox.Text = sql;
+            ExecuteEachRowCheck.IsChecked = executeEachRow;
             RefreshConnectionList(connectionId);
         }
 
@@ -103,6 +105,7 @@ namespace SampleELT.Dialogs
             StepName = StepNameBox.Text.Trim();
             ConnectionId = conn.Id;
             SQL = SQLBox.Text.Trim();
+            ExecuteEachRow = ExecuteEachRowCheck.IsChecked == true;
             DialogResult = true;
         }
 

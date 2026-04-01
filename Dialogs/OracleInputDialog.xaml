@@ -13,6 +13,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ステップ名 -->
@@ -59,10 +60,17 @@
                  VerticalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
                  FontSize="12"
-                 Margin="0,0,0,10"/>
+                 Margin="0,0,0,8"/>
+
+        <!-- 行ごとに実行 -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,10">
+            <CheckBox x:Name="ExecuteEachRowCheck"
+                      Content="行ごとに実行（前ステップの各行の値を ? パラメータとして渡す）"
+                      FontSize="11"/>
+        </StackPanel>
 
         <!-- ボタン -->
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>

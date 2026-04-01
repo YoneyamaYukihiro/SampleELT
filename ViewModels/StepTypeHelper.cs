@@ -15,5 +15,9 @@ namespace SampleELT.ViewModels
         public static StepType ExcelOutput => StepType.ExcelOutput;
         public static StepType Filter => StepType.Filter;
         public static StepType Calculation => StepType.Calculation;
+        public static StepType SelectValues => StepType.SelectValues;
+        public static StepType DBDelete => StepType.DBDelete;
+        public static StepType InsertUpdate => StepType.InsertUpdate;
+        public static StepType ExecSQL => StepType.ExecSQL;
     }
 }

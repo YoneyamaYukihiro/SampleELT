@@ -51,6 +51,20 @@ namespace SampleELT.Models
             => GetById(id)?.ConnectionString;
 
         /// <summary>
+        /// ステップ Settings から DbConnectionInfo を取得する。
+        /// </summary>
+        public DbConnectionInfo? FindConnection(Dictionary<string, object?> settings)
+        {
+            if (settings.TryGetValue("ConnectionId", out var idObj) &&
+                idObj != null &&
+                Guid.TryParse(idObj.ToString(), out var id))
+            {
+                return GetById(id);
+            }
+            return null;
+        }
+
+        /// <summary>
         /// ステップ Settings から ConnectionId → ConnectionString を解決する。
         /// ConnectionId が未設定の場合は直接 ConnectionString にフォールバック。
         /// </summary>
