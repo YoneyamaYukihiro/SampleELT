@@ -46,6 +46,9 @@ namespace SampleELT.ViewModels
         // Event fired when the schedule manager dialog should open
         public event Action? OpenScheduleManagerRequested;
 
+        // Event fired when schedule status changes (run completed / registry updated)
+        public event Action? ScheduleStatusChanged;
+
         // In-app scheduler
         private readonly DispatcherTimer _scheduleTimer;
 
@@ -116,6 +119,10 @@ namespace SampleELT.ViewModels
                 entry.LastRunSuccess = false;
                 entry.LastRunMessage = ex.Message;
                 AddLog($"===== スケジュール実行エラー [{entry.Name}]: {ex.Message} =====");
+            }
+            finally
+            {
+                ScheduleStatusChanged?.Invoke();
             }
         }
 
