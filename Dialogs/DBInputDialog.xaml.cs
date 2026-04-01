@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -8,6 +7,7 @@ using System.Windows.Controls;
 using MySqlConnector;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
+using DataTable = System.Data.DataTable;
 
 namespace SampleELT.Dialogs
 {
