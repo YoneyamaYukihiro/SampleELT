@@ -442,11 +442,15 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSize = step.Settings.TryGetValue("CommitSize", out var cs)
+                && int.TryParse(cs?.ToString(), out var csVal) ? csVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT");
+                step.Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT",
+                commitSize);
 
             if (dialog.ShowDialog() == true)
             {
@@ -454,6 +458,7 @@ namespace SampleELT
                 step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["Mode"] = dialog.Mode;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
                 stepVm.NotifyConnectionChanged();
             }
