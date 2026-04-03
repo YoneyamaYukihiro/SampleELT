@@ -82,6 +82,17 @@ namespace SampleELT.Steps
                     var v2 = GetNumeric(GetFieldValue(field2));
                     return v2 != 0 ? v1 / v2 : (object?)null;
                 }
+                case "dateDiffMinutes":
+                {
+                    var v1 = GetFieldValue(field1);
+                    var v2 = GetFieldValue(field2);
+                    if (v1 is DateTime dt1 && v2 is DateTime dt2)
+                        return Math.Round((dt1 - dt2).TotalMinutes, 2);
+                    // フォールバック: 数値（OADate形式の日数）として計算
+                    var d1 = GetNumeric(v1);
+                    var d2 = GetNumeric(v2);
+                    return Math.Round((d1 - d2) * 24 * 60, 2);
+                }
                 case "concat":
                 {
                     var s1 = GetFieldValue(field1)?.ToString() ?? "";

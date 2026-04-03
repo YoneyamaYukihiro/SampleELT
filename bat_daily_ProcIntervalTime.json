@@ -77,7 +77,8 @@
       "settings": {
         "FieldName": "PROC_START",
         "Operator": "lessThan",
-        "Value": "PREVIOUS_PROC_END"
+        "Value": "",
+        "RightField": "PREVIOUS_PROC_END"
       }
     },
     {
@@ -89,7 +90,8 @@
       "settings": {
         "FieldName": "PROC_END",
         "Operator": "greaterThan",
-        "Value": "PREVIOUS_PROC_END"
+        "Value": "",
+        "RightField": "PREVIOUS_PROC_END"
       }
     },
     {
@@ -100,7 +102,7 @@
       "canvasY": 305.0,
       "settings": {
         "OutputFieldName": "PROC_INTERVAL_TIME_MIN",
-        "ExpressionType": "subtract",
+        "ExpressionType": "dateDiffMinutes",
         "Field1": "PROC_END",
         "Field2": "PREVIOUS_PROC_END"
       }
