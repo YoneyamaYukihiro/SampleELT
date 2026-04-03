@@ -30,9 +30,12 @@ namespace SampleELT
         private StepNodeViewModel? _connectionSourceStep;
         private StepNodeViewModel? _connectionTargetStep;
 
-        // Step node size constants
-        private const double NodeWidth = 132; // card width (150 total - 18 port)
-        private const double NodeHeight = 70;
+        // Resize state
+        private bool _isResizing;
+        private StepNodeViewModel? _resizingStep;
+        private Point _resizeStartMousePos;
+        private double _resizeStartWidth;
+        private double _resizeStartHeight;
 
         public MainWindow()
         {
@@ -95,7 +98,17 @@ namespace SampleELT
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
 
-            if (_isDragging && _draggingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
+            if (_isResizing && _resizingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var currentPos = e.GetPosition(BackgroundCanvas);
+                var deltaX = currentPos.X - _resizeStartMousePos.X;
+                var deltaY = currentPos.Y - _resizeStartMousePos.Y;
+
+                stepVm.NodeWidth = Math.Max(120, _resizeStartWidth + deltaX);
+                stepVm.NodeHeight = Math.Max(50, _resizeStartHeight + deltaY);
+                e.Handled = true;
+            }
+            else if (_isDragging && _draggingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
             {
                 var currentPos = e.GetPosition(BackgroundCanvas);
                 var deltaX = currentPos.X - _dragStartMousePos.X;
@@ -122,6 +135,15 @@ namespace SampleELT
         {
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
+
+            if (_isResizing && _resizingStep == stepVm)
+            {
+                _isResizing = false;
+                _resizingStep = null;
+                fe.ReleaseMouseCapture();
+                e.Handled = true;
+                return;
+            }
 
             if (_isConnecting && _connectionSourceStep != null)
             {
@@ -162,6 +184,22 @@ namespace SampleELT
             stepVm.IsSelected = true;
         }
 
+        private void StepNode_ResizeDragStarted(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement fe) return;
+            if (fe.DataContext is not StepNodeViewModel stepVm) return;
+
+            _isResizing = true;
+            _isDragging = false;
+            _resizingStep = stepVm;
+            _resizeStartMousePos = Mouse.GetPosition(BackgroundCanvas);
+            _resizeStartWidth = stepVm.NodeWidth;
+            _resizeStartHeight = stepVm.NodeHeight;
+
+            fe.CaptureMouse();
+            e.Handled = true;
+        }
+
         // ==================== CANVAS MOUSE EVENTS ====================
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -178,6 +216,7 @@ namespace SampleELT
         {
             if (_isConnecting) ClearConnectionMode();
             if (_isDragging) { _isDragging = false; _draggingStep = null; }
+            if (_isResizing) { _isResizing = false; _resizingStep = null; }
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -301,6 +340,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -329,6 +369,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -357,6 +398,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -387,6 +429,7 @@ namespace SampleELT
                 step.Settings["Delimiter"] = dialog.Delimiter;
                 step.Settings["Encoding"]  = dialog.Encoding;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -399,11 +442,15 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSize = step.Settings.TryGetValue("CommitSize", out var cs)
+                && int.TryParse(cs?.ToString(), out var csVal) ? csVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT");
+                step.Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT",
+                commitSize);
 
             if (dialog.ShowDialog() == true)
             {
@@ -411,7 +458,9 @@ namespace SampleELT
                 step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["Mode"] = dialog.Mode;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -442,6 +491,7 @@ namespace SampleELT
                 step.Settings["Encoding"] = dialog.Encoding;
                 step.Settings["IncludeHeader"] = dialog.IncludeHeader.ToString();
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -451,17 +501,20 @@ namespace SampleELT
             var dialog = new FilterDialog { Owner = this };
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("FieldName", out var fn) ? fn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Operator", out var op) ? op?.ToString() ?? "equals" : "equals",
-                step.Settings.TryGetValue("Value", out var v) ? v?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("FieldName",  out var fn) ? fn?.ToString()   ?? "" : "",
+                step.Settings.TryGetValue("Operator",   out var op) ? op?.ToString()   ?? "equals" : "equals",
+                step.Settings.TryGetValue("Value",      out var v)  ? v?.ToString()    ?? "" : "",
+                step.Settings.TryGetValue("RightField", out var rf) ? rf?.ToString()   ?? "" : "");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["FieldName"] = dialog.FieldName;
-                step.Settings["Operator"] = dialog.Operator;
-                step.Settings["Value"] = dialog.Value;
+                step.Settings["FieldName"]  = dialog.FieldName;
+                step.Settings["Operator"]   = dialog.Operator;
+                step.Settings["Value"]      = dialog.Value;
+                step.Settings["RightField"] = dialog.RightField;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -486,6 +539,7 @@ namespace SampleELT
                 step.Settings["Field2"] = dialog.Field2;
                 step.Settings["Constant"] = dialog.Constant;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -502,6 +556,7 @@ namespace SampleELT
                 step.Name = dialog.StepName;
                 step.Settings["FieldMappings"] = dialog.FieldMappings;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -514,11 +569,15 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSizeDel = step.Settings.TryGetValue("CommitSize", out var csDel)
+                && int.TryParse(csDel?.ToString(), out var csDelVal) ? csDelVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
+                commitSizeDel);
 
             if (dialog.ShowDialog() == true)
             {
@@ -526,7 +585,9 @@ namespace SampleELT
                 step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -539,12 +600,16 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSizeIU = step.Settings.TryGetValue("CommitSize", out var csIU)
+                && int.TryParse(csIU?.ToString(), out var csIUVal) ? csIUVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
                 step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "",
+                commitSizeIU);
 
             if (dialog.ShowDialog() == true)
             {
@@ -553,7 +618,9 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -582,6 +649,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -593,6 +661,7 @@ namespace SampleELT
             {
                 stepVm.Step.Name = dialog.StepName;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -611,6 +680,7 @@ namespace SampleELT
                 step.Settings["Fields"] = dialog.Fields;
                 step.Settings["RowCount"] = dialog.RowCount;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -629,6 +699,7 @@ namespace SampleELT
                 step.Settings["JoinType"] = dialog.JoinType;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -641,12 +712,16 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSizeUpd = step.Settings.TryGetValue("CommitSize", out var csUpd)
+                && int.TryParse(csUpd?.ToString(), out var csUpdVal) ? csUpdVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
                 step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "",
+                commitSizeUpd);
 
             if (dialog.ShowDialog() == true)
             {
@@ -655,7 +730,9 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -674,6 +751,7 @@ namespace SampleELT
                 step.Settings["Fields"]     = dialog.Fields;
                 step.Settings["DateFormat"] = dialog.DateFormat;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -684,8 +762,8 @@ namespace SampleELT
             foreach (var stepVm in _vm.Steps)
             {
                 if (stepVm == excludeStep) continue;
-                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + NodeWidth &&
-                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + NodeHeight)
+                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + stepVm.NodeWidth &&
+                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + stepVm.NodeHeight)
                     return stepVm;
             }
             return null;
@@ -702,8 +780,8 @@ namespace SampleELT
             _connectionSourceStep = stepVm;
 
             // 接続線の始点 = ステップ右端の中央
-            var startX = stepVm.X + NodeWidth;
-            var startY = stepVm.Y + NodeHeight / 2;
+            var startX = stepVm.X + stepVm.NodeWidth;
+            var startY = stepVm.Y + stepVm.NodeHeight / 2;
 
             TempConnectionLine.X1 = startX;
             TempConnectionLine.Y1 = startY;
@@ -830,16 +908,33 @@ namespace SampleELT
 
             var content = new StackPanel();
 
-            // 名前行（ドット + 名前）
-            var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
-            nameRow.Children.Add(new Ellipse
+            // 名前行（ドット + 名前 | トグルボタン）
+            var nameRow = new DockPanel { LastChildFill = true };
+
+            // トグルボタン（右端）
+            var toggleBtn = CreateToggleButton(entry.IsEnabled, (_, _) =>
+            {
+                entry.IsEnabled = !entry.IsEnabled;
+                ScheduleRegistry.Instance.Save();
+                RefreshSchedulePanel();
+            });
+            DockPanel.SetDock(toggleBtn, Dock.Right);
+            nameRow.Children.Add(toggleBtn);
+
+            // 左側：ドット + 名前 [+ (無効) ラベル]
+            var leftStack = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            leftStack.Children.Add(new Ellipse
             {
                 Width = 8, Height = 8,
                 Fill = new SolidColorBrush(dotColor),
                 Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center
             });
-            nameRow.Children.Add(new TextBlock
+            leftStack.Children.Add(new TextBlock
             {
                 Text = entry.Name,
                 FontWeight = FontWeights.SemiBold,
@@ -847,14 +942,7 @@ namespace SampleELT
                 Foreground = fg,
                 TextTrimming = TextTrimming.CharacterEllipsis
             });
-            if (!entry.IsEnabled)
-                nameRow.Children.Add(new TextBlock
-                {
-                    Text = " (無効)",
-                    FontSize = 10,
-                    Foreground = Brushes.Gray,
-                    VerticalAlignment = VerticalAlignment.Center
-                });
+            nameRow.Children.Add(leftStack);
             content.Children.Add(nameRow);
 
             // 種別
@@ -909,6 +997,44 @@ namespace SampleELT
                 Child = content
             };
         }
+
+        private static Button CreateToggleButton(bool isEnabled, RoutedEventHandler onClick)
+        {
+            var bg = new SolidColorBrush(
+                isEnabled ? Color.FromRgb(0x43, 0xA0, 0x47)   // green
+                          : Color.FromRgb(0x9E, 0x9E, 0x9E)); // gray
+
+            // CornerRadius を持つ pill 型テンプレート
+            var borderFef = new FrameworkElementFactory(typeof(Border));
+            borderFef.SetValue(Border.CornerRadiusProperty, new CornerRadius(10));
+            borderFef.SetValue(Border.BackgroundProperty,
+                new TemplateBindingExtension(Control.BackgroundProperty));
+            borderFef.SetValue(Border.PaddingProperty,
+                new TemplateBindingExtension(Control.PaddingProperty));
+            var cpFef = new FrameworkElementFactory(typeof(ContentPresenter));
+            cpFef.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            cpFef.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            borderFef.AppendChild(cpFef);
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = borderFef };
+
+            var btn = new Button
+            {
+                Content         = isEnabled ? "有効" : "無効",
+                Background      = bg,
+                Foreground      = Brushes.White,
+                BorderThickness = new Thickness(0),
+                Padding         = new Thickness(8, 2, 8, 2),
+                FontSize        = 10,
+                FontWeight      = FontWeights.SemiBold,
+                Cursor          = Cursors.Hand,
+                Template        = template,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin          = new Thickness(6, 0, 0, 0)
+            };
+            btn.Click += onClick;
+            return btn;
+        }
+
 
         private static string GetWeekDayName(DayOfWeek day) => day switch
         {
@@ -1000,6 +1126,13 @@ namespace SampleELT
         private void ClearLog_Click(object sender, RoutedEventArgs e)
         {
             _vm.LogMessages.Clear();
+        }
+
+        private void CopyLog_Click(object sender, RoutedEventArgs e)
+        {
+            var text = string.Join(Environment.NewLine, _vm.LogMessages);
+            if (!string.IsNullOrEmpty(text))
+                Clipboard.SetText(text);
         }
     }
 }

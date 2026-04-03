@@ -18,6 +18,14 @@ namespace SampleELT.Steps
             CancellationToken ct)
         {
             var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
+
+            // SQL に @変数 が含まれる場合に備えて AllowUserVariables を有効化
+            var csb = new MySqlConnectionStringBuilder(connectionString)
+            {
+                AllowUserVariables = true
+            };
+            connectionString = csb.ConnectionString;
+
             var sql = Settings.TryGetValue("SQL", out var s) ? s?.ToString() ?? "" : "";
             var executeEachRow = Settings.TryGetValue("ExecuteEachRow", out var eer)
                 && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;

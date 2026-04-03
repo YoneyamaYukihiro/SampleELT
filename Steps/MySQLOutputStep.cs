@@ -20,6 +20,8 @@ namespace SampleELT.Steps
             var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
             var tableName = Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "";
             var mode = Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT";
+            int commitSize = Settings.TryGetValue("CommitSize", out var cs)
+                && int.TryParse(cs?.ToString(), out var csVal) && csVal > 0 ? csVal : 100;
 
             if (inputData.Count == 0)
             {
@@ -30,10 +32,10 @@ namespace SampleELT.Steps
             using var conn = new MySqlConnection(connectionString);
             await conn.OpenAsync(ct);
 
-            using var transaction = await conn.BeginTransactionAsync(ct);
+            int inserted = 0;
+            var transaction = await conn.BeginTransactionAsync(ct);
             try
             {
-                int inserted = 0;
                 foreach (var row in inputData)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -54,14 +56,18 @@ namespace SampleELT.Steps
                     }
 
                     using var cmd = new MySqlCommand(sql, conn, transaction);
-
                     for (int i = 0; i < columns.Count; i++)
-                    {
                         cmd.Parameters.AddWithValue($"@p{i}", row[columns[i]] ?? DBNull.Value);
-                    }
 
                     await cmd.ExecuteNonQueryAsync(ct);
                     inserted++;
+
+                    if (inserted % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = await conn.BeginTransactionAsync(ct);
+                    }
                 }
 
                 await transaction.CommitAsync(ct);
@@ -71,6 +77,10 @@ namespace SampleELT.Steps
             {
                 await transaction.RollbackAsync(ct);
                 throw;
+            }
+            finally
+            {
+                await transaction.DisposeAsync();
             }
 
             return inputData;

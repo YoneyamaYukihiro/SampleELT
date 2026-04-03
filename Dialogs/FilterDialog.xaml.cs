@@ -9,17 +9,19 @@ namespace SampleELT.Dialogs
         public string FieldName { get; private set; } = "";
         public string Operator { get; private set; } = "equals";
         public string Value { get; private set; } = "";
+        public string RightField { get; private set; } = "";
 
         public FilterDialog()
         {
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, string fieldName, string op, string value)
+        public void Initialize(string stepName, string fieldName, string op, string value, string rightField = "")
         {
             StepNameBox.Text = stepName;
             FieldNameBox.Text = fieldName;
             ValueBox.Text = value;
+            RightFieldBox.Text = rightField;
 
             foreach (ComboBoxItem item in OperatorCombo.Items)
             {
@@ -75,6 +77,7 @@ namespace SampleELT.Dialogs
             FieldName = FieldNameBox.Text.Trim();
             Operator = (OperatorCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "equals";
             Value = ValueBox.Text?.Trim() ?? "";
+            RightField = RightFieldBox.Text?.Trim() ?? "";
             DialogResult = true;
         }
 

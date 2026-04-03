@@ -27,31 +27,55 @@ namespace SampleELT.ViewModels
 
         public string TypeLabel => Step.StepType switch
         {
-            StepType.OracleInput => "Oracle Input",
-            StepType.MySQLInput => "MySQL Input",
-            StepType.ExcelInput => "File Input",
+            StepType.DBInput      => "DB Input",
+            StepType.DBOutput     => "DB Output",
+            StepType.OracleInput  => "Oracle Input",
+            StepType.MySQLInput   => "MySQL Input",
+            StepType.ExcelInput   => "File Input",
             StepType.OracleOutput => "Oracle Output",
-            StepType.MySQLOutput => "MySQL Output",
-            StepType.ExcelOutput => "File Output",
-            StepType.Filter => "Filter",
-            StepType.Calculation => "Calculation",
+            StepType.MySQLOutput  => "MySQL Output",
+            StepType.ExcelOutput  => "File Output",
+            StepType.Filter       => "Filter",
+            StepType.Calculation  => "Calculation",
             StepType.SelectValues => "Select Values",
-            StepType.DBDelete => "DB Delete",
+            StepType.DBDelete     => "DB Delete",
             StepType.InsertUpdate => "Insert/Update",
-            StepType.ExecSQL => "Exec SQL",
-            StepType.Dummy => "Dummy",
+            StepType.ExecSQL      => "Exec SQL",
+            StepType.Dummy        => "Dummy",
             StepType.GenerateRows => "Generate Rows",
-            StepType.MergeJoin => "Merge Join",
-            StepType.DBUpdate => "DB Update",
-            StepType.SetVariable => "Set Variable",
-            _ => "Unknown"
+            StepType.MergeJoin    => "Merge Join",
+            StepType.DBUpdate     => "DB Update",
+            StepType.SetVariable  => "Set Variable",
+            _ => Step.StepType.ToString()
         };
+
+        /// <summary>接続設定名 (ConnectionId が紐づくステップのみ表示)</summary>
+        public string ConnectionLabel
+        {
+            get
+            {
+                if (!Step.Settings.TryGetValue("ConnectionId", out var idObj) || idObj == null)
+                    return "";
+                if (!System.Guid.TryParse(idObj.ToString(), out var id))
+                    return "";
+                var conn = ConnectionRegistry.Instance.GetById(id);
+                return conn?.Name ?? "";
+            }
+        }
+
+        [ObservableProperty]
+        private double _nodeWidth;
+
+        [ObservableProperty]
+        private double _nodeHeight;
 
         public StepNodeViewModel(StepBase step)
         {
             Step = step;
             _x = step.CanvasX;
             _y = step.CanvasY;
+            _nodeWidth = step.NodeWidth;
+            _nodeHeight = step.NodeHeight;
         }
 
         partial void OnXChanged(double value)
@@ -64,9 +88,24 @@ namespace SampleELT.ViewModels
             Step.CanvasY = value;
         }
 
+        partial void OnNodeWidthChanged(double value)
+        {
+            Step.NodeWidth = value;
+        }
+
+        partial void OnNodeHeightChanged(double value)
+        {
+            Step.NodeHeight = value;
+        }
+
         public void NotifyNameChanged()
         {
             OnPropertyChanged(nameof(DisplayName));
+        }
+
+        public void NotifyConnectionChanged()
+        {
+            OnPropertyChanged(nameof(ConnectionLabel));
         }
     }
 }

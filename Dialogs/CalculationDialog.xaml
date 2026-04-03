@@ -40,6 +40,7 @@
                 <ComboBoxItem Content="divide"/>
                 <ComboBoxItem Content="concat"/>
                 <ComboBoxItem Content="constant"/>
+                <ComboBoxItem Content="dateDiffMinutes"/>
             </ComboBox>
         </StackPanel>
 

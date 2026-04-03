@@ -298,12 +298,12 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Canvas>
-                                                <!-- Arrow line -->
+                                                <!-- Connection line -->
                                                 <Line X1="{Binding X1}" Y1="{Binding Y1}"
                                                       X2="{Binding X2}" Y2="{Binding Y2}"
                                                       Stroke="#2196F3" StrokeThickness="2"/>
-                                                <!-- Arrowhead marker (simple) -->
-                                                <Polygon Points="0,0 -10,-5 -10,5"
+                                                <!-- Arrowhead: tip at X2,Y2, pointing in ArrowAngle direction -->
+                                                <Polygon Points="0,0 -12,-5 -12,5"
                                                          Fill="#2196F3"
                                                          RenderTransformOrigin="0,0">
                                                     <Polygon.RenderTransform>
@@ -344,6 +344,8 @@
                                             <controls:StepNodeControl
                                                 x:Name="StepNode"
                                                 DataContext="{Binding}"
+                                                Width="{Binding NodeWidth}"
+                                                Height="{Binding NodeHeight}"
                                                 IsSelected="{Binding IsSelected}"
                                                 IsConnectionTarget="{Binding IsConnectionTarget}"
                                                 IsConnectingMode="{Binding IsConnectingMode}"
@@ -351,7 +353,8 @@
                                                 MouseLeftButtonUp="StepNode_MouseLeftButtonUp"
                                                 MouseMove="StepNode_MouseMove"
                                                 MouseRightButtonDown="StepNode_MouseRightButtonDown"
-                                                OutputPortDragStarted="StepNode_OutputPortDragStarted">
+                                                OutputPortDragStarted="StepNode_OutputPortDragStarted"
+                                                ResizeDragStarted="StepNode_ResizeDragStarted">
                                                 <controls:StepNodeControl.ContextMenu>
                                                     <ContextMenu>
                                                         <MenuItem Header="⚙ 設定"
@@ -387,6 +390,39 @@
                                         Height="22"
                                         FontSize="11"
                                         Click="ClearLog_Click">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#546E7A"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}"
+                                                                CornerRadius="3"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#78909C"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <Button DockPanel.Dock="Right"
+                                        Content="📋 コピー"
+                                        HorizontalAlignment="Right"
+                                        Padding="8,2"
+                                        Height="22"
+                                        FontSize="11"
+                                        Margin="0,0,4,0"
+                                        Click="CopyLog_Click">
                                     <Button.Style>
                                         <Style TargetType="Button">
                                             <Setter Property="Background" Value="#546E7A"/>

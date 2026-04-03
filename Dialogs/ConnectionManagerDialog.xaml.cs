@@ -45,7 +45,23 @@ namespace SampleELT.Dialogs
                 DbTypeCombo.SelectedIndex = 0;
                 OracleSection.Visibility = Visibility.Visible;
                 MySQLSection.Visibility = Visibility.Collapsed;
-                OracleConnStrBox.Text = conn.ConnectionString;
+                try
+                {
+                    var builder = new OracleConnectionStringBuilder(conn.ConnectionString);
+                    ParseOracleDataSource(builder.DataSource ?? "",
+                        out var host, out var port, out var service);
+                    OracleServerBox.Text  = host;
+                    OraclePortBox.Text    = port;
+                    OracleServiceBox.Text = service;
+                    OracleUserBox.Text    = builder.UserID;
+                    OraclePassBox.Password = builder.Password;
+                }
+                catch
+                {
+                    OracleServerBox.Text  = "localhost";
+                    OraclePortBox.Text    = "1521";
+                    OracleServiceBox.Text = "ORCL";
+                }
             }
             else
             {
@@ -145,13 +161,13 @@ namespace SampleELT.Dialogs
 
             if (isOracle)
             {
-                if (string.IsNullOrWhiteSpace(OracleConnStrBox.Text))
+                if (string.IsNullOrWhiteSpace(OracleServerBox.Text))
                 {
-                    MessageBox.Show("接続文字列を入力してください。", "入力エラー",
+                    MessageBox.Show("サーバーを入力してください。", "入力エラー",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                _currentConnection.ConnectionString = OracleConnStrBox.Text.Trim();
+                _currentConnection.ConnectionString = BuildOracleConnectionString();
             }
             else
             {
@@ -179,6 +195,48 @@ namespace SampleELT.Dialogs
             return builder.ConnectionString;
         }
 
+        private string BuildOracleConnectionString()
+        {
+            if (!int.TryParse(OraclePortBox.Text.Trim(), out int port)) port = 1521;
+            var dataSource = $"{OracleServerBox.Text.Trim()}:{port}/{OracleServiceBox.Text.Trim()}";
+            var builder = new OracleConnectionStringBuilder
+            {
+                DataSource = dataSource,
+                UserID     = OracleUserBox.Text.Trim(),
+                Password   = OraclePassBox.Password
+            };
+            return builder.ConnectionString;
+        }
+
+        /// <summary>
+        /// "host:port/service" 形式の DataSource を分解する。
+        /// </summary>
+        private static void ParseOracleDataSource(
+            string dataSource, out string host, out string port, out string service)
+        {
+            host = "localhost"; port = "1521"; service = "ORCL";
+            if (string.IsNullOrWhiteSpace(dataSource)) return;
+
+            var colonIdx = dataSource.IndexOf(':');
+            var slashIdx = dataSource.IndexOf('/');
+
+            if (colonIdx > 0 && slashIdx > colonIdx)
+            {
+                host    = dataSource[..colonIdx];
+                port    = dataSource[(colonIdx + 1)..slashIdx];
+                service = dataSource[(slashIdx + 1)..];
+            }
+            else if (slashIdx > 0)
+            {
+                host    = dataSource[..slashIdx];
+                service = dataSource[(slashIdx + 1)..];
+            }
+            else
+            {
+                host = dataSource; // TNS 名などそのまま使用
+            }
+        }
+
         private async void TestConnection_Click(object sender, RoutedEventArgs e)
         {
             string cs;
@@ -187,7 +245,7 @@ namespace SampleELT.Dialogs
             if (_currentConnection != null)
             {
                 isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
-                cs = isOracle ? OracleConnStrBox.Text.Trim() : BuildMySQLConnectionString();
+                cs = isOracle ? BuildOracleConnectionString() : BuildMySQLConnectionString();
             }
             else
             {
@@ -197,6 +255,7 @@ namespace SampleELT.Dialogs
             }
 
             isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
+            cs = isOracle ? BuildOracleConnectionString() : BuildMySQLConnectionString();
 
             try
             {
