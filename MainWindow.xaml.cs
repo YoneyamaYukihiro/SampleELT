@@ -340,6 +340,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -368,6 +369,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -396,6 +398,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -426,6 +429,7 @@ namespace SampleELT
                 step.Settings["Delimiter"] = dialog.Delimiter;
                 step.Settings["Encoding"]  = dialog.Encoding;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -451,6 +455,7 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["Mode"] = dialog.Mode;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -481,6 +486,7 @@ namespace SampleELT
                 step.Settings["Encoding"] = dialog.Encoding;
                 step.Settings["IncludeHeader"] = dialog.IncludeHeader.ToString();
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -503,6 +509,7 @@ namespace SampleELT
                 step.Settings["Value"]      = dialog.Value;
                 step.Settings["RightField"] = dialog.RightField;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -527,6 +534,7 @@ namespace SampleELT
                 step.Settings["Field2"] = dialog.Field2;
                 step.Settings["Constant"] = dialog.Constant;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -543,6 +551,7 @@ namespace SampleELT
                 step.Name = dialog.StepName;
                 step.Settings["FieldMappings"] = dialog.FieldMappings;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -568,6 +577,7 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -595,6 +605,7 @@ namespace SampleELT
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -623,6 +634,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -634,6 +646,7 @@ namespace SampleELT
             {
                 stepVm.Step.Name = dialog.StepName;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -652,6 +665,7 @@ namespace SampleELT
                 step.Settings["Fields"] = dialog.Fields;
                 step.Settings["RowCount"] = dialog.RowCount;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -670,6 +684,7 @@ namespace SampleELT
                 step.Settings["JoinType"] = dialog.JoinType;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -697,6 +712,7 @@ namespace SampleELT
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -715,6 +731,7 @@ namespace SampleELT
                 step.Settings["Fields"]     = dialog.Fields;
                 step.Settings["DateFormat"] = dialog.DateFormat;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 

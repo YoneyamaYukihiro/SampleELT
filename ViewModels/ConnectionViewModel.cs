@@ -10,9 +10,12 @@ namespace SampleELT.ViewModels
         public StepNodeViewModel Source { get; }
         public StepNodeViewModel Target { get; }
 
-        public double X1 => Source.X + Source.NodeWidth / 2;
+        // Source: right-center edge (output port position)
+        public double X1 => Source.X + Source.NodeWidth;
         public double Y1 => Source.Y + Source.NodeHeight / 2;
-        public double X2 => Target.X + Target.NodeWidth / 2;
+
+        // Target: left-center edge (input port position)
+        public double X2 => Target.X;
         public double Y2 => Target.Y + Target.NodeHeight / 2;
 
         /// <summary>

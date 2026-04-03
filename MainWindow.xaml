@@ -298,12 +298,12 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Canvas>
-                                                <!-- Arrow line -->
+                                                <!-- Connection line -->
                                                 <Line X1="{Binding X1}" Y1="{Binding Y1}"
                                                       X2="{Binding X2}" Y2="{Binding Y2}"
                                                       Stroke="#2196F3" StrokeThickness="2"/>
-                                                <!-- Arrowhead marker (simple) -->
-                                                <Polygon Points="0,0 -10,-5 -10,5"
+                                                <!-- Arrowhead: tip at X2,Y2, pointing in ArrowAngle direction -->
+                                                <Polygon Points="0,0 -12,-5 -12,5"
                                                          Fill="#2196F3"
                                                          RenderTransformOrigin="0,0">
                                                     <Polygon.RenderTransform>

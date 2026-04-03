@@ -27,7 +27,7 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"/>
 
-                <!-- 名前・種別 -->
+                <!-- 名前・種別・接続名 -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock x:Name="NameText"
                                Text="{Binding DisplayName}"
@@ -41,6 +41,23 @@
                                FontSize="10"
                                Foreground="#757575"
                                TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="ConnText"
+                               Text="{Binding ConnectionLabel}"
+                               FontSize="9"
+                               Foreground="#1565C0"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding ConnectionLabel}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ConnectionLabel}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </StackPanel>
             </Grid>
         </Border>
