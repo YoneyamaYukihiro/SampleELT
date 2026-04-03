@@ -1,0 +1,192 @@
+{
+  "name": "bat_daily(ProcIntervalTime)",
+  "steps": [
+    {
+      "id": "a0000001-0000-0000-0000-000000000001",
+      "name": "Generate Rows",
+      "stepType": "GenerateRows",
+      "canvasX": 134.0,
+      "canvasY": 115.0,
+      "settings": {
+        "Fields": "start_date=\nend_date=",
+        "RowCount": "1"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000002",
+      "name": "Modified Java Script Value",
+      "stepType": "SetVariable",
+      "canvasX": 134.0,
+      "canvasY": 187.0,
+      "settings": {
+        "Fields": "start_date=YESTERDAY\nend_date=TODAY",
+        "DateFormat": "yyyy/M/d"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000003",
+      "name": "Select values",
+      "stepType": "SelectValues",
+      "canvasX": 134.0,
+      "canvasY": 281.0,
+      "settings": {
+        "FieldMappings": "start_date\nend_date"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000004",
+      "name": "SelectWpProcIntervalTime",
+      "stepType": "MySQLInput",
+      "canvasX": 272.0,
+      "canvasY": 245.0,
+      "settings": {
+        "ConnectionId": "b1c2d3e4-f5a6-7890-abcd-ef1234567891",
+        "SQL": "SELECT\n\t@i:=@i+1 AS ROWNUM,\n\tA.LINE_ID,\n\tA.SB_ID,\n\tA.PD_ID,\n\tA.LOT_ID,\n\tA.OP_ID,\n\tA.STEP_ID,\n\tA.WP_ID,\n\tA.RECIPE_ID,\n\tA.PROC_START,\n\tA.PROC_END\nFROM\n\t (SELECT @i:=0) AS DUMMY,\n\tREAL_PROCESS_TIME A\nWHERE\n\tA.LINE_ID = 'H1'\nAND\tA.SB_ID = '1A0'\nAND A.PROC_END >= ?\nAND A.PROC_END < ?\nORDER BY\n\tA.WP_ID,\n\tA.PROC_END",
+        "ExecuteEachRow": "false"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000005",
+      "name": "SelectWpProcIntervalTime 2",
+      "stepType": "MySQLInput",
+      "canvasX": 270.0,
+      "canvasY": 365.0,
+      "settings": {
+        "ConnectionId": "b1c2d3e4-f5a6-7890-abcd-ef1234567891",
+        "SQL": "SELECT\n\t@i:=@i+1 AS ROWNUM,\n\tA.WP_ID,\n\tA.LOT_ID AS PREVIOUS_LOT_ID,\n\tA.OP_ID AS PREVIOUS_OP_ID,\n\tA.STEP_ID AS PREVIOUS_STEP_ID,\n\tA.RECIPE_ID AS PREVIOUS_RECIPE_ID,\n\tA.PROC_START AS PREVIOUS_PROC_START,\n\tA.PROC_END AS PREVIOUS_PROC_END\nFROM\n\t (SELECT @i:=1) AS DUMMY,\n\tREAL_PROCESS_TIME A\nWHERE\n\tA.LINE_ID = 'H1'\nAND\tA.SB_ID = '1A0'\nAND A.PROC_END >= ?\nAND A.PROC_END < ?\nORDER BY\n\tA.WP_ID,\n\tA.PROC_END",
+        "ExecuteEachRow": "false"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000006",
+      "name": "Merge Join",
+      "stepType": "MergeJoin",
+      "canvasX": 414.0,
+      "canvasY": 302.0,
+      "settings": {
+        "JoinType": "INNER",
+        "KeyFields": "ROWNUM,WP_ID"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000007",
+      "name": "ProcStartCheck",
+      "stepType": "Filter",
+      "canvasX": 504.0,
+      "canvasY": 305.0,
+      "settings": {
+        "FieldName": "PROC_START",
+        "Operator": "lessThan",
+        "Value": "PREVIOUS_PROC_END"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000008",
+      "name": "ProcEndCheck",
+      "stepType": "Filter",
+      "canvasX": 619.0,
+      "canvasY": 305.0,
+      "settings": {
+        "FieldName": "PROC_END",
+        "Operator": "greaterThan",
+        "Value": "PREVIOUS_PROC_END"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000009",
+      "name": "Formula",
+      "stepType": "Calculation",
+      "canvasX": 724.0,
+      "canvasY": 305.0,
+      "settings": {
+        "OutputFieldName": "PROC_INTERVAL_TIME_MIN",
+        "ExpressionType": "subtract",
+        "Field1": "PROC_END",
+        "Field2": "PREVIOUS_PROC_END"
+      }
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000010",
+      "name": "Dummy (do nothing)",
+      "stepType": "Dummy",
+      "canvasX": 557.0,
+      "canvasY": 413.0,
+      "settings": {}
+    },
+    {
+      "id": "a0000001-0000-0000-0000-000000000011",
+      "name": "Update",
+      "stepType": "DBUpdate",
+      "canvasX": 840.0,
+      "canvasY": 305.0,
+      "settings": {
+        "ConnectionId": "b1c2d3e4-f5a6-7890-abcd-ef1234567891",
+        "TableName": "real_process_time",
+        "KeyFields": "LINE_ID,SB_ID,PD_ID,LOT_ID,OP_ID,STEP_ID,WP_ID,RECIPE_ID",
+        "UpdateFields": "PROC_INTERVAL_TIME_MIN"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "b0000001-0000-0000-0000-000000000001",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000001",
+      "targetStepId": "a0000001-0000-0000-0000-000000000002"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000002",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000002",
+      "targetStepId": "a0000001-0000-0000-0000-000000000003"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000003",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000003",
+      "targetStepId": "a0000001-0000-0000-0000-000000000004"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000004",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000003",
+      "targetStepId": "a0000001-0000-0000-0000-000000000005"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000005",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000004",
+      "targetStepId": "a0000001-0000-0000-0000-000000000006"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000006",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000005",
+      "targetStepId": "a0000001-0000-0000-0000-000000000006"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000007",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000006",
+      "targetStepId": "a0000001-0000-0000-0000-000000000007"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000008",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000007",
+      "targetStepId": "a0000001-0000-0000-0000-000000000010"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000009",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000007",
+      "targetStepId": "a0000001-0000-0000-0000-000000000008"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000010",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000008",
+      "targetStepId": "a0000001-0000-0000-0000-000000000010"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000011",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000008",
+      "targetStepId": "a0000001-0000-0000-0000-000000000009"
+    },
+    {
+      "id": "b0000001-0000-0000-0000-000000000012",
+      "sourceStepId": "a0000001-0000-0000-0000-000000000009",
+      "targetStepId": "a0000001-0000-0000-0000-000000000011"
+    }
+  ]
+}
