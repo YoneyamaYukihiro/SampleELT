@@ -74,26 +74,68 @@
                 <TextBox x:Name="NameTextBox" Height="28" Padding="6,4"
                          BorderBrush="#CCCCCC" Margin="0,0,0,12"/>
 
+                <!-- 実行対象 -->
+                <TextBlock Text="実行対象" FontSize="12" FontWeight="Bold"
+                           Foreground="#424242" Margin="0,0,0,6"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <RadioButton x:Name="TargetPipelineRadio"
+                                 Content="パイプライン"
+                                 GroupName="ScheduleTarget"
+                                 FontSize="12" IsChecked="True"
+                                 Margin="0,0,16,0"
+                                 Checked="TargetRadio_Checked"/>
+                    <RadioButton x:Name="TargetJobRadio"
+                                 Content="ジョブ"
+                                 GroupName="ScheduleTarget"
+                                 FontSize="12"
+                                 Checked="TargetRadio_Checked"/>
+                </StackPanel>
+
                 <!-- パイプラインファイル -->
-                <TextBlock Text="パイプラインファイル" FontSize="12" FontWeight="Bold"
-                           Foreground="#424242" Margin="0,0,0,4"/>
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox x:Name="PipelineFileTextBox" Height="28" Padding="6,4"
-                             BorderBrush="#CCCCCC" Grid.Column="0"/>
-                    <Button Content="参照..." Grid.Column="1"
-                            Height="28" Padding="8,0" Margin="6,0,0,0"
-                            Click="BrowseButton_Click">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                                <Setter Property="FontSize" Value="12"/>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                </Grid>
+                <StackPanel x:Name="PipelinePanel">
+                    <TextBlock Text="パイプラインファイル" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="PipelineFileTextBox" Height="28" Padding="6,4"
+                                 BorderBrush="#CCCCCC" Grid.Column="0"/>
+                        <Button Content="参照..." Grid.Column="1"
+                                Height="28" Padding="8,0" Margin="6,0,0,0"
+                                Click="BrowseButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="12"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <!-- ジョブファイル -->
+                <StackPanel x:Name="JobPanel" Visibility="Collapsed">
+                    <TextBlock Text="ジョブファイル" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="JobFileTextBox" Height="28" Padding="6,4"
+                                 BorderBrush="#CCCCCC" Grid.Column="0"/>
+                        <Button Content="参照..." Grid.Column="1"
+                                Height="28" Padding="8,0" Margin="6,0,0,0"
+                                Click="BrowseJobButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="12"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                </StackPanel>
 
                 <!-- 有効/無効 -->
                 <CheckBox x:Name="EnabledCheckBox" Content="有効にする"

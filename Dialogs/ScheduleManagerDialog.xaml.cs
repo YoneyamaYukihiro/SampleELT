@@ -56,7 +56,6 @@ namespace SampleELT.Dialogs
             ScheduleRegistry.Instance.Save();
             RefreshList();
 
-            // 追加したアイテムを選択
             for (int i = 0; i < ScheduleListBox.Items.Count; i++)
             {
                 if (ScheduleListBox.Items[i] is ListBoxItem li && li.Tag == entry)
@@ -79,7 +78,6 @@ namespace SampleELT.Dialogs
 
             if (result != MessageBoxResult.Yes) return;
 
-            // タスクスケジューラに登録されていた場合は削除
             if (_current.Mode == ScheduleMode.TaskScheduler)
                 TaskSchedulerHelper.Unregister(_current);
 
@@ -97,8 +95,16 @@ namespace SampleELT.Dialogs
             _suppressEvents = true;
 
             NameTextBox.Text = entry.Name;
-            PipelineFileTextBox.Text = entry.PipelineFilePath;
             EnabledCheckBox.IsChecked = entry.IsEnabled;
+
+            // 実行対象
+            var isPipeline = entry.Target != ScheduleTarget.Job;
+            TargetPipelineRadio.IsChecked = isPipeline;
+            TargetJobRadio.IsChecked = !isPipeline;
+            UpdateTargetPanelVisibility(entry.Target);
+
+            PipelineFileTextBox.Text = entry.PipelineFilePath;
+            JobFileTextBox.Text = entry.JobFilePath;
 
             // スケジュール種類
             TypeComboBox.SelectedIndex = entry.Type switch
@@ -119,7 +125,6 @@ namespace SampleELT.Dialogs
             HourlyMinuteTextBox.Text = entry.HourlyMinute.ToString("D2");
             IntervalTextBox.Text = entry.IntervalMinutes.ToString();
 
-            // 最終実行情報
             if (entry.LastRunTime.HasValue)
             {
                 var status = entry.LastRunSuccess == true ? "成功" : "失敗";
@@ -135,9 +140,23 @@ namespace SampleELT.Dialogs
             UpdatePanelVisibility(entry.Type);
         }
 
+        private void TargetRadio_Checked(object sender, RoutedEventArgs e)
+        {
+            if (PipelinePanel == null) return;
+            var target = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
+            UpdateTargetPanelVisibility(target);
+        }
+
+        private void UpdateTargetPanelVisibility(ScheduleTarget target)
+        {
+            if (PipelinePanel == null) return;
+            PipelinePanel.Visibility = target == ScheduleTarget.Pipeline ? Visibility.Visible : Visibility.Collapsed;
+            JobPanel.Visibility      = target == ScheduleTarget.Job      ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         private void ModeRadio_Checked(object sender, RoutedEventArgs e)
         {
-            if (ModeInAppNote == null) return; // InitializeComponent 前は無視
+            if (ModeInAppNote == null) return;
             var isTaskScheduler = ModeTaskSchedulerRadio.IsChecked == true;
             ModeInAppNote.Visibility        = isTaskScheduler ? Visibility.Collapsed : Visibility.Visible;
             ModeTaskSchedulerNote.Visibility = isTaskScheduler ? Visibility.Visible   : Visibility.Collapsed;
@@ -179,17 +198,40 @@ namespace SampleELT.Dialogs
                 PipelineFileTextBox.Text = dialog.FileName;
         }
 
+        private void BrowseJobButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title  = "ジョブファイルを選択",
+                Filter = "Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json|All files (*.*)|*.*"
+            };
+            if (dialog.ShowDialog() == true)
+                JobFileTextBox.Text = dialog.FileName;
+        }
+
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             if (_current == null) return;
 
             var prevMode = _current.Mode;
 
-            _current.Name             = NameTextBox.Text.Trim();
-            _current.PipelineFilePath = PipelineFileTextBox.Text.Trim();
-            _current.IsEnabled        = EnabledCheckBox.IsChecked == true;
-            _current.Mode             = ModeTaskSchedulerRadio.IsChecked == true
-                                        ? ScheduleMode.TaskScheduler : ScheduleMode.InApp;
+            _current.Name      = NameTextBox.Text.Trim();
+            _current.IsEnabled = EnabledCheckBox.IsChecked == true;
+            _current.Target    = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
+
+            if (_current.Target == ScheduleTarget.Pipeline)
+            {
+                _current.PipelineFilePath = PipelineFileTextBox.Text.Trim();
+                _current.JobFilePath = "";
+            }
+            else
+            {
+                _current.PipelineFilePath = "";
+                _current.JobFilePath = JobFileTextBox.Text.Trim();
+            }
+
+            _current.Mode = ModeTaskSchedulerRadio.IsChecked == true
+                            ? ScheduleMode.TaskScheduler : ScheduleMode.InApp;
             _current.Type = TypeComboBox.SelectedIndex switch
             {
                 1 => ScheduleType.Weekly,
@@ -203,7 +245,6 @@ namespace SampleELT.Dialogs
             if (int.TryParse(MinuteTextBox.Text, out int m) && m >= 0 && m <= 59)
                 _current.TimeMinute = m;
 
-            // 曜日: 月=0...日=6 → DayOfWeek 月=1...日=0
             _current.WeekDay = WeekDayComboBox.SelectedIndex switch
             {
                 0 => DayOfWeek.Monday,
@@ -223,8 +264,8 @@ namespace SampleELT.Dialogs
             ScheduleRegistry.Instance.Save();
             RefreshList();
 
-            // タスクスケジューラ連携
-            if (_current.Mode == ScheduleMode.TaskScheduler)
+            // タスクスケジューラ連携（パイプラインのみ対応）
+            if (_current.Mode == ScheduleMode.TaskScheduler && _current.Target == ScheduleTarget.Pipeline)
             {
                 var (ok, msg) = TaskSchedulerHelper.Register(_current);
                 if (!ok)
@@ -234,9 +275,17 @@ namespace SampleELT.Dialogs
                         "登録エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
+            else if (_current.Mode == ScheduleMode.TaskScheduler && _current.Target == ScheduleTarget.Job)
+            {
+                MessageBox.Show(
+                    "ジョブはWindowsタスクスケジューラに対応していません。\nインアプリモードに切り替えてください。",
+                    "非対応", MessageBoxButton.OK, MessageBoxImage.Information);
+                _current.Mode = ScheduleMode.InApp;
+                ModeInAppRadio.IsChecked = true;
+                ScheduleRegistry.Instance.Save();
+            }
             else if (prevMode == ScheduleMode.TaskScheduler)
             {
-                // インアプリに戻った場合はタスクスケジューラから削除
                 TaskSchedulerHelper.Unregister(_current);
             }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -46,9 +47,17 @@ namespace SampleELT
             _vm.LogMessages.CollectionChanged += LogMessages_CollectionChanged;
             _vm.OpenSettingsRequested += OpenStepSettingsDialog;
             _vm.OpenScheduleManagerRequested += OpenScheduleManagerDialog;
+            _vm.OpenJobManagerRequested += OpenJobManagerDialog;
             _vm.ScheduleStatusChanged += () => Dispatcher.InvokeAsync(RefreshSchedulePanel);
 
             RefreshSchedulePanel();
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (!_vm.ConfirmDiscardChanges())
+                e.Cancel = true;
+            base.OnClosing(e);
         }
 
         private void LogMessages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -313,6 +322,8 @@ namespace SampleELT
                     OpenSetVariableDialog(stepVm);
                     break;
             }
+            // ダイアログが閉じた後は設定が変わった可能性があるため常に dirty とする
+            _vm.MarkModified();
         }
 
         private void OpenDBInputDialog(StepNodeViewModel stepVm)
@@ -1087,6 +1098,12 @@ namespace SampleELT
             var dialog = new ScheduleManagerDialog { Owner = this };
             dialog.ShowDialog();
             RefreshSchedulePanel(); // ダイアログで追加・変更された内容を反映
+        }
+
+        private void OpenJobManagerDialog()
+        {
+            var dialog = new JobManagerDialog { Owner = this };
+            dialog.ShowDialog();
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e)

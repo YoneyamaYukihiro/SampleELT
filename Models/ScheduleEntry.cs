@@ -2,6 +2,12 @@ using System;
 
 namespace SampleELT.Models
 {
+    public enum ScheduleTarget
+    {
+        Pipeline,   // パイプラインファイルを直接実行
+        Job         // ジョブを実行（複数パイプラインを順次実行）
+    }
+
     public enum ScheduleMode
     {
         InApp,          // アプリ内スケジューラ（アプリ起動中のみ）
@@ -20,7 +26,9 @@ namespace SampleELT.Models
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "";
+        public ScheduleTarget Target { get; set; } = ScheduleTarget.Pipeline;
         public string PipelineFilePath { get; set; } = "";
+        public string JobFilePath { get; set; } = "";
         public bool IsEnabled { get; set; } = true;
         public ScheduleMode Mode { get; set; } = ScheduleMode.InApp;
         public ScheduleType Type { get; set; } = ScheduleType.Daily;

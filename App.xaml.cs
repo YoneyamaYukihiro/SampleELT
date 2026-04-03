@@ -36,6 +36,7 @@ namespace SampleELT
 
             // 通常 UI モード
             ScheduleRegistry.Instance.Load();
+            JobRegistry.Instance.Load();
             var mainWindow = new MainWindow();
             mainWindow.Show();
         }

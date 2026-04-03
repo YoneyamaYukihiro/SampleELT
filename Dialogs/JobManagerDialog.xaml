@@ -1,0 +1,310 @@
+<Window x:Class="SampleELT.Dialogs.JobManagerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ジョブ管理"
+        Width="780" Height="560"
+        MinWidth="640" MinHeight="460"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="210" MinWidth="160"/>
+            <ColumnDefinition Width="4"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ==================== 上: ファイル操作ツールバー ==================== -->
+        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                Background="#ECEFF1" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1"
+                Padding="8,5">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="NewJobFileButton" Content="📄 新規"
+                        Height="26" Padding="8,0" Margin="0,0,4,0"
+                        Click="NewJobFileButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="FontSize" Value="12"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="OpenJobFileButton" Content="📂 開く"
+                        Height="26" Padding="8,0" Margin="0,0,4,0"
+                        Click="OpenJobFileButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="FontSize" Value="12"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="SaveJobFileButton" Content="💾 保存"
+                        Height="26" Padding="8,0" Margin="0,0,4,0"
+                        Click="SaveJobFileButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Background" Value="#4CAF50"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="SaveAsJobFileButton" Content="📋 名前を付けて保存"
+                        Height="26" Padding="8,0" Margin="0,0,12,0"
+                        Click="SaveAsJobFileButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Background" Value="#388E3C"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <TextBlock x:Name="FilePathLabel"
+                           VerticalAlignment="Center" FontSize="11"
+                           Foreground="#616161" Text="（ファイル未保存）"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ==================== 左: ジョブ一覧 ==================== -->
+        <Border Grid.Row="1" Grid.Column="0"
+                BorderBrush="#DDDDDD" BorderThickness="0,0,1,0"
+                Background="#FAFAFA">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Background="#ECEFF1"
+                        Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
+                    <TextBlock Text="ジョブ一覧"
+                               FontWeight="Bold" FontSize="12" Foreground="#424242"/>
+                </Border>
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                            Margin="8,6" HorizontalAlignment="Left">
+                    <Button x:Name="AddJobButton" Content="追加"
+                            Width="60" Height="26" Margin="0,0,6,0"
+                            Click="AddJobButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                <Setter Property="FontSize" Value="12"/>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button x:Name="DeleteJobButton" Content="削除"
+                            Width="60" Height="26"
+                            Click="DeleteJobButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                <Setter Property="FontSize" Value="12"/>
+                                <Setter Property="Background" Value="#F44336"/>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+                <ListBox x:Name="JobListBox"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         SelectionChanged="JobListBox_SelectionChanged"
+                         Margin="4,4"/>
+            </DockPanel>
+        </Border>
+
+        <GridSplitter Grid.Row="1" Grid.Column="1"
+                      Width="4" HorizontalAlignment="Stretch"
+                      Background="#DDDDDD"/>
+
+        <!-- ==================== 右: 編集フォーム ==================== -->
+        <Grid Grid.Row="1" Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ジョブ名・設定 -->
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Padding="16,12,16,0">
+                <StackPanel x:Name="EditPanel" IsEnabled="False">
+                    <!-- ジョブ名 -->
+                    <TextBlock Text="ジョブ名" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <TextBox x:Name="NameTextBox" Height="28" Padding="6,4"
+                             BorderBrush="#CCCCCC" Margin="0,0,0,12"
+                             TextChanged="JobForm_Changed"/>
+
+                    <!-- 有効/無効 -->
+                    <CheckBox x:Name="EnabledCheckBox" Content="有効にする"
+                              FontSize="12" Margin="0,0,0,12"
+                              Checked="JobForm_Changed" Unchecked="JobForm_Changed"/>
+
+                    <!-- 最終実行情報 -->
+                    <Border Background="#F5F5F5" CornerRadius="4"
+                            Padding="10,8" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="最終実行情報" FontSize="11" FontWeight="Bold"
+                                       Foreground="#616161" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="LastRunTextBlock"
+                                       Text="（未実行）" FontSize="11"
+                                       Foreground="#757575" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- パイプラインステップ一覧 -->
+            <Border Grid.Row="1" Margin="16,0,16,0"
+                    BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="4">
+                <DockPanel x:Name="StepsPanel" IsEnabled="False">
+                    <Border DockPanel.Dock="Top" Background="#ECEFF1"
+                            Padding="8,5" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <TextBlock Text="実行パイプライン（上から順に実行）"
+                                       FontSize="11" FontWeight="Bold" Foreground="#424242"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button x:Name="AddStepButton" Content="＋ 追加"
+                                        Height="22" Padding="8,0" Margin="0,0,4,0"
+                                        FontSize="11"
+                                        Click="AddStepButton_Click">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                            <Setter Property="FontSize" Value="11"/>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <ListView x:Name="StepsListView"
+                              BorderThickness="0"
+                              SelectionMode="Single"
+                              SelectionChanged="StepsListView_SelectionChanged">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="順序" Width="46"
+                                                DisplayMemberBinding="{Binding DisplayOrder}"/>
+                                <GridViewColumn Header="名前" Width="120"
+                                                DisplayMemberBinding="{Binding Name}"/>
+                                <GridViewColumn Header="パイプラインファイル" Width="260"
+                                                DisplayMemberBinding="{Binding PipelineFilePath}"/>
+                                <GridViewColumn Header="エラー時" Width="70"
+                                                DisplayMemberBinding="{Binding ContinueOnErrorLabel}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </DockPanel>
+            </Border>
+
+            <!-- ステップ編集エリア -->
+            <Border Grid.Row="2" Margin="16,8,16,12"
+                    Background="#F9FBE7" BorderBrush="#C5E1A5" BorderThickness="1" CornerRadius="4"
+                    Padding="10,8">
+                <StackPanel x:Name="StepEditPanel" IsEnabled="False">
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="ステップ名：" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="#424242" Width="72"/>
+                        <TextBox x:Name="StepNameTextBox" Grid.Column="1"
+                                 Height="24" Padding="4,2" FontSize="11"
+                                 BorderBrush="#CCCCCC"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="ファイル：" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="#424242" Width="72"/>
+                        <TextBox x:Name="StepFileTextBox" Grid.Column="1"
+                                 Height="24" Padding="4,2" FontSize="11"
+                                 BorderBrush="#CCCCCC"/>
+                        <Button Content="参照..." Grid.Column="2"
+                                Height="24" Padding="6,0" Margin="4,0,0,0" FontSize="11"
+                                Click="StepBrowseButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="11"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox x:Name="ContinueOnErrorCheckBox"
+                                  Content="エラー時も続行する" FontSize="11" Margin="72,0,0,0"/>
+                        <Button x:Name="ApplyStepButton" Content="適用"
+                                Height="24" Padding="10,0" Margin="16,0,4,0" FontSize="11"
+                                Click="ApplyStepButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="Background" Value="#4CAF50"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button x:Name="DeleteStepButton" Content="削除"
+                                Height="24" Padding="10,0" Margin="4,0,0,0" FontSize="11"
+                                Click="DeleteStepButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="Background" Value="#F44336"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button x:Name="MoveUpButton" Content="↑" Width="28"
+                                Height="24" Padding="0" Margin="8,0,2,0" FontSize="11"
+                                Click="MoveUpButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="Background" Value="#607D8B"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button x:Name="MoveDownButton" Content="↓" Width="28"
+                                Height="24" Padding="0" Margin="2,0,0,0" FontSize="11"
+                                Click="MoveDownButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="Background" Value="#607D8B"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ==================== 下: 保存・閉じるボタン ==================== -->
+        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                Background="#ECEFF1" Padding="12,8"
+                BorderBrush="#DDDDDD" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <TextBlock x:Name="StatusTextBlock"
+                           VerticalAlignment="Center"
+                           Foreground="#4CAF50" FontSize="12"
+                           Margin="0,0,16,0" Visibility="Collapsed"/>
+                <Button x:Name="SaveJobButton" Content="保存"
+                        Height="30" Width="80" Margin="0,0,8,0"
+                        Click="SaveJobButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="Background" Value="#4CAF50"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="閉じる" Height="30" Width="80"
+                        Click="CloseButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="Background" Value="#607D8B"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

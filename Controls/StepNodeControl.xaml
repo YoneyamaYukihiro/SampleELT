@@ -87,12 +87,6 @@
             <Border.Effect>
                 <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.3" Color="#2196F3"/>
             </Border.Effect>
-            <TextBlock Text="▶"
-                       Foreground="White"
-                       FontSize="7"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
-                       Margin="1,0,0,0"/>
         </Border>
 
         <!-- 入力ポート (左端・接続ドラッグ中のみ強調表示) -->

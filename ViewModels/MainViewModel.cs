@@ -36,6 +36,12 @@ namespace SampleELT.ViewModels
         [ObservableProperty]
         private string _statusMessage = "準備完了";
 
+        [ObservableProperty]
+        private string _windowTitle = "SampleELT";
+
+        [ObservableProperty]
+        private bool _isModified;
+
         public Pipeline CurrentPipeline { get; private set; } = new Pipeline();
 
         private CancellationTokenSource? _cts;
@@ -45,6 +51,9 @@ namespace SampleELT.ViewModels
 
         // Event fired when the schedule manager dialog should open
         public event Action? OpenScheduleManagerRequested;
+
+        // Event fired when the job manager dialog should open
+        public event Action? OpenJobManagerRequested;
 
         // Event fired when schedule status changes (run completed / registry updated)
         public event Action? ScheduleStatusChanged;
@@ -67,6 +76,12 @@ namespace SampleELT.ViewModels
             OpenScheduleManagerRequested?.Invoke();
         }
 
+        [RelayCommand]
+        private void OpenJobManager()
+        {
+            OpenJobManagerRequested?.Invoke();
+        }
+
         private async void SchedulerTick(object? sender, EventArgs e)
         {
             var now = DateTime.Now;
@@ -82,33 +97,48 @@ namespace SampleELT.ViewModels
                 // この実行タイミングですでに実行済みならスキップ
                 if (entry.LastRunTime.HasValue && entry.LastRunTime.Value >= lastDue.Value) continue;
 
-                await RunScheduledPipelineAsync(entry);
+                await RunScheduledEntryAsync(entry);
                 anySaved = true;
             }
 
             if (anySaved) registry.Save();
         }
 
-        private async Task RunScheduledPipelineAsync(ScheduleEntry entry)
+        private async Task RunScheduledEntryAsync(ScheduleEntry entry)
         {
             AddLog($"===== スケジュール実行開始: {entry.Name} =====");
             entry.LastRunTime = DateTime.Now;
 
+            var progress = new Progress<string>(msg =>
+            {
+                AddLog(msg);
+                StatusMessage = msg;
+            });
+            var cts = new CancellationTokenSource();
+
             try
             {
-                if (!File.Exists(entry.PipelineFilePath))
-                    throw new FileNotFoundException($"パイプラインファイルが見つかりません: {entry.PipelineFilePath}");
-
-                var pipeline = PipelineLoader.LoadFromFile(entry.PipelineFilePath);
-                var progress = new Progress<string>(msg =>
+                if (entry.Target == Models.ScheduleTarget.Job)
                 {
-                    AddLog(msg);
-                    StatusMessage = msg;
-                });
-                var engine = new ExecutionEngine();
-                var cts = new CancellationTokenSource();
+                    if (string.IsNullOrWhiteSpace(entry.JobFilePath))
+                        throw new InvalidOperationException("ジョブファイルが指定されていません");
 
-                await engine.ExecuteAsync(pipeline, progress, cts.Token);
+                    if (!File.Exists(entry.JobFilePath))
+                        throw new FileNotFoundException($"ジョブファイルが見つかりません: {entry.JobFilePath}");
+
+                    var job = JobLoader.LoadFromFile(entry.JobFilePath);
+                    var executor = new JobExecutor();
+                    await executor.ExecuteAsync(job, progress, cts.Token);
+                }
+                else
+                {
+                    if (!File.Exists(entry.PipelineFilePath))
+                        throw new FileNotFoundException($"パイプラインファイルが見つかりません: {entry.PipelineFilePath}");
+
+                    var pipeline = PipelineLoader.LoadFromFile(entry.PipelineFilePath);
+                    var engine = new ExecutionEngine();
+                    await engine.ExecuteAsync(pipeline, progress, cts.Token);
+                }
 
                 entry.LastRunSuccess = true;
                 entry.LastRunMessage = "実行完了";
@@ -160,6 +190,7 @@ namespace SampleELT.ViewModels
             var vm = new StepNodeViewModel(step);
             Steps.Add(vm);
             SelectedStep = vm;
+            MarkModified();
 
             AddLog($"ステップ追加: {step.Name}");
             StatusMessage = $"ステップ追加: {step.Name}";
@@ -190,6 +221,7 @@ namespace SampleELT.ViewModels
             AddLog($"ステップ削除: {SelectedStep.Step.Name}");
             StatusMessage = "ステップを削除しました";
             SelectedStep = null;
+            MarkModified();
         }
 
         [RelayCommand]
@@ -245,11 +277,13 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void ClearCanvas()
         {
+            if (!ConfirmDiscardChanges()) return;
             Steps.Clear();
             Connections.Clear();
             CurrentPipeline.Steps.Clear();
             CurrentPipeline.Connections.Clear();
             SelectedStep = null;
+            IsModified = false;
             StatusMessage = "キャンバスをクリアしました";
             AddLog("キャンバスをクリアしました");
         }
@@ -299,6 +333,7 @@ namespace SampleELT.ViewModels
                 File.WriteAllText(dialog.FileName, json);
 
                 CurrentPipeline.Name = Path.GetFileNameWithoutExtension(dialog.FileName);
+                IsModified = false;
                 StatusMessage = $"保存完了: {dialog.FileName}";
                 AddLog($"パイプライン保存: {dialog.FileName}");
             }
@@ -314,6 +349,8 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void LoadPipeline()
         {
+            if (!ConfirmDiscardChanges()) return;
+
             var dialog = new OpenFileDialog
             {
                 Title = "パイプラインを読み込む",
@@ -401,6 +438,7 @@ namespace SampleELT.ViewModels
                 }
 
                 SelectedStep = null;
+                IsModified = false;
                 StatusMessage = $"読み込み完了: {dialog.FileName}";
                 AddLog($"パイプライン読み込み: {dialog.FileName}");
             }
@@ -440,6 +478,7 @@ namespace SampleELT.ViewModels
             CurrentPipeline.Connections.Add(conn);
             Connections.Add(new ConnectionViewModel(conn, sourceVm, targetVm));
 
+            MarkModified();
             AddLog($"接続: {sourceVm.DisplayName} → {targetVm.DisplayName}");
             StatusMessage = $"接続作成: {sourceVm.DisplayName} → {targetVm.DisplayName}";
         }
@@ -453,12 +492,39 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void NewPipeline()
         {
+            if (!ConfirmDiscardChanges()) return;
             Steps.Clear();
             Connections.Clear();
             CurrentPipeline = new Pipeline();
             SelectedStep = null;
+            IsModified = false;
             StatusMessage = "新しいパイプライン";
             AddLog("新しいパイプラインを作成しました");
+        }
+
+        // ==================== DIRTY TRACKING ====================
+
+        public void MarkModified()
+        {
+            IsModified = true;
+        }
+
+        partial void OnIsModifiedChanged(bool value)
+        {
+            var name = string.IsNullOrWhiteSpace(CurrentPipeline.Name) ? "新しいパイプライン" : CurrentPipeline.Name;
+            WindowTitle = value ? $"SampleELT - {name} *" : $"SampleELT - {name}";
+        }
+
+        /// <summary>未保存の変更がある場合、ユーザーに確認する。続行してよければ true を返す。</summary>
+        public bool ConfirmDiscardChanges()
+        {
+            if (!IsModified) return true;
+            var result = System.Windows.MessageBox.Show(
+                "パイプラインに未保存の変更があります。変更を破棄して続行しますか？",
+                "未保存の変更",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning);
+            return result == System.Windows.MessageBoxResult.Yes;
         }
 
         private void AddLog(string message)
