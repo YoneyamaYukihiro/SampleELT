@@ -323,7 +323,8 @@ namespace SampleELT.ViewModels
             try
             {
                 var json = File.ReadAllText(dialog.FileName);
-                var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json, options);
                 if (pipelineData == null) return;
 
                 // Clear current state
