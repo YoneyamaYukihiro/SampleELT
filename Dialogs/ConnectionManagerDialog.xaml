@@ -108,18 +108,40 @@
                     </ComboBox>
                 </StackPanel>
 
-                <!-- Oracle: 接続文字列 -->
+                <!-- Oracle: 個別フィールド -->
                 <StackPanel Grid.Row="2" x:Name="OracleSection" Margin="0,0,0,10">
-                    <TextBlock Text="接続文字列 (Connection String)" FontWeight="Bold" Margin="0,0,0,4"/>
-                    <TextBox x:Name="OracleConnStrBox"
-                             Height="56"
-                             Padding="6,4"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto"
-                             TextChanged="EditField_Changed"/>
-                    <TextBlock Text="例: Data Source=host:1521/ORCL;User Id=user;Password=pass;"
-                               Foreground="#9E9E9E" FontSize="11" Margin="0,2,0,0"/>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="サーバー" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="OracleServerBox" Height="28" Padding="6,4"
+                                     Text="localhost" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="ポート" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="OraclePortBox" Height="28" Padding="6,4"
+                                     Text="1521" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="サービス名 / SID" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="OracleServiceBox" Height="28" Padding="6,4"
+                                 Text="ORCL" TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="ユーザー名" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="OracleUserBox" Height="28" Padding="6,4"
+                                 TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="パスワード" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <PasswordBox x:Name="OraclePassBox" Height="28" Padding="6,4"
+                                     PasswordChanged="EditField_Changed"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- MySQL: 個別フィールド -->
