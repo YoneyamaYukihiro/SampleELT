@@ -33,9 +33,14 @@ namespace SampleELT.Steps
             bool isOracle = conn?.DbType == DbType.Oracle;
 
             if (isOracle)
+            {
                 await ExecuteOracleAsync(connectionString, sql, executeEachRow, inputData, progress, ct);
+            }
             else
-                await ExecuteMySQLAsync(connectionString, sql, executeEachRow, inputData, progress, ct);
+            {
+                var csb = new MySqlConnectionStringBuilder(connectionString) { AllowUserVariables = true };
+                await ExecuteMySQLAsync(csb.ConnectionString, sql, executeEachRow, inputData, progress, ct);
+            }
 
             return inputData;
         }

@@ -19,7 +19,9 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore
-        run: dotnet restore SampleELT.sln
+        run: |
+          dotnet restore SampleELT.csproj
+          dotnet restore SampleELT.Tests/SampleELT.Tests.csproj
 
       - name: Build (main project)
         run: dotnet build SampleELT.csproj --no-restore -c Release
@@ -27,6 +29,7 @@ jobs:
       - name: Test
         run: >
           dotnet test SampleELT.Tests/SampleELT.Tests.csproj
+          --no-restore
           -c Release
           --verbosity normal
           --logger "trx;LogFileName=test-results.trx"

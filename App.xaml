@@ -1,8 +1,7 @@
 <Application x:Class="SampleELT.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="clr-namespace:SampleELT.Converters"
-             StartupUri="MainWindow.xaml">
+             xmlns:converters="clr-namespace:SampleELT.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <!-- Converters -->

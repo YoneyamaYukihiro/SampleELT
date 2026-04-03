@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -42,6 +43,89 @@ namespace SampleELT.ViewModels
         // Event fired when a step's settings dialog should open
         public event Action<StepNodeViewModel>? OpenSettingsRequested;
 
+        // Event fired when the schedule manager dialog should open
+        public event Action? OpenScheduleManagerRequested;
+
+        // Event fired when schedule status changes (run completed / registry updated)
+        public event Action? ScheduleStatusChanged;
+
+        // In-app scheduler
+        private readonly DispatcherTimer _scheduleTimer;
+
+        public MainViewModel()
+        {
+            _scheduleTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            _scheduleTimer.Tick += SchedulerTick;
+            _scheduleTimer.Start();
+        }
+
+        // ==================== SCHEDULE MANAGER ====================
+
+        [RelayCommand]
+        private void OpenScheduleManager()
+        {
+            OpenScheduleManagerRequested?.Invoke();
+        }
+
+        private async void SchedulerTick(object? sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+            var registry = ScheduleRegistry.Instance;
+            bool anySaved = false;
+
+            foreach (var entry in registry.Schedules.Where(s => s.IsEnabled))
+            {
+                // 直近の実行予定時刻（now 以前）を取得
+                var lastDue = registry.CalcLastDueTime(entry, now);
+                if (lastDue == null) continue; // インターバルがまだ期限前
+
+                // この実行タイミングですでに実行済みならスキップ
+                if (entry.LastRunTime.HasValue && entry.LastRunTime.Value >= lastDue.Value) continue;
+
+                await RunScheduledPipelineAsync(entry);
+                anySaved = true;
+            }
+
+            if (anySaved) registry.Save();
+        }
+
+        private async Task RunScheduledPipelineAsync(ScheduleEntry entry)
+        {
+            AddLog($"===== スケジュール実行開始: {entry.Name} =====");
+            entry.LastRunTime = DateTime.Now;
+
+            try
+            {
+                if (!File.Exists(entry.PipelineFilePath))
+                    throw new FileNotFoundException($"パイプラインファイルが見つかりません: {entry.PipelineFilePath}");
+
+                var pipeline = PipelineLoader.LoadFromFile(entry.PipelineFilePath);
+                var progress = new Progress<string>(msg =>
+                {
+                    AddLog(msg);
+                    StatusMessage = msg;
+                });
+                var engine = new ExecutionEngine();
+                var cts = new CancellationTokenSource();
+
+                await engine.ExecuteAsync(pipeline, progress, cts.Token);
+
+                entry.LastRunSuccess = true;
+                entry.LastRunMessage = "実行完了";
+                AddLog($"===== スケジュール実行完了: {entry.Name} =====");
+            }
+            catch (Exception ex)
+            {
+                entry.LastRunSuccess = false;
+                entry.LastRunMessage = ex.Message;
+                AddLog($"===== スケジュール実行エラー [{entry.Name}]: {ex.Message} =====");
+            }
+            finally
+            {
+                ScheduleStatusChanged?.Invoke();
+            }
+        }
+
         [RelayCommand]
         private void AddStep(StepType stepType)
         {
@@ -67,6 +151,8 @@ namespace SampleELT.ViewModels
                 StepType.MergeJoin => new MergeJoinStep { Name = "Merge Join", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.DBUpdate => new DBUpdateStep { Name = "DB Update", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.SetVariable => new SetVariableStep { Name = "Set Variable", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBInput    => new DBInputStep  { Name = "DB Input",   CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBOutput   => new DBOutputStep { Name = "DB Output",  CanvasX = offsetX, CanvasY = offsetY },
                 _ => throw new ArgumentOutOfRangeException(nameof(stepType))
             };
 
@@ -193,6 +279,8 @@ namespace SampleELT.ViewModels
                         StepType = s.StepType.ToString(),
                         CanvasX = s.CanvasX,
                         CanvasY = s.CanvasY,
+                        NodeWidth = s.NodeWidth,
+                        NodeHeight = s.NodeHeight,
                         Settings = s.Settings.ToDictionary(
                             kv => kv.Key,
                             kv => kv.Value?.ToString()
@@ -237,7 +325,8 @@ namespace SampleELT.ViewModels
             try
             {
                 var json = File.ReadAllText(dialog.FileName);
-                var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json, options);
                 if (pipelineData == null) return;
 
                 // Clear current state
@@ -267,6 +356,8 @@ namespace SampleELT.ViewModels
                         "MergeJoin" => new MergeJoinStep(),
                         "DBUpdate" => new DBUpdateStep(),
                         "SetVariable" => new SetVariableStep(),
+                        "DBInput"     => new DBInputStep(),
+                        "DBOutput"    => new DBOutputStep(),
                         _ => null
                     };
 
@@ -275,6 +366,8 @@ namespace SampleELT.ViewModels
                     step.Name = stepData.Name;
                     step.CanvasX = stepData.CanvasX;
                     step.CanvasY = stepData.CanvasY;
+                    step.NodeWidth = stepData.NodeWidth > 0 ? stepData.NodeWidth : 150.0;
+                    step.NodeHeight = stepData.NodeHeight > 0 ? stepData.NodeHeight : 70.0;
                     step.Settings = stepData.Settings.ToDictionary(
                         kv => kv.Key,
                         kv => (object?)kv.Value
@@ -396,6 +489,8 @@ namespace SampleELT.ViewModels
         public string StepType { get; set; } = "";
         public double CanvasX { get; set; }
         public double CanvasY { get; set; }
+        public double NodeWidth { get; set; } = 150.0;
+        public double NodeHeight { get; set; } = 70.0;
         public Dictionary<string, string?> Settings { get; set; } = new();
     }
 

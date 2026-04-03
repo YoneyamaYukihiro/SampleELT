@@ -4,6 +4,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using SampleELT.Controls;
 using SampleELT.Dialogs;
 using SampleELT.Models;
@@ -28,9 +30,12 @@ namespace SampleELT
         private StepNodeViewModel? _connectionSourceStep;
         private StepNodeViewModel? _connectionTargetStep;
 
-        // Step node size constants
-        private const double NodeWidth = 132; // card width (150 total - 18 port)
-        private const double NodeHeight = 70;
+        // Resize state
+        private bool _isResizing;
+        private StepNodeViewModel? _resizingStep;
+        private Point _resizeStartMousePos;
+        private double _resizeStartWidth;
+        private double _resizeStartHeight;
 
         public MainWindow()
         {
@@ -40,8 +45,10 @@ namespace SampleELT
 
             _vm.LogMessages.CollectionChanged += LogMessages_CollectionChanged;
             _vm.OpenSettingsRequested += OpenStepSettingsDialog;
+            _vm.OpenScheduleManagerRequested += OpenScheduleManagerDialog;
+            _vm.ScheduleStatusChanged += () => Dispatcher.InvokeAsync(RefreshSchedulePanel);
 
-            LoadHelpContent();
+            RefreshSchedulePanel();
         }
 
         private void LogMessages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -91,7 +98,17 @@ namespace SampleELT
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
 
-            if (_isDragging && _draggingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
+            if (_isResizing && _resizingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var currentPos = e.GetPosition(BackgroundCanvas);
+                var deltaX = currentPos.X - _resizeStartMousePos.X;
+                var deltaY = currentPos.Y - _resizeStartMousePos.Y;
+
+                stepVm.NodeWidth = Math.Max(120, _resizeStartWidth + deltaX);
+                stepVm.NodeHeight = Math.Max(50, _resizeStartHeight + deltaY);
+                e.Handled = true;
+            }
+            else if (_isDragging && _draggingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
             {
                 var currentPos = e.GetPosition(BackgroundCanvas);
                 var deltaX = currentPos.X - _dragStartMousePos.X;
@@ -118,6 +135,15 @@ namespace SampleELT
         {
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
+
+            if (_isResizing && _resizingStep == stepVm)
+            {
+                _isResizing = false;
+                _resizingStep = null;
+                fe.ReleaseMouseCapture();
+                e.Handled = true;
+                return;
+            }
 
             if (_isConnecting && _connectionSourceStep != null)
             {
@@ -158,6 +184,22 @@ namespace SampleELT
             stepVm.IsSelected = true;
         }
 
+        private void StepNode_ResizeDragStarted(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement fe) return;
+            if (fe.DataContext is not StepNodeViewModel stepVm) return;
+
+            _isResizing = true;
+            _isDragging = false;
+            _resizingStep = stepVm;
+            _resizeStartMousePos = Mouse.GetPosition(BackgroundCanvas);
+            _resizeStartWidth = stepVm.NodeWidth;
+            _resizeStartHeight = stepVm.NodeHeight;
+
+            fe.CaptureMouse();
+            e.Handled = true;
+        }
+
         // ==================== CANVAS MOUSE EVENTS ====================
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -174,6 +216,7 @@ namespace SampleELT
         {
             if (_isConnecting) ClearConnectionMode();
             if (_isDragging) { _isDragging = false; _draggingStep = null; }
+            if (_isResizing) { _isResizing = false; _resizingStep = null; }
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -212,6 +255,9 @@ namespace SampleELT
 
             switch (step.StepType)
             {
+                case StepType.DBInput:
+                    OpenDBInputDialog(stepVm);
+                    break;
                 case StepType.OracleInput:
                     OpenOracleInputDialog(stepVm);
                     break;
@@ -220,6 +266,9 @@ namespace SampleELT
                     break;
                 case StepType.ExcelInput:
                     OpenExcelInputDialog(stepVm);
+                    break;
+                case StepType.DBOutput:
+                    OpenDBOutputDialog(stepVm, "");
                     break;
                 case StepType.OracleOutput:
                     OpenDBOutputDialog(stepVm, "Oracle");
@@ -266,6 +315,35 @@ namespace SampleELT
             }
         }
 
+        private void OpenDBInputDialog(StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new DBInputDialog { Owner = this };
+
+            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
+                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
+                : null;
+
+            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
+                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+            dialog.Initialize(
+                step.Name,
+                connId,
+                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
+                executeEachRow);
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
+                step.Settings["SQL"] = dialog.SQL;
+                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
+                stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
+            }
+        }
+
         private void OpenOracleInputDialog(StepNodeViewModel stepVm)
         {
             var step = stepVm.Step;
@@ -291,6 +369,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -319,6 +398,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -349,6 +429,7 @@ namespace SampleELT
                 step.Settings["Delimiter"] = dialog.Delimiter;
                 step.Settings["Encoding"]  = dialog.Encoding;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -374,6 +455,7 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["Mode"] = dialog.Mode;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -404,6 +486,7 @@ namespace SampleELT
                 step.Settings["Encoding"] = dialog.Encoding;
                 step.Settings["IncludeHeader"] = dialog.IncludeHeader.ToString();
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -413,17 +496,20 @@ namespace SampleELT
             var dialog = new FilterDialog { Owner = this };
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("FieldName", out var fn) ? fn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Operator", out var op) ? op?.ToString() ?? "equals" : "equals",
-                step.Settings.TryGetValue("Value", out var v) ? v?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("FieldName",  out var fn) ? fn?.ToString()   ?? "" : "",
+                step.Settings.TryGetValue("Operator",   out var op) ? op?.ToString()   ?? "equals" : "equals",
+                step.Settings.TryGetValue("Value",      out var v)  ? v?.ToString()    ?? "" : "",
+                step.Settings.TryGetValue("RightField", out var rf) ? rf?.ToString()   ?? "" : "");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["FieldName"] = dialog.FieldName;
-                step.Settings["Operator"] = dialog.Operator;
-                step.Settings["Value"] = dialog.Value;
+                step.Settings["FieldName"]  = dialog.FieldName;
+                step.Settings["Operator"]   = dialog.Operator;
+                step.Settings["Value"]      = dialog.Value;
+                step.Settings["RightField"] = dialog.RightField;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -448,6 +534,7 @@ namespace SampleELT
                 step.Settings["Field2"] = dialog.Field2;
                 step.Settings["Constant"] = dialog.Constant;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -464,6 +551,7 @@ namespace SampleELT
                 step.Name = dialog.StepName;
                 step.Settings["FieldMappings"] = dialog.FieldMappings;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -489,6 +577,7 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -516,6 +605,7 @@ namespace SampleELT
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -544,6 +634,7 @@ namespace SampleELT
                 step.Settings["SQL"] = dialog.SQL;
                 step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -555,6 +646,7 @@ namespace SampleELT
             {
                 stepVm.Step.Name = dialog.StepName;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -573,6 +665,7 @@ namespace SampleELT
                 step.Settings["Fields"] = dialog.Fields;
                 step.Settings["RowCount"] = dialog.RowCount;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -591,6 +684,7 @@ namespace SampleELT
                 step.Settings["JoinType"] = dialog.JoinType;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -618,6 +712,7 @@ namespace SampleELT
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -636,6 +731,7 @@ namespace SampleELT
                 step.Settings["Fields"]     = dialog.Fields;
                 step.Settings["DateFormat"] = dialog.DateFormat;
                 stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
             }
         }
 
@@ -646,8 +742,8 @@ namespace SampleELT
             foreach (var stepVm in _vm.Steps)
             {
                 if (stepVm == excludeStep) continue;
-                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + NodeWidth &&
-                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + NodeHeight)
+                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + stepVm.NodeWidth &&
+                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + stepVm.NodeHeight)
                     return stepVm;
             }
             return null;
@@ -664,8 +760,8 @@ namespace SampleELT
             _connectionSourceStep = stepVm;
 
             // 接続線の始点 = ステップ右端の中央
-            var startX = stepVm.X + NodeWidth;
-            var startY = stepVm.Y + NodeHeight / 2;
+            var startX = stepVm.X + stepVm.NodeWidth;
+            var startY = stepVm.Y + stepVm.NodeHeight / 2;
 
             TempConnectionLine.X1 = startX;
             TempConnectionLine.Y1 = startY;
@@ -714,17 +810,222 @@ namespace SampleELT
             }
         }
 
-        // ==================== HELP CONTENT ====================
+        // ==================== SCHEDULE STATUS PANEL ====================
 
-        private void LoadHelpContent()
+        private void RefreshSchedulePanel()
         {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            UsageTextBox.Text = ReadDoc(Path.Combine(baseDir, "docs", "使い方.md"));
-            SpecTextBox.Text  = ReadDoc(Path.Combine(baseDir, "docs", "仕様書.md"));
+            ScheduleStatusPanel.Children.Clear();
+            var schedules = ScheduleRegistry.Instance.Schedules;
+
+            if (schedules.Count == 0)
+            {
+                ScheduleStatusPanel.Children.Add(new TextBlock
+                {
+                    Text = "スケジュールがありません\n「スケジュール管理」から追加してください",
+                    FontSize = 11,
+                    Foreground = Brushes.Gray,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(4, 8, 4, 0)
+                });
+                return;
+            }
+
+            foreach (var entry in schedules)
+                ScheduleStatusPanel.Children.Add(BuildScheduleCard(entry));
         }
 
-        private static string ReadDoc(string path) =>
-            File.Exists(path) ? File.ReadAllText(path, System.Text.Encoding.UTF8) : $"({Path.GetFileName(path)} が見つかりません)";
+        private UIElement BuildScheduleCard(ScheduleEntry entry)
+        {
+            // ステータス色の決定
+            Color dotColor;
+            if (!entry.IsEnabled)
+                dotColor = Color.FromRgb(0x9E, 0x9E, 0x9E);      // gray
+            else if (entry.LastRunSuccess == false)
+                dotColor = Color.FromRgb(0xF4, 0x43, 0x36);      // red
+            else if (entry.LastRunSuccess == true)
+                dotColor = Color.FromRgb(0x4C, 0xAF, 0x50);      // green
+            else
+                dotColor = Color.FromRgb(0x21, 0x96, 0xF3);      // blue (未実行)
+
+            // スケジュール種別の説明
+            var typeDesc = entry.Type switch
+            {
+                ScheduleType.Daily    => $"毎日 {entry.TimeHour:D2}:{entry.TimeMinute:D2}",
+                ScheduleType.Weekly   => $"毎週{GetWeekDayName(entry.WeekDay)} {entry.TimeHour:D2}:{entry.TimeMinute:D2}",
+                ScheduleType.Hourly   => $"毎時 {entry.HourlyMinute:D2}分",
+                ScheduleType.Interval => $"{entry.IntervalMinutes}分ごと",
+                _                     => ""
+            };
+
+            // 次回実行時刻（有効時のみ）
+            string nextStr = "";
+            if (entry.IsEnabled)
+            {
+                var next = ScheduleRegistry.Instance.CalcNextRunTime(entry);
+                if (next.HasValue)
+                    nextStr = $"次回: {next.Value:MM/dd HH:mm}";
+            }
+
+            // 前回実行情報
+            string lastRunStr;
+            Color lastRunColor;
+            if (entry.LastRunTime.HasValue)
+            {
+                var icon = entry.LastRunSuccess == true ? "✓" : "✗";
+                lastRunStr  = $"{icon} {entry.LastRunTime.Value:MM/dd HH:mm}";
+                lastRunColor = entry.LastRunSuccess == true
+                    ? Color.FromRgb(0x4C, 0xAF, 0x50)
+                    : Color.FromRgb(0xF4, 0x43, 0x36);
+            }
+            else
+            {
+                lastRunStr  = "未実行";
+                lastRunColor = Color.FromRgb(0x9E, 0x9E, 0x9E);
+            }
+
+            var fg = new SolidColorBrush(
+                entry.IsEnabled ? Color.FromRgb(0x21, 0x21, 0x21) : Color.FromRgb(0x75, 0x75, 0x75));
+
+            var content = new StackPanel();
+
+            // 名前行（ドット + 名前 | トグルボタン）
+            var nameRow = new DockPanel { LastChildFill = true };
+
+            // トグルボタン（右端）
+            var toggleBtn = CreateToggleButton(entry.IsEnabled, (_, _) =>
+            {
+                entry.IsEnabled = !entry.IsEnabled;
+                ScheduleRegistry.Instance.Save();
+                RefreshSchedulePanel();
+            });
+            DockPanel.SetDock(toggleBtn, Dock.Right);
+            nameRow.Children.Add(toggleBtn);
+
+            // 左側：ドット + 名前 [+ (無効) ラベル]
+            var leftStack = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            leftStack.Children.Add(new Ellipse
+            {
+                Width = 8, Height = 8,
+                Fill = new SolidColorBrush(dotColor),
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            leftStack.Children.Add(new TextBlock
+            {
+                Text = entry.Name,
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 12,
+                Foreground = fg,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            nameRow.Children.Add(leftStack);
+            content.Children.Add(nameRow);
+
+            // 種別
+            content.Children.Add(new TextBlock
+            {
+                Text = typeDesc,
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x75, 0x75, 0x75)),
+                Margin = new Thickness(14, 2, 0, 0)
+            });
+
+            // 次回
+            if (!string.IsNullOrEmpty(nextStr))
+                content.Children.Add(new TextBlock
+                {
+                    Text = nextStr,
+                    FontSize = 10,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0x61, 0x61, 0x61)),
+                    Margin = new Thickness(14, 1, 0, 0)
+                });
+
+            // 前回
+            content.Children.Add(new TextBlock
+            {
+                Text = lastRunStr,
+                FontSize = 10,
+                Foreground = new SolidColorBrush(lastRunColor),
+                Margin = new Thickness(14, 1, 0, 0)
+            });
+
+            // エラーメッセージ（失敗時）
+            if (entry.LastRunSuccess == false && !string.IsNullOrEmpty(entry.LastRunMessage))
+                content.Children.Add(new TextBlock
+                {
+                    Text = entry.LastRunMessage,
+                    FontSize = 9,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xF4, 0x43, 0x36)),
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(14, 1, 0, 0)
+                });
+
+            return new Border
+            {
+                Background = new SolidColorBrush(
+                    entry.IsEnabled ? Colors.White : Color.FromRgb(0xF5, 0xF5, 0xF5)),
+                BorderBrush = new SolidColorBrush(
+                    entry.IsEnabled ? Color.FromRgb(0xDD, 0xDD, 0xDD) : Color.FromRgb(0xE8, 0xE8, 0xE8)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Margin = new Thickness(0, 0, 0, 6),
+                Padding = new Thickness(8, 6, 8, 6),
+                Child = content
+            };
+        }
+
+        private static Button CreateToggleButton(bool isEnabled, RoutedEventHandler onClick)
+        {
+            var bg = new SolidColorBrush(
+                isEnabled ? Color.FromRgb(0x43, 0xA0, 0x47)   // green
+                          : Color.FromRgb(0x9E, 0x9E, 0x9E)); // gray
+
+            // CornerRadius を持つ pill 型テンプレート
+            var borderFef = new FrameworkElementFactory(typeof(Border));
+            borderFef.SetValue(Border.CornerRadiusProperty, new CornerRadius(10));
+            borderFef.SetValue(Border.BackgroundProperty,
+                new TemplateBindingExtension(Control.BackgroundProperty));
+            borderFef.SetValue(Border.PaddingProperty,
+                new TemplateBindingExtension(Control.PaddingProperty));
+            var cpFef = new FrameworkElementFactory(typeof(ContentPresenter));
+            cpFef.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            cpFef.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            borderFef.AppendChild(cpFef);
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = borderFef };
+
+            var btn = new Button
+            {
+                Content         = isEnabled ? "有効" : "無効",
+                Background      = bg,
+                Foreground      = Brushes.White,
+                BorderThickness = new Thickness(0),
+                Padding         = new Thickness(8, 2, 8, 2),
+                FontSize        = 10,
+                FontWeight      = FontWeights.SemiBold,
+                Cursor          = Cursors.Hand,
+                Template        = template,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin          = new Thickness(6, 0, 0, 0)
+            };
+            btn.Click += onClick;
+            return btn;
+        }
+
+        private static string GetWeekDayName(DayOfWeek day) => day switch
+        {
+            DayOfWeek.Monday    => "月曜",
+            DayOfWeek.Tuesday   => "火曜",
+            DayOfWeek.Wednesday => "水曜",
+            DayOfWeek.Thursday  => "木曜",
+            DayOfWeek.Friday    => "金曜",
+            DayOfWeek.Saturday  => "土曜",
+            DayOfWeek.Sunday    => "日曜",
+            _                   => ""
+        };
 
         // ==================== PALETTE DOUBLE CLICK ====================
 
@@ -756,9 +1057,38 @@ namespace SampleELT
             dialog.ShowDialog();
         }
 
+        private void ScheduleManager_Click(object sender, RoutedEventArgs e)
+        {
+            OpenScheduleManagerDialog();
+        }
+
+        private void OpenScheduleManagerDialog()
+        {
+            var dialog = new ScheduleManagerDialog { Owner = this };
+            dialog.ShowDialog();
+            RefreshSchedulePanel(); // ダイアログで追加・変更された内容を反映
+        }
+
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void RefreshSchedule_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshSchedulePanel();
+        }
+
+        private void HelpUsage_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new HelpDialog(0) { Owner = this };
+            dialog.Show();
+        }
+
+        private void HelpSpec_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new HelpDialog(1) { Owner = this };
+            dialog.Show();
         }
 
         private void About_Click(object sender, RoutedEventArgs e)
@@ -775,6 +1105,13 @@ namespace SampleELT
         private void ClearLog_Click(object sender, RoutedEventArgs e)
         {
             _vm.LogMessages.Clear();
+        }
+
+        private void CopyLog_Click(object sender, RoutedEventArgs e)
+        {
+            var text = string.Join(Environment.NewLine, _vm.LogMessages);
+            if (!string.IsNullOrEmpty(text))
+                Clipboard.SetText(text);
         }
     }
 }

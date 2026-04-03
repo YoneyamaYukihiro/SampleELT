@@ -12,6 +12,8 @@ namespace SampleELT.Models
         public abstract StepType StepType { get; }
         public double CanvasX { get; set; }
         public double CanvasY { get; set; }
+        public double NodeWidth { get; set; } = 150.0;
+        public double NodeHeight { get; set; } = 70.0;
         public Dictionary<string, object?> Settings { get; set; } = new();
 
         /// <summary>
