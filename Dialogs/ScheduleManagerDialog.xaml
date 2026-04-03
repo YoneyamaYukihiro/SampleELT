@@ -99,6 +99,40 @@
                 <CheckBox x:Name="EnabledCheckBox" Content="有効にする"
                           FontSize="12" Margin="0,0,0,14"/>
 
+                <!-- 実行モード -->
+                <TextBlock Text="実行モード" FontSize="12" FontWeight="Bold"
+                           Foreground="#424242" Margin="0,0,0,6"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <RadioButton x:Name="ModeInAppRadio"
+                                 Content="インアプリ"
+                                 GroupName="ScheduleMode"
+                                 FontSize="12" IsChecked="True"
+                                 Margin="0,0,16,0"
+                                 Checked="ModeRadio_Checked"/>
+                    <RadioButton x:Name="ModeTaskSchedulerRadio"
+                                 Content="Windowsタスクスケジューラ"
+                                 GroupName="ScheduleMode"
+                                 FontSize="12"
+                                 Checked="ModeRadio_Checked"/>
+                </StackPanel>
+                <!-- モード説明 -->
+                <Border x:Name="ModeInAppNote"
+                        Background="#E3F2FD" CornerRadius="4"
+                        Padding="8,6" Margin="0,4,0,14">
+                    <TextBlock Text="アプリが起動している間だけスケジュールを監視します。"
+                               FontSize="11" Foreground="#1565C0" TextWrapping="Wrap"/>
+                </Border>
+                <Border x:Name="ModeTaskSchedulerNote"
+                        Background="#FFF3E0" CornerRadius="4"
+                        Padding="8,6" Margin="0,4,0,14"
+                        Visibility="Collapsed">
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#E65100">
+                        <Run Text="アプリが起動していなくても Windows が自動実行します。"/>
+                        <LineBreak/>
+                        <Run Text="保存時にタスクスケジューラへ登録します。管理者権限が必要な場合があります。"/>
+                    </TextBlock>
+                </Border>
+
                 <!-- スケジュール種類 -->
                 <TextBlock Text="スケジュール種類" FontSize="12" FontWeight="Bold"
                            Foreground="#424242" Margin="0,0,0,4"/>

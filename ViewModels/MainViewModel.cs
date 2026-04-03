@@ -73,7 +73,7 @@ namespace SampleELT.ViewModels
             var registry = ScheduleRegistry.Instance;
             bool anySaved = false;
 
-            foreach (var entry in registry.Schedules.Where(s => s.IsEnabled))
+            foreach (var entry in registry.Schedules.Where(s => s.IsEnabled && s.Mode == Models.ScheduleMode.InApp))
             {
                 // 直近の実行予定時刻（now 以前）を取得
                 var lastDue = registry.CalcLastDueTime(entry, now);

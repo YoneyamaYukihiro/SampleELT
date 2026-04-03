@@ -2,6 +2,12 @@ using System;
 
 namespace SampleELT.Models
 {
+    public enum ScheduleMode
+    {
+        InApp,          // アプリ内スケジューラ（アプリ起動中のみ）
+        TaskScheduler   // Windowsタスクスケジューラ（アプリ未起動でも動作）
+    }
+
     public enum ScheduleType
     {
         Daily,    // 毎日 指定時刻
@@ -16,6 +22,7 @@ namespace SampleELT.Models
         public string Name { get; set; } = "";
         public string PipelineFilePath { get; set; } = "";
         public bool IsEnabled { get; set; } = true;
+        public ScheduleMode Mode { get; set; } = ScheduleMode.InApp;
         public ScheduleType Type { get; set; } = ScheduleType.Daily;
 
         // Daily / Weekly: time of day

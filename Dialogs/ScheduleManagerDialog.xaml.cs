@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using SampleELT.Models;
+using SampleELT.Services;
 
 namespace SampleELT.Dialogs
 {
@@ -78,6 +79,10 @@ namespace SampleELT.Dialogs
 
             if (result != MessageBoxResult.Yes) return;
 
+            // タスクスケジューラに登録されていた場合は削除
+            if (_current.Mode == ScheduleMode.TaskScheduler)
+                TaskSchedulerHelper.Unregister(_current);
+
             ScheduleRegistry.Instance.Schedules.Remove(_current);
             ScheduleRegistry.Instance.Save();
             _current = null;
@@ -105,6 +110,9 @@ namespace SampleELT.Dialogs
                 _                     => 0
             };
 
+            ModeInAppRadio.IsChecked        = entry.Mode != ScheduleMode.TaskScheduler;
+            ModeTaskSchedulerRadio.IsChecked = entry.Mode == ScheduleMode.TaskScheduler;
+
             HourTextBox.Text = entry.TimeHour.ToString();
             MinuteTextBox.Text = entry.TimeMinute.ToString("D2");
             WeekDayComboBox.SelectedIndex = (int)entry.WeekDay == 0 ? 6 : (int)entry.WeekDay - 1;
@@ -125,6 +133,14 @@ namespace SampleELT.Dialogs
 
             _suppressEvents = false;
             UpdatePanelVisibility(entry.Type);
+        }
+
+        private void ModeRadio_Checked(object sender, RoutedEventArgs e)
+        {
+            if (ModeInAppNote == null) return; // InitializeComponent 前は無視
+            var isTaskScheduler = ModeTaskSchedulerRadio.IsChecked == true;
+            ModeInAppNote.Visibility        = isTaskScheduler ? Visibility.Collapsed : Visibility.Visible;
+            ModeTaskSchedulerNote.Visibility = isTaskScheduler ? Visibility.Visible   : Visibility.Collapsed;
         }
 
         private void TypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -167,9 +183,13 @@ namespace SampleELT.Dialogs
         {
             if (_current == null) return;
 
+            var prevMode = _current.Mode;
+
             _current.Name             = NameTextBox.Text.Trim();
             _current.PipelineFilePath = PipelineFileTextBox.Text.Trim();
             _current.IsEnabled        = EnabledCheckBox.IsChecked == true;
+            _current.Mode             = ModeTaskSchedulerRadio.IsChecked == true
+                                        ? ScheduleMode.TaskScheduler : ScheduleMode.InApp;
             _current.Type = TypeComboBox.SelectedIndex switch
             {
                 1 => ScheduleType.Weekly,
@@ -202,6 +222,23 @@ namespace SampleELT.Dialogs
 
             ScheduleRegistry.Instance.Save();
             RefreshList();
+
+            // タスクスケジューラ連携
+            if (_current.Mode == ScheduleMode.TaskScheduler)
+            {
+                var (ok, msg) = TaskSchedulerHelper.Register(_current);
+                if (!ok)
+                {
+                    MessageBox.Show(
+                        $"タスクスケジューラへの登録に失敗しました:\n{msg}",
+                        "登録エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            else if (prevMode == ScheduleMode.TaskScheduler)
+            {
+                // インアプリに戻った場合はタスクスケジューラから削除
+                TaskSchedulerHelper.Unregister(_current);
+            }
 
             StatusTextBlock.Text       = "保存しました";
             StatusTextBlock.Visibility = Visibility.Visible;
