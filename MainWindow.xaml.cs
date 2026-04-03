@@ -832,16 +832,33 @@ namespace SampleELT
 
             var content = new StackPanel();
 
-            // 名前行（ドット + 名前）
-            var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
-            nameRow.Children.Add(new Ellipse
+            // 名前行（ドット + 名前 | トグルボタン）
+            var nameRow = new DockPanel { LastChildFill = true };
+
+            // トグルボタン（右端）
+            var toggleBtn = CreateToggleButton(entry.IsEnabled, (_, _) =>
+            {
+                entry.IsEnabled = !entry.IsEnabled;
+                ScheduleRegistry.Instance.Save();
+                RefreshSchedulePanel();
+            });
+            DockPanel.SetDock(toggleBtn, Dock.Right);
+            nameRow.Children.Add(toggleBtn);
+
+            // 左側：ドット + 名前 [+ (無効) ラベル]
+            var leftStack = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            leftStack.Children.Add(new Ellipse
             {
                 Width = 8, Height = 8,
                 Fill = new SolidColorBrush(dotColor),
                 Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center
             });
-            nameRow.Children.Add(new TextBlock
+            leftStack.Children.Add(new TextBlock
             {
                 Text = entry.Name,
                 FontWeight = FontWeights.SemiBold,
@@ -849,14 +866,7 @@ namespace SampleELT
                 Foreground = fg,
                 TextTrimming = TextTrimming.CharacterEllipsis
             });
-            if (!entry.IsEnabled)
-                nameRow.Children.Add(new TextBlock
-                {
-                    Text = " (無効)",
-                    FontSize = 10,
-                    Foreground = Brushes.Gray,
-                    VerticalAlignment = VerticalAlignment.Center
-                });
+            nameRow.Children.Add(leftStack);
             content.Children.Add(nameRow);
 
             // 種別
@@ -910,6 +920,43 @@ namespace SampleELT
                 Padding = new Thickness(8, 6, 8, 6),
                 Child = content
             };
+        }
+
+        private static Button CreateToggleButton(bool isEnabled, RoutedEventHandler onClick)
+        {
+            var bg = new SolidColorBrush(
+                isEnabled ? Color.FromRgb(0x43, 0xA0, 0x47)   // green
+                          : Color.FromRgb(0x9E, 0x9E, 0x9E)); // gray
+
+            // CornerRadius を持つ pill 型テンプレート
+            var borderFef = new FrameworkElementFactory(typeof(Border));
+            borderFef.SetValue(Border.CornerRadiusProperty, new CornerRadius(10));
+            borderFef.SetValue(Border.BackgroundProperty,
+                new TemplateBindingExtension(Control.BackgroundProperty));
+            borderFef.SetValue(Border.PaddingProperty,
+                new TemplateBindingExtension(Control.PaddingProperty));
+            var cpFef = new FrameworkElementFactory(typeof(ContentPresenter));
+            cpFef.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            cpFef.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            borderFef.AppendChild(cpFef);
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = borderFef };
+
+            var btn = new Button
+            {
+                Content         = isEnabled ? "有効" : "無効",
+                Background      = bg,
+                Foreground      = Brushes.White,
+                BorderThickness = new Thickness(0),
+                Padding         = new Thickness(8, 2, 8, 2),
+                FontSize        = 10,
+                FontWeight      = FontWeights.SemiBold,
+                Cursor          = Cursors.Hand,
+                Template        = template,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin          = new Thickness(6, 0, 0, 0)
+            };
+            btn.Click += onClick;
+            return btn;
         }
 
         private static string GetWeekDayName(DayOfWeek day) => day switch
