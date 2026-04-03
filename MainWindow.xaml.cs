@@ -30,9 +30,12 @@ namespace SampleELT
         private StepNodeViewModel? _connectionSourceStep;
         private StepNodeViewModel? _connectionTargetStep;
 
-        // Step node size constants
-        private const double NodeWidth = 132; // card width (150 total - 18 port)
-        private const double NodeHeight = 70;
+        // Resize state
+        private bool _isResizing;
+        private StepNodeViewModel? _resizingStep;
+        private Point _resizeStartMousePos;
+        private double _resizeStartWidth;
+        private double _resizeStartHeight;
 
         public MainWindow()
         {
@@ -95,7 +98,17 @@ namespace SampleELT
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
 
-            if (_isDragging && _draggingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
+            if (_isResizing && _resizingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var currentPos = e.GetPosition(BackgroundCanvas);
+                var deltaX = currentPos.X - _resizeStartMousePos.X;
+                var deltaY = currentPos.Y - _resizeStartMousePos.Y;
+
+                stepVm.NodeWidth = Math.Max(120, _resizeStartWidth + deltaX);
+                stepVm.NodeHeight = Math.Max(50, _resizeStartHeight + deltaY);
+                e.Handled = true;
+            }
+            else if (_isDragging && _draggingStep == stepVm && e.LeftButton == MouseButtonState.Pressed)
             {
                 var currentPos = e.GetPosition(BackgroundCanvas);
                 var deltaX = currentPos.X - _dragStartMousePos.X;
@@ -122,6 +135,15 @@ namespace SampleELT
         {
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
+
+            if (_isResizing && _resizingStep == stepVm)
+            {
+                _isResizing = false;
+                _resizingStep = null;
+                fe.ReleaseMouseCapture();
+                e.Handled = true;
+                return;
+            }
 
             if (_isConnecting && _connectionSourceStep != null)
             {
@@ -162,6 +184,22 @@ namespace SampleELT
             stepVm.IsSelected = true;
         }
 
+        private void StepNode_ResizeDragStarted(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement fe) return;
+            if (fe.DataContext is not StepNodeViewModel stepVm) return;
+
+            _isResizing = true;
+            _isDragging = false;
+            _resizingStep = stepVm;
+            _resizeStartMousePos = Mouse.GetPosition(BackgroundCanvas);
+            _resizeStartWidth = stepVm.NodeWidth;
+            _resizeStartHeight = stepVm.NodeHeight;
+
+            fe.CaptureMouse();
+            e.Handled = true;
+        }
+
         // ==================== CANVAS MOUSE EVENTS ====================
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -178,6 +216,7 @@ namespace SampleELT
         {
             if (_isConnecting) ClearConnectionMode();
             if (_isDragging) { _isDragging = false; _draggingStep = null; }
+            if (_isResizing) { _isResizing = false; _resizingStep = null; }
         }
 
         private void Canvas_MouseMove(object sender, MouseEventArgs e)
@@ -1049,6 +1088,13 @@ namespace SampleELT
         private void ClearLog_Click(object sender, RoutedEventArgs e)
         {
             _vm.LogMessages.Clear();
+        }
+
+        private void CopyLog_Click(object sender, RoutedEventArgs e)
+        {
+            var text = string.Join(Environment.NewLine, _vm.LogMessages);
+            if (!string.IsNullOrEmpty(text))
+                Clipboard.SetText(text);
         }
     }
 }

@@ -279,6 +279,8 @@ namespace SampleELT.ViewModels
                         StepType = s.StepType.ToString(),
                         CanvasX = s.CanvasX,
                         CanvasY = s.CanvasY,
+                        NodeWidth = s.NodeWidth,
+                        NodeHeight = s.NodeHeight,
                         Settings = s.Settings.ToDictionary(
                             kv => kv.Key,
                             kv => kv.Value?.ToString()
@@ -364,6 +366,8 @@ namespace SampleELT.ViewModels
                     step.Name = stepData.Name;
                     step.CanvasX = stepData.CanvasX;
                     step.CanvasY = stepData.CanvasY;
+                    step.NodeWidth = stepData.NodeWidth > 0 ? stepData.NodeWidth : 150.0;
+                    step.NodeHeight = stepData.NodeHeight > 0 ? stepData.NodeHeight : 70.0;
                     step.Settings = stepData.Settings.ToDictionary(
                         kv => kv.Key,
                         kv => (object?)kv.Value
@@ -485,6 +489,8 @@ namespace SampleELT.ViewModels
         public string StepType { get; set; } = "";
         public double CanvasX { get; set; }
         public double CanvasY { get; set; }
+        public double NodeWidth { get; set; } = 150.0;
+        public double NodeHeight { get; set; } = 70.0;
         public Dictionary<string, string?> Settings { get; set; } = new();
     }
 

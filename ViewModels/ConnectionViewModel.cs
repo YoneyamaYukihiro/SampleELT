@@ -10,14 +10,10 @@ namespace SampleELT.ViewModels
         public StepNodeViewModel Source { get; }
         public StepNodeViewModel Target { get; }
 
-        // Node dimensions for center calculation
-        private const double NodeWidth = 140.0;
-        private const double NodeHeight = 70.0;
-
-        public double X1 => Source.X + NodeWidth / 2;
-        public double Y1 => Source.Y + NodeHeight / 2;
-        public double X2 => Target.X + NodeWidth / 2;
-        public double Y2 => Target.Y + NodeHeight / 2;
+        public double X1 => Source.X + Source.NodeWidth / 2;
+        public double Y1 => Source.Y + Source.NodeHeight / 2;
+        public double X2 => Target.X + Target.NodeWidth / 2;
+        public double Y2 => Target.Y + Target.NodeHeight / 2;
 
         /// <summary>
         /// Angle (in degrees) for the arrowhead at the target end.
@@ -41,7 +37,8 @@ namespace SampleELT.ViewModels
 
             Source.PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName == nameof(StepNodeViewModel.X) || e.PropertyName == nameof(StepNodeViewModel.Y))
+                if (e.PropertyName == nameof(StepNodeViewModel.X) || e.PropertyName == nameof(StepNodeViewModel.Y)
+                    || e.PropertyName == nameof(StepNodeViewModel.NodeWidth) || e.PropertyName == nameof(StepNodeViewModel.NodeHeight))
                 {
                     OnPropertyChanged(nameof(X1));
                     OnPropertyChanged(nameof(Y1));
@@ -51,7 +48,8 @@ namespace SampleELT.ViewModels
 
             Target.PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName == nameof(StepNodeViewModel.X) || e.PropertyName == nameof(StepNodeViewModel.Y))
+                if (e.PropertyName == nameof(StepNodeViewModel.X) || e.PropertyName == nameof(StepNodeViewModel.Y)
+                    || e.PropertyName == nameof(StepNodeViewModel.NodeWidth) || e.PropertyName == nameof(StepNodeViewModel.NodeHeight))
                 {
                     OnPropertyChanged(nameof(X2));
                     OnPropertyChanged(nameof(Y2));

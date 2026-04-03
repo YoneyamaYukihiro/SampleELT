@@ -47,11 +47,19 @@ namespace SampleELT.ViewModels
             _ => "Unknown"
         };
 
+        [ObservableProperty]
+        private double _nodeWidth;
+
+        [ObservableProperty]
+        private double _nodeHeight;
+
         public StepNodeViewModel(StepBase step)
         {
             Step = step;
             _x = step.CanvasX;
             _y = step.CanvasY;
+            _nodeWidth = step.NodeWidth;
+            _nodeHeight = step.NodeHeight;
         }
 
         partial void OnXChanged(double value)
@@ -62,6 +70,16 @@ namespace SampleELT.ViewModels
         partial void OnYChanged(double value)
         {
             Step.CanvasY = value;
+        }
+
+        partial void OnNodeWidthChanged(double value)
+        {
+            Step.NodeWidth = value;
+        }
+
+        partial void OnNodeHeightChanged(double value)
+        {
+            Step.NodeHeight = value;
         }
 
         public void NotifyNameChanged()
