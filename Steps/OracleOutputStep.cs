@@ -20,6 +20,8 @@ namespace SampleELT.Steps
             var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
             var tableName = Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "";
             var mode = Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT";
+            int commitSize = Settings.TryGetValue("CommitSize", out var cs)
+                && int.TryParse(cs?.ToString(), out var csVal) && csVal > 0 ? csVal : 100;
 
             if (inputData.Count == 0)
             {
@@ -30,10 +32,10 @@ namespace SampleELT.Steps
             using var conn = new OracleConnection(connectionString);
             await conn.OpenAsync(ct);
 
-            using var transaction = conn.BeginTransaction();
+            int inserted = 0;
+            var transaction = conn.BeginTransaction();
             try
             {
-                int inserted = 0;
                 foreach (var row in inputData)
                 {
                     ct.ThrowIfCancellationRequested();
@@ -55,14 +57,18 @@ namespace SampleELT.Steps
 
                     using var cmd = new OracleCommand(sql, conn);
                     cmd.Transaction = transaction;
-
                     for (int i = 0; i < columns.Count; i++)
-                    {
                         cmd.Parameters.Add(new OracleParameter($":p{i}", row[columns[i]] ?? DBNull.Value));
-                    }
 
                     await cmd.ExecuteNonQueryAsync(ct);
                     inserted++;
+
+                    if (inserted % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        transaction.Dispose();
+                        transaction = conn.BeginTransaction();
+                    }
                 }
 
                 await transaction.CommitAsync(ct);
@@ -72,6 +78,10 @@ namespace SampleELT.Steps
             {
                 await transaction.RollbackAsync(ct);
                 throw;
+            }
+            finally
+            {
+                transaction.Dispose();
             }
 
             return inputData;
