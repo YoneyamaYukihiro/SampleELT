@@ -725,8 +725,8 @@ namespace SampleELT
             foreach (var stepVm in _vm.Steps)
             {
                 if (stepVm == excludeStep) continue;
-                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + NodeWidth &&
-                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + NodeHeight)
+                if (canvasPos.X >= stepVm.X && canvasPos.X <= stepVm.X + stepVm.NodeWidth &&
+                    canvasPos.Y >= stepVm.Y && canvasPos.Y <= stepVm.Y + stepVm.NodeHeight)
                     return stepVm;
             }
             return null;
@@ -743,8 +743,8 @@ namespace SampleELT
             _connectionSourceStep = stepVm;
 
             // 接続線の始点 = ステップ右端の中央
-            var startX = stepVm.X + NodeWidth;
-            var startY = stepVm.Y + NodeHeight / 2;
+            var startX = stepVm.X + stepVm.NodeWidth;
+            var startY = stepVm.Y + stepVm.NodeHeight / 2;
 
             TempConnectionLine.X1 = startX;
             TempConnectionLine.Y1 = startY;
