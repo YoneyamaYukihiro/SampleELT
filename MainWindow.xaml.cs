@@ -413,16 +413,18 @@ namespace SampleELT
             var dialog = new FilterDialog { Owner = this };
             dialog.Initialize(
                 step.Name,
-                step.Settings.TryGetValue("FieldName", out var fn) ? fn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Operator", out var op) ? op?.ToString() ?? "equals" : "equals",
-                step.Settings.TryGetValue("Value", out var v) ? v?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("FieldName",  out var fn) ? fn?.ToString()   ?? "" : "",
+                step.Settings.TryGetValue("Operator",   out var op) ? op?.ToString()   ?? "equals" : "equals",
+                step.Settings.TryGetValue("Value",      out var v)  ? v?.ToString()    ?? "" : "",
+                step.Settings.TryGetValue("RightField", out var rf) ? rf?.ToString()   ?? "" : "");
 
             if (dialog.ShowDialog() == true)
             {
                 step.Name = dialog.StepName;
-                step.Settings["FieldName"] = dialog.FieldName;
-                step.Settings["Operator"] = dialog.Operator;
-                step.Settings["Value"] = dialog.Value;
+                step.Settings["FieldName"]  = dialog.FieldName;
+                step.Settings["Operator"]   = dialog.Operator;
+                step.Settings["Value"]      = dialog.Value;
+                step.Settings["RightField"] = dialog.RightField;
                 stepVm.NotifyNameChanged();
             }
         }
