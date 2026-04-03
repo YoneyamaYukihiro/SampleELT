@@ -569,11 +569,15 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSizeDel = step.Settings.TryGetValue("CommitSize", out var csDel)
+                && int.TryParse(csDel?.ToString(), out var csDelVal) ? csDelVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
+                commitSizeDel);
 
             if (dialog.ShowDialog() == true)
             {
@@ -581,6 +585,7 @@ namespace SampleELT
                 step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
                 stepVm.NotifyConnectionChanged();
             }
@@ -595,12 +600,16 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSizeIU = step.Settings.TryGetValue("CommitSize", out var csIU)
+                && int.TryParse(csIU?.ToString(), out var csIUVal) ? csIUVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
                 step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "",
+                commitSizeIU);
 
             if (dialog.ShowDialog() == true)
             {
@@ -609,6 +618,7 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
                 stepVm.NotifyConnectionChanged();
             }
@@ -702,12 +712,16 @@ namespace SampleELT
                 ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
                 : null;
 
+            int commitSizeUpd = step.Settings.TryGetValue("CommitSize", out var csUpd)
+                && int.TryParse(csUpd?.ToString(), out var csUpdVal) ? csUpdVal : 100;
+
             dialog.Initialize(
                 step.Name,
                 connId,
                 step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
                 step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "");
+                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "",
+                commitSizeUpd);
 
             if (dialog.ShowDialog() == true)
             {
@@ -716,6 +730,7 @@ namespace SampleELT
                 step.Settings["TableName"] = dialog.TableName;
                 step.Settings["KeyFields"] = dialog.KeyFields;
                 step.Settings["UpdateFields"] = dialog.UpdateFields;
+                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
                 stepVm.NotifyNameChanged();
                 stepVm.NotifyConnectionChanged();
             }
