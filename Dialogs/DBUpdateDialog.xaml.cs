@@ -14,15 +14,17 @@ namespace SampleELT.Dialogs
         public string TableName { get; private set; } = "";
         public string KeyFields { get; private set; } = "";
         public string UpdateFields { get; private set; } = "";
+        public int CommitSize { get; private set; } = 100;
 
         public DBUpdateDialog() { InitializeComponent(); }
 
-        public void Initialize(string stepName, Guid? connectionId, string tableName, string keyFields, string updateFields)
+        public void Initialize(string stepName, Guid? connectionId, string tableName, string keyFields, string updateFields, int commitSize = 100)
         {
             StepNameBox.Text = stepName;
             TableNameBox.Text = tableName;
             KeyFieldsBox.Text = keyFields;
             UpdateFieldsBox.Text = updateFields;
+            CommitSizeBox.Text = commitSize.ToString();
             RefreshConnectionList(connectionId);
         }
 
@@ -90,6 +92,7 @@ namespace SampleELT.Dialogs
             TableName = TableNameBox.Text.Trim();
             KeyFields = KeyFieldsBox.Text.Trim();
             UpdateFields = UpdateFieldsBox.Text.Trim();
+            CommitSize = int.TryParse(CommitSizeBox.Text.Trim(), out var cs) && cs >= 0 ? cs : 100;
             DialogResult = true;
         }
 

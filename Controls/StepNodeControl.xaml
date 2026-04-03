@@ -1,7 +1,6 @@
 <UserControl x:Class="SampleELT.Controls.StepNodeControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Width="150" Height="70"
              Cursor="SizeAll">
     <Grid>
         <!-- カード本体 (右16pxを出力ポート用に空ける) -->
@@ -28,7 +27,7 @@
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"/>
 
-                <!-- 名前・種別 -->
+                <!-- 名前・種別・接続名 -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock x:Name="NameText"
                                Text="{Binding DisplayName}"
@@ -42,6 +41,23 @@
                                FontSize="10"
                                Foreground="#757575"
                                TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="ConnText"
+                               Text="{Binding ConnectionLabel}"
+                               FontSize="9"
+                               Foreground="#1565C0"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding ConnectionLabel}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ConnectionLabel}" Value="">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                 </StackPanel>
             </Grid>
         </Border>
@@ -71,12 +87,6 @@
             <Border.Effect>
                 <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.3" Color="#2196F3"/>
             </Border.Effect>
-            <TextBlock Text="▶"
-                       Foreground="White"
-                       FontSize="7"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
-                       Margin="1,0,0,0"/>
         </Border>
 
         <!-- 入力ポート (左端・接続ドラッグ中のみ強調表示) -->
@@ -90,5 +100,17 @@
                  StrokeThickness="2"
                  Visibility="Collapsed"
                  IsHitTestVisible="False"/>
+
+        <!-- リサイズグリップ (右下隅) -->
+        <Path x:Name="ResizeGrip"
+              Data="M 0,8 L 8,0 M 4,8 L 8,4"
+              Stroke="#BDBDBD"
+              StrokeThickness="1.5"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Bottom"
+              Margin="0,0,20,2"
+              Width="10" Height="10"
+              Cursor="SizeNWSE"
+              MouseLeftButtonDown="ResizeGrip_MouseLeftButtonDown"/>
     </Grid>
 </UserControl>

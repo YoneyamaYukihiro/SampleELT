@@ -82,6 +82,25 @@ namespace SampleELT.Controls
             }
         }
 
+        // ==================== ResizeDragStarted (カスタムイベント) ====================
+
+        public static readonly RoutedEvent ResizeDragStartedEvent =
+            EventManager.RegisterRoutedEvent(
+                "ResizeDragStarted", RoutingStrategy.Bubble,
+                typeof(RoutedEventHandler), typeof(StepNodeControl));
+
+        public event RoutedEventHandler ResizeDragStarted
+        {
+            add => AddHandler(ResizeDragStartedEvent, value);
+            remove => RemoveHandler(ResizeDragStartedEvent, value);
+        }
+
+        private void ResizeGrip_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            RaiseEvent(new RoutedEventArgs(ResizeDragStartedEvent));
+            e.Handled = true;
+        }
+
         // ==================== OutputPortDragStarted (カスタムイベント) ====================
 
         public static readonly RoutedEvent OutputPortDragStartedEvent =

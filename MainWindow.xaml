@@ -4,7 +4,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:SampleELT.Controls"
         xmlns:vm="clr-namespace:SampleELT.ViewModels"
-        Title="SampleELT - ETL Designer"
+        Title="{Binding WindowTitle}"
         Width="1200" Height="800"
         MinWidth="900" MinHeight="600">
 
@@ -35,8 +35,13 @@
             </MenuItem>
             <MenuItem Header="ツール(_T)">
                 <MenuItem Header="DB 接続設定(_C)..." Click="ConnectionManager_Click"/>
+                <MenuItem Header="スケジュール管理(_S)..." Click="ScheduleManager_Click"/>
+                <MenuItem Header="ジョブ管理(_J)..." Command="{Binding OpenJobManagerCommand}"/>
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)">
+                <MenuItem Header="使い方(_U)..." Click="HelpUsage_Click"/>
+                <MenuItem Header="仕様書(_S)..." Click="HelpSpec_Click"/>
+                <Separator/>
                 <MenuItem Header="バージョン情報" Click="About_Click"/>
             </MenuItem>
         </Menu>
@@ -44,20 +49,20 @@
         <!-- Toolbar -->
         <ToolBar DockPanel.Dock="Top" Background="#F5F5F5" Padding="4,2">
             <Button ToolTip="新規パイプライン" Command="{Binding NewPipelineCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4">
+                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="2,0">
                 <TextBlock Text="📄 新規"/>
             </Button>
             <Button ToolTip="パイプラインを開く" Command="{Binding LoadPipelineCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4">
+                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="2,0">
                 <TextBlock Text="📂 開く"/>
             </Button>
             <Button ToolTip="パイプラインを保存" Command="{Binding SavePipelineCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4">
+                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="2,0">
                 <TextBlock Text="💾 保存"/>
             </Button>
             <Separator/>
             <Button ToolTip="パイプラインを実行 (F5)" Command="{Binding RunPipelineCommand}"
-                    Padding="8,4">
+                    Padding="8,4" Margin="2,0">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
                         <Setter Property="Background" Value="#4CAF50"/>
@@ -74,7 +79,7 @@
                 <TextBlock Text="▶ 実行"/>
             </Button>
             <Button ToolTip="実行を停止" Command="{Binding StopCommand}"
-                    Padding="8,4">
+                    Padding="8,4" Margin="2,0">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
                         <Setter Property="Background" Value="#F44336"/>
@@ -92,8 +97,37 @@
             </Button>
             <Separator/>
             <Button ToolTip="キャンバスをクリア" Command="{Binding ClearCanvasCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4">
+                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="2,0">
                 <TextBlock Text="🗑 クリア"/>
+            </Button>
+            <Separator/>
+            <Button ToolTip="スケジュール管理" Command="{Binding OpenScheduleManagerCommand}"
+                    Padding="8,4" Margin="2,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                        <Setter Property="Background" Value="#7B1FA2"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#4A148C"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <TextBlock Text="⏰ スケジュール"/>
+            </Button>
+            <Button ToolTip="ジョブ管理" Command="{Binding OpenJobManagerCommand}"
+                    Padding="8,4" Margin="2,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                        <Setter Property="Background" Value="#00695C"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#004D40"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <TextBlock Text="🔗 ジョブ"/>
             </Button>
         </ToolBar>
 
@@ -142,15 +176,10 @@
                         <Border Background="#E3F2FD" CornerRadius="4" Padding="6,4" Margin="0,0,0,6">
                             <TextBlock Text="Input" FontWeight="Bold" FontSize="12" Foreground="#1565C0"/>
                         </Border>
-                        <Button Content="🔶 Oracle Input"
-                                Tag="{x:Static vm:StepTypeHelper.OracleInput}"
+                        <Button Content="🔌 DB Input"
+                                Tag="{x:Static vm:StepTypeHelper.DBInput}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="🐬 MySQL Input"
-                                Tag="{x:Static vm:StepTypeHelper.MySQLInput}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
+                                ToolTip="ダブルクリックで追加（Oracle / MySQL 自動判別）"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📂 File Input"
                                 Tag="{x:Static vm:StepTypeHelper.ExcelInput}"
@@ -162,18 +191,23 @@
                         <Border Background="#E8F5E9" CornerRadius="4" Padding="6,4" Margin="0,10,0,6">
                             <TextBlock Text="Output" FontWeight="Bold" FontSize="12" Foreground="#1B5E20"/>
                         </Border>
-                        <Button Content="🔶 Oracle Output"
-                                Tag="{x:Static vm:StepTypeHelper.OracleOutput}"
+                        <Button Content="🔌 DB Output"
+                                Tag="{x:Static vm:StepTypeHelper.DBOutput}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="🐬 MySQL Output"
-                                Tag="{x:Static vm:StepTypeHelper.MySQLOutput}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
+                                ToolTip="ダブルクリックで追加（Oracle / MySQL 自動判別）"
                                 Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📄 File Output"
                                 Tag="{x:Static vm:StepTypeHelper.ExcelOutput}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="🔄 Insert/Update"
+                                Tag="{x:Static vm:StepTypeHelper.InsertUpdate}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="ダブルクリックで追加"
+                                Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="✏️ DB Update"
+                                Tag="{x:Static vm:StepTypeHelper.DBUpdate}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
                                 ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
@@ -204,16 +238,6 @@
                         </Border>
                         <Button Content="🗑 DB Delete"
                                 Tag="{x:Static vm:StepTypeHelper.DBDelete}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="🔄 Insert/Update"
-                                Tag="{x:Static vm:StepTypeHelper.InsertUpdate}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
-                        <Button Content="✏️ DB Update"
-                                Tag="{x:Static vm:StepTypeHelper.DBUpdate}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
                                 ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
@@ -289,12 +313,12 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Canvas>
-                                                <!-- Arrow line -->
+                                                <!-- Connection line -->
                                                 <Line X1="{Binding X1}" Y1="{Binding Y1}"
                                                       X2="{Binding X2}" Y2="{Binding Y2}"
                                                       Stroke="#2196F3" StrokeThickness="2"/>
-                                                <!-- Arrowhead marker (simple) -->
-                                                <Polygon Points="0,0 -10,-5 -10,5"
+                                                <!-- Arrowhead: tip at X2,Y2, pointing in ArrowAngle direction -->
+                                                <Polygon Points="0,0 -12,-5 -12,5"
                                                          Fill="#2196F3"
                                                          RenderTransformOrigin="0,0">
                                                     <Polygon.RenderTransform>
@@ -335,6 +359,8 @@
                                             <controls:StepNodeControl
                                                 x:Name="StepNode"
                                                 DataContext="{Binding}"
+                                                Width="{Binding NodeWidth}"
+                                                Height="{Binding NodeHeight}"
                                                 IsSelected="{Binding IsSelected}"
                                                 IsConnectionTarget="{Binding IsConnectionTarget}"
                                                 IsConnectingMode="{Binding IsConnectingMode}"
@@ -342,7 +368,8 @@
                                                 MouseLeftButtonUp="StepNode_MouseLeftButtonUp"
                                                 MouseMove="StepNode_MouseMove"
                                                 MouseRightButtonDown="StepNode_MouseRightButtonDown"
-                                                OutputPortDragStarted="StepNode_OutputPortDragStarted">
+                                                OutputPortDragStarted="StepNode_OutputPortDragStarted"
+                                                ResizeDragStarted="StepNode_ResizeDragStarted">
                                                 <controls:StepNodeControl.ContextMenu>
                                                     <ContextMenu>
                                                         <MenuItem Header="⚙ 設定"
@@ -403,6 +430,39 @@
                                         </Style>
                                     </Button.Style>
                                 </Button>
+                                <Button DockPanel.Dock="Right"
+                                        Content="📋 コピー"
+                                        HorizontalAlignment="Right"
+                                        Padding="8,2"
+                                        Height="22"
+                                        FontSize="11"
+                                        Margin="0,0,4,0"
+                                        Click="CopyLog_Click">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="#546E7A"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}"
+                                                                CornerRadius="3"
+                                                                Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Background" Value="#78909C"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
                             </DockPanel>
                         </Border>
                         <ScrollViewer x:Name="LogScrollViewer"
@@ -427,47 +487,43 @@
             <!-- Splitter -->
             <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="#DDDDDD"/>
 
-            <!-- ==================== RIGHT HELP PANEL ==================== -->
+            <!-- ==================== RIGHT SCHEDULE STATUS PANEL ==================== -->
             <Border Grid.Column="4"
                     Background="#FAFAFA"
                     BorderBrush="#DDDDDD"
                     BorderThickness="1,0,0,0">
                 <DockPanel>
-                    <Border DockPanel.Dock="Top" Background="#ECEFF1" Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
-                        <TextBlock Text="ヘルプ" FontWeight="Bold" FontSize="13" Foreground="#424242"/>
+                    <!-- Header -->
+                    <Border DockPanel.Dock="Top" Background="#ECEFF1" Padding="8,5"
+                            BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
+                        <DockPanel>
+                            <TextBlock Text="📅 スケジュール" FontWeight="Bold" FontSize="13"
+                                       Foreground="#424242" VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right" Content="🔄"
+                                    HorizontalAlignment="Right"
+                                    ToolTip="一覧を更新"
+                                    Click="RefreshSchedule_Click"
+                                    Height="22" Padding="6,0" FontSize="12">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="Foreground" Value="#424242"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#DDDDDD"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </DockPanel>
                     </Border>
-                    <TabControl x:Name="HelpTabControl" SelectedIndex="0"
-                                Background="Transparent"
-                                BorderThickness="0">
-                        <TabItem Header="使い方">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Auto">
-                                <TextBox x:Name="UsageTextBox"
-                                         IsReadOnly="True"
-                                         BorderThickness="0"
-                                         Background="Transparent"
-                                         FontFamily="Meiryo UI, Yu Gothic UI, sans-serif"
-                                         FontSize="11"
-                                         TextWrapping="Wrap"
-                                         Padding="8"
-                                         AcceptsReturn="True"/>
-                            </ScrollViewer>
-                        </TabItem>
-                        <TabItem Header="仕様書">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Auto">
-                                <TextBox x:Name="SpecTextBox"
-                                         IsReadOnly="True"
-                                         BorderThickness="0"
-                                         Background="Transparent"
-                                         FontFamily="Meiryo UI, Yu Gothic UI, sans-serif"
-                                         FontSize="11"
-                                         TextWrapping="Wrap"
-                                         Padding="8"
-                                         AcceptsReturn="True"/>
-                            </ScrollViewer>
-                        </TabItem>
-                    </TabControl>
+                    <!-- Schedule cards list -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="ScheduleStatusPanel" Margin="6,6"/>
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
         </Grid>
