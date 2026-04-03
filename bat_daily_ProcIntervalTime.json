@@ -36,7 +36,7 @@
     {
       "id": "a0000001-0000-0000-0000-000000000004",
       "name": "SelectWpProcIntervalTime",
-      "stepType": "MySQLInput",
+      "stepType": "DBInput",
       "canvasX": 272.0,
       "canvasY": 245.0,
       "settings": {
@@ -48,7 +48,7 @@
     {
       "id": "a0000001-0000-0000-0000-000000000005",
       "name": "SelectWpProcIntervalTime 2",
-      "stepType": "MySQLInput",
+      "stepType": "DBInput",
       "canvasX": 270.0,
       "canvasY": 365.0,
       "settings": {
