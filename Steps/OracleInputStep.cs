@@ -72,6 +72,7 @@ namespace SampleELT.Steps
             {
                 // 最初の行の値をパラメータとして使用（lookup パターン）
                 var oracleSql = hasNamedParams ? ReplaceNamedPlaceholders(sql) : ReplacePlaceholders(sql);
+                progress.Report($"Oracle Input: 実行SQL (先頭300文字) → {oracleSql.Replace("\r\n", " ").Replace("\n", " ")[..Math.Min(300, oracleSql.Length)]}");
                 using var cmd = new OracleCommand(oracleSql, conn);
                 if (hasNamedParams)
                     AddNamedParameters(cmd.Parameters, inputData[0]);
@@ -90,6 +91,7 @@ namespace SampleELT.Steps
             }
             else
             {
+                progress.Report($"Oracle Input: 実行SQL (先頭300文字) → {sql.Replace("\r\n", " ").Replace("\n", " ")[..Math.Min(300, sql.Length)]}");
                 using var cmd = new OracleCommand(sql, conn);
                 using var reader = await cmd.ExecuteReaderAsync(ct);
                 while (await reader.ReadAsync(ct))
