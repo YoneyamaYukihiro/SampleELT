@@ -30,11 +30,17 @@ namespace SampleELT.Dialogs
             string keyFields, string updateFields, int commitSize = 100)
         {
             StepNameBox.Text = stepName;
+            CommitSizeBox.Text = commitSize.ToString();
+            // RefreshConnectionList を先に呼ぶことで SelectionChanged が空の TableCombo に対して発火し、
+            // その後にセットした TableCombo.Text が上書きされるのを防ぐ
+            RefreshConnectionList(connectionId);
             TableCombo.Text = tableName;
             KeyFieldsBox.Text = keyFields;
             UpdateFieldsBox.Text = updateFields;
-            CommitSizeBox.Text = commitSize.ToString();
-            RefreshConnectionList(connectionId);
+
+            // テーブル名が設定済みなら表示時にカラムを自動取得
+            if (!string.IsNullOrEmpty(tableName))
+                Loaded += async (_, _) => await AutoLoadColumnsAsync();
         }
 
         // ==================== 接続 ====================
@@ -196,43 +202,50 @@ namespace SampleELT.Dialogs
 
             LoadColumnsButton.IsEnabled = false;
             LoadColumnsButton.Content = "取得中...";
-            ColumnStatusText.Text = "取得中...";
+            await AutoLoadColumnsAsync();
+            LoadColumnsButton.IsEnabled = true;
+            LoadColumnsButton.Content = "🔄 カラム取得";
+        }
 
+        /// <summary>
+        /// テーブルのカラム一覧を取得してグリッドに反映する。
+        /// Initialize() の Loaded イベントと LoadColumns_Click の両方から呼ばれる。
+        /// エラー時はエラーダイアログを出さず ColumnStatusText に表示する。
+        /// </summary>
+        private async Task AutoLoadColumnsAsync()
+        {
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn) return;
+            var tableName = TableCombo.Text?.Trim();
+            if (string.IsNullOrEmpty(tableName)) return;
+
+            LoadColumnsButton.IsEnabled = false;
+            ColumnStatusText.Text = "取得中...";
             try
             {
                 var columnNames = await GetColumnsAsync(conn, tableName);
-
-                // 既存のキー/更新フィールドの設定を復元するために保持
-                var existingKeys = KeyFieldsBox.Text.Split(',')
-                    .Select(s => s.Trim()).Where(s => s.Length > 0).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                var existingUpdates = UpdateFieldsBox.Text.Split(',')
-                    .Select(s => s.Trim()).Where(s => s.Length > 0).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var existingKeys    = ParseFields(KeyFieldsBox.Text);
+                var existingUpdates = ParseFields(UpdateFieldsBox.Text);
 
                 _columns.Clear();
                 foreach (var name in columnNames)
-                {
                     _columns.Add(new ColumnItem
                     {
                         ColumnName = name,
-                        IsKey = existingKeys.Contains(name),
+                        IsKey    = existingKeys.Contains(name),
                         IsUpdate = existingUpdates.Contains(name)
                     });
-                }
 
                 ColumnGrid.ItemsSource = null;
                 ColumnGrid.ItemsSource = _columns;
                 ColumnStatusText.Text = $"{columnNames.Count} カラム取得済み";
             }
-            catch (Exception ex)
+            catch
             {
-                ColumnStatusText.Text = "取得失敗";
-                MessageBox.Show($"カラム一覧の取得に失敗しました:\n{ex.Message}", "エラー",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                ColumnStatusText.Text = "カラムの自動取得に失敗しました（カラム取得ボタンで再試行できます）";
             }
             finally
             {
                 LoadColumnsButton.IsEnabled = true;
-                LoadColumnsButton.Content = "🔄 カラム取得";
             }
         }
 
@@ -268,16 +281,15 @@ namespace SampleELT.Dialogs
             return columns;
         }
 
+        private static HashSet<string> ParseFields(string csv) =>
+            csv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0)
+               .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         // ==================== チェックボックス変更 ====================
 
         private void Column_CheckChanged(object sender, RoutedEventArgs e)
         {
-            UpdateFieldTextBoxes();
-        }
-
-        private void UpdateFieldTextBoxes()
-        {
-            KeyFieldsBox.Text = string.Join(",", _columns.Where(c => c.IsKey).Select(c => c.ColumnName));
+            KeyFieldsBox.Text   = string.Join(",", _columns.Where(c => c.IsKey).Select(c => c.ColumnName));
             UpdateFieldsBox.Text = string.Join(",", _columns.Where(c => c.IsUpdate).Select(c => c.ColumnName));
         }
 
@@ -313,12 +325,12 @@ namespace SampleELT.Dialogs
                 return;
             }
 
-            StepName = StepNameBox.Text.Trim();
+            StepName     = StepNameBox.Text.Trim();
             ConnectionId = conn.Id;
-            TableName = TableCombo.Text.Trim();
-            KeyFields = KeyFieldsBox.Text.Trim();
+            TableName    = TableCombo.Text.Trim();
+            KeyFields    = KeyFieldsBox.Text.Trim();
             UpdateFields = UpdateFieldsBox.Text.Trim();
-            CommitSize = int.TryParse(CommitSizeBox.Text.Trim(), out var cs) && cs >= 0 ? cs : 100;
+            CommitSize   = int.TryParse(CommitSizeBox.Text.Trim(), out var cs) && cs >= 0 ? cs : 100;
             DialogResult = true;
         }
 
