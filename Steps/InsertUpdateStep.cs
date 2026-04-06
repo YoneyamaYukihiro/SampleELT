@@ -78,8 +78,18 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
-                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0)
+                                         .Where(f => allCols.Any(c => string.Equals(c, f, StringComparison.OrdinalIgnoreCase)))
+                                         .ToList();
+
+                    // UpdateFields が明示指定されている場合、テーブルに存在しない入力カラムを除外する
+                    if (!string.IsNullOrWhiteSpace(updateFieldsRaw))
+                    {
+                        var allowed = new HashSet<string>(
+                            keyFields.Concat(updateCols), StringComparer.OrdinalIgnoreCase);
+                        allCols = allCols.Where(c => allowed.Contains(c)).ToList();
+                    }
 
                     var onClause = string.Join(" AND ", keyFields.Select((k, i) => $"t.{k} = s.{k}"));
                     var updateClause = string.Join(", ", updateCols.Select(c => $"t.{c} = s.{c}"));
@@ -134,8 +144,18 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
-                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0)
+                                         .Where(f => allCols.Any(c => string.Equals(c, f, StringComparison.OrdinalIgnoreCase)))
+                                         .ToList();
+
+                    // UpdateFields が明示指定されている場合、テーブルに存在しない入力カラムを除外する
+                    if (!string.IsNullOrWhiteSpace(updateFieldsRaw))
+                    {
+                        var allowed = new HashSet<string>(
+                            keyFields.Concat(updateCols), StringComparer.OrdinalIgnoreCase);
+                        allCols = allCols.Where(c => allowed.Contains(c)).ToList();
+                    }
 
                     var colList = string.Join(", ", allCols);
                     var paramList = string.Join(", ", allCols.Select((c, i) => $"@p{i}"));
