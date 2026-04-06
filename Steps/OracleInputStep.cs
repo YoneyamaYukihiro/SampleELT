@@ -30,6 +30,20 @@ namespace SampleELT.Steps
 
             var hasNamedParams = HasNamedParams(sql);
 
+            // バインドパラメータのデバッグ情報を出力
+            if (hasNamedParams)
+                progress.Report($"Oracle Input: 名前付きパラメータ検出 (:{{}}) → Oracle バインド変数に変換");
+            else if (sql.Contains('?'))
+                progress.Report($"Oracle Input: ? プレースホルダー検出 → 位置バインド");
+            else
+                progress.Report("Oracle Input: パラメータなし → そのまま実行");
+
+            if (inputData.Count > 0)
+            {
+                var fields = string.Join(", ", inputData[0].Select(kv => $"{kv.Key}={kv.Value ?? "NULL"}"));
+                progress.Report($"Oracle Input: 入力フィールド [{fields}]");
+            }
+
             if (executeEachRow && inputData.Count > 0)
             {
                 // 前ステップの各行の値を順番にパラメータとして渡す（行ごとに実行）
