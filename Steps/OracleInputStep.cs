@@ -32,9 +32,9 @@ namespace SampleELT.Steps
 
             // バインドパラメータのデバッグ情報を出力
             if (hasNamedParams)
-                progress.Report($"Oracle Input: 名前付きパラメータ検出 (:{{}}) → Oracle バインド変数に変換");
+                progress.Report($"Oracle Input: 名前付きパラメータ検出 (:{{}}) → :fn_xxx 形式に変換");
             else if (sql.Contains('?'))
-                progress.Report($"Oracle Input: ? プレースホルダー検出 → 位置バインド");
+                progress.Report($"Oracle Input: ? プレースホルダー検出 → :p0, :p1, ... 形式に変換");
             else
                 progress.Report("Oracle Input: パラメータなし → そのまま実行");
 
@@ -114,28 +114,28 @@ namespace SampleELT.Steps
         private static bool HasNamedParams(string sql)
             => Regex.IsMatch(sql, @":\{[a-zA-Z_]\w*\}");
 
-        /// <summary>:{fieldname} を Oracle バインド変数 :_fn_fieldname に変換する</summary>
+        /// <summary>:{fieldname} を Oracle バインド変数 :fn_fieldname に変換する</summary>
         private static string ReplaceNamedPlaceholders(string sql)
-            => Regex.Replace(sql, @":\{([a-zA-Z_]\w*)\}", m => $":_fn_{m.Groups[1].Value}");
+            => Regex.Replace(sql, @":\{([a-zA-Z_]\w*)\}", m => $":fn_{m.Groups[1].Value}");
 
         /// <summary>入力行のフィールドを名前でバインドする</summary>
         private static void AddNamedParameters(OracleParameterCollection p, Dictionary<string, object?> row)
         {
             foreach (var kvp in row)
-                p.Add(new OracleParameter($":_fn_{kvp.Key}", kvp.Value ?? DBNull.Value));
+                p.Add(new OracleParameter($"fn_{kvp.Key}", kvp.Value ?? DBNull.Value));
         }
 
-        /// <summary>Oracle は ? をサポートしないため :_p0, :_p1, ... に変換する</summary>
+        /// <summary>Oracle は ? をサポートしないため :p0, :p1, ... に変換する</summary>
         private static string ReplacePlaceholders(string sql)
         {
             int idx = 0;
-            return Regex.Replace(sql, @"\?", _ => $":_p{idx++}");
+            return Regex.Replace(sql, @"\?", _ => $":p{idx++}");
         }
 
         private static void AddParameters(OracleParameterCollection p, List<object?> values)
         {
             for (int i = 0; i < values.Count; i++)
-                p.Add(new OracleParameter($":_p{i}", values[i] ?? DBNull.Value));
+                p.Add(new OracleParameter($"p{i}", values[i] ?? DBNull.Value));
         }
 
         public override string GetDisplayIcon() => "🔶";
