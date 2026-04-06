@@ -25,7 +25,7 @@ namespace SampleELT.Steps
             CancellationToken ct)
         {
             var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
-            var sql = Settings.TryGetValue("SQL", out var s) ? s?.ToString() ?? "" : "";
+            var rawSql = Settings.TryGetValue("SQL", out var s) ? s?.ToString() ?? "" : "";
             var executeEachRow = Settings.TryGetValue("ExecuteEachRow", out var eer)
                 && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
@@ -34,12 +34,12 @@ namespace SampleELT.Steps
 
             if (isOracle)
             {
-                await ExecuteOracleAsync(connectionString, sql, executeEachRow, inputData, progress, ct);
+                await ExecuteOracleAsync(connectionString, TrimSql(rawSql), executeEachRow, inputData, progress, ct);
             }
             else
             {
                 var csb = new MySqlConnectionStringBuilder(connectionString) { AllowUserVariables = true };
-                await ExecuteMySQLAsync(csb.ConnectionString, sql, executeEachRow, inputData, progress, ct);
+                await ExecuteMySQLAsync(csb.ConnectionString, rawSql, executeEachRow, inputData, progress, ct);
             }
 
             return inputData;
@@ -128,6 +128,9 @@ namespace SampleELT.Steps
                 throw;
             }
         }
+
+        /// <summary>末尾の空白・セミコロンを除去する（Oracle は末尾セミコロンを許容しない）</summary>
+        private static string TrimSql(string sql) => sql.TrimEnd().TrimEnd(';').TrimEnd();
 
         public override string GetDisplayIcon() => "⚡";
     }
