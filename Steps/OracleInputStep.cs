@@ -19,7 +19,7 @@ namespace SampleELT.Steps
             CancellationToken ct)
         {
             var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
-            var sql = Settings.TryGetValue("SQL", out var s) ? s?.ToString() ?? "" : "";
+            var sql = TrimSql(Settings.TryGetValue("SQL", out var s) ? s?.ToString() ?? "" : "");
             var executeEachRow = Settings.TryGetValue("ExecuteEachRow", out var eer)
                 && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
@@ -90,6 +90,9 @@ namespace SampleELT.Steps
 
             return result;
         }
+
+        /// <summary>末尾の空白・セミコロンを除去する（Oracle は末尾セミコロンを許容しない）</summary>
+        private static string TrimSql(string sql) => sql.TrimEnd().TrimEnd(';').TrimEnd();
 
         /// <summary>SQL に :{fieldname} 形式の名前付きプレースホルダーが含まれるか判定する</summary>
         private static bool HasNamedParams(string sql)
