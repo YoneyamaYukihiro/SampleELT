@@ -20,6 +20,8 @@ namespace SampleELT.Dialogs
         public int CommitSize { get; private set; } = 100;
 
         private readonly List<ColumnItem> _columns = new();
+        private string _initKeyFields = "";
+        private string _initUpdateFields = "";
 
         public InsertUpdateDialog()
         {
@@ -31,12 +33,12 @@ namespace SampleELT.Dialogs
         {
             StepNameBox.Text = stepName;
             CommitSizeBox.Text = commitSize.ToString();
+            _initKeyFields = keyFields;
+            _initUpdateFields = updateFields;
             // RefreshConnectionList を先に呼ぶことで SelectionChanged が空の TableCombo に対して発火し、
             // その後にセットした TableCombo.Text が上書きされるのを防ぐ
             RefreshConnectionList(connectionId);
             TableCombo.Text = tableName;
-            KeyFieldsBox.Text = keyFields;
-            UpdateFieldsBox.Text = updateFields;
 
             // テーブル名が設定済みなら表示時にカラムを自動取得
             if (!string.IsNullOrEmpty(tableName))
@@ -223,8 +225,8 @@ namespace SampleELT.Dialogs
             try
             {
                 var columnNames = await GetColumnsAsync(conn, tableName);
-                var existingKeys    = ParseFields(KeyFieldsBox.Text);
-                var existingUpdates = ParseFields(UpdateFieldsBox.Text);
+                var existingKeys    = ParseFields(_initKeyFields);
+                var existingUpdates = ParseFields(_initUpdateFields);
 
                 _columns.Clear();
                 foreach (var name in columnNames)
@@ -285,14 +287,6 @@ namespace SampleELT.Dialogs
             csv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0)
                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // ==================== チェックボックス変更 ====================
-
-        private void Column_CheckChanged(object sender, RoutedEventArgs e)
-        {
-            KeyFieldsBox.Text   = string.Join(",", _columns.Where(c => c.IsKey).Select(c => c.ColumnName));
-            UpdateFieldsBox.Text = string.Join(",", _columns.Where(c => c.IsUpdate).Select(c => c.ColumnName));
-        }
-
         // ==================== OK / キャンセル ====================
 
         private void OK_Click(object sender, RoutedEventArgs e)
@@ -318,9 +312,10 @@ namespace SampleELT.Dialogs
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(KeyFieldsBox.Text))
+            var keyFields = string.Join(",", _columns.Where(c => c.IsKey).Select(c => c.ColumnName));
+            if (string.IsNullOrEmpty(keyFields))
             {
-                MessageBox.Show("キーフィールドを入力してください。", "入力エラー",
+                MessageBox.Show("キーフィールドをカラム選択で指定してください。", "入力エラー",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -328,8 +323,8 @@ namespace SampleELT.Dialogs
             StepName     = StepNameBox.Text.Trim();
             ConnectionId = conn.Id;
             TableName    = TableCombo.Text.Trim();
-            KeyFields    = KeyFieldsBox.Text.Trim();
-            UpdateFields = UpdateFieldsBox.Text.Trim();
+            KeyFields    = keyFields;
+            UpdateFields = string.Join(",", _columns.Where(c => c.IsUpdate).Select(c => c.ColumnName));
             CommitSize   = int.TryParse(CommitSizeBox.Text.Trim(), out var cs) && cs >= 0 ? cs : 100;
             DialogResult = true;
         }
