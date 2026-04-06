@@ -229,6 +229,13 @@ namespace SampleELT.ViewModels
         {
             if (IsRunning) return;
 
+            // 手動実行前に上書き保存（ファイルが既存の場合のみ）
+            if (!string.IsNullOrEmpty(_currentFilePath))
+            {
+                SaveToFile(_currentFilePath);
+                AddLog($"パイプライン保存: {_currentFilePath}");
+            }
+
             IsRunning = true;
             StatusMessage = "実行中...";
             _cts = new CancellationTokenSource();
