@@ -1,0 +1,60 @@
+{
+  "Name": "bat_daily(real_process_time)",
+  "Steps": [
+    {
+      "Id": "9cdd73a1-235d-4e5f-b7b8-e23276c44acc",
+      "Name": "Spirytus(lot_event_history)",
+      "StepType": "DBInput",
+      "CanvasX": 228,
+      "CanvasY": 150,
+      "NodeWidth": 166,
+      "NodeHeight": 103,
+      "Settings": {
+        "ConnectionId": "217b796c-b911-4602-8835-7996c017684b",
+        "SQL": "SELECT\r\n \u0027H1\u0027 LINE_ID,\r\n XX.SB_ID,\r\n XX.PD_ID,\r\n XX.LOT_ID,\r\n DD.OP_ID,\r\n DD.STEP_ID,\r\n CC.WP_ID,\r\n DECODE(CC.RECIPE_ID, \u0027\u679A\u8449\u30EC\u30B7\u30D4\u0027, EE.RECIPE_ID, CC.RECIPE_ID) AS RECIPE_ID,\r\n CC.LOT_RECIPE_FLAG,\r\n DECODE(CC.LOT_RECIPE_FLAG, 0, EE.WF_RECIPE_PROC_QUANTITY, CC.WF_GOOD_QUANTITY) AS WF_PROC_QUANTITY,\r\n DECODE(CC.LOT_RECIPE_FLAG, 0, EE.CHIP_RECIPE_PROC_QUANTITY, CC.CHIP_GOOD_QUANTITY) AS CHIP_PROC_QUANTITY,\r\n XX.FLOW_CLASS,\r\n XX.LOT_FLOW_TYPE,\r\n AA.ENTRY_TIME AS WORK_START,\r\n BB.ENTRY_TIME AS PROC_START,\r\n CC.ENTRY_TIME AS PROC_END,\r\n DD.ENTRY_TIME AS WORK_END,\r\n ROUND((DD.ENTRY_TIME - AA.ENTRY_TIME) * (24*60), 2) AS WORK_TIME_MIN,\r\n ROUND((CC.ENTRY_TIME - BB.ENTRY_TIME) * (24*60), 2) AS PROC_TIME_MIN,\r\n AA.EMP_ID AS WORK_STRAT_EMP_ID,\r\n DD.EMP_ID AS WORK_END_EMP_ID,\r\n CASE\r\n  WHEN AA.EMP_ID = \u00279999995\u0027 AND DD.EMP_ID = \u00279999995\u0027 THEN 1\r\n  ELSE 0\r\n END AS AUTO_WORK_FLAG,\r\n BB.EMP_ID AS PROC_STRAT_EMP_ID,\r\n CC.EMP_ID AS PROC_END_EMP_ID, \r\n CASE\r\n  WHEN BB.EMP_ID = \u00279999996\u0027 AND CC.EMP_ID = \u00279999996\u0027 THEN 1\r\n  ELSE 0\r\n END AS AUTO_PROC_FLAG,\r\n TO_CHAR(SYSDATE,\u0027YYYY/MM/DD HH24:MI:SS\u0027) AS UPDATE_TIME\r\nFROM\r\n LOT XX,\r\n (\r\n SELECT\r\n  *\r\n FROM\r\n  LOT_EVENT_HISTORY\r\n WHERE\r\n  LOT_EVENT_ID =3\r\n ) AA,\r\n (\r\n SELECT\r\n  *\r\n FROM\r\n  LOT_EVENT_HISTORY\r\n WHERE\r\n  LOT_EVENT_ID =4\r\n ) BB,\r\n (\r\n SELECT\r\n  *\r\n FROM\r\n  LOT_EVENT_HISTORY\r\n WHERE\r\n  LOT_EVENT_ID =5\r\n ) CC,\r\n (\r\n SELECT\r\n  *\r\n FROM\r\n  LOT_EVENT_HISTORY\r\n WHERE\r\n  LOT_EVENT_ID =6\r\n ) DD,\r\n (\r\n SELECT\r\n  SB_ID, \r\n  LOT_ID, \r\n  OP_ID, \r\n  STEP_ID, \r\n  WP_ID, \r\n  RECIPE_ID,\r\n  SUM(CHIP_QUANTITY) CHIP_RECIPE_PROC_QUANTITY,\r\n  COUNT(*) AS WF_RECIPE_PROC_QUANTITY\r\n FROM\r\n  WF_HISTORY\r\n WHERE\r\n  LOT_EVENT_ID = 5\r\n GROUP BY\r\n  SB_ID, LOT_ID, OP_ID, STEP_ID, WP_ID, RECIPE_ID\r\n ) EE\r\nWHERE\r\n XX.SB_ID = \u00271A0\u0027\r\nAND DD.SB_ID = XX.SB_ID\r\nAND DD.LOT_ID = XX.LOT_ID\r\nAND DD.ENTRY_TIME \u003E= TO_DATE(:{start_date},\u0027YYYY/MM/DD HH24:MI:SS\u0027)\r\nAND DD.ENTRY_TIME \u003C TO_DATE(:{end_date},\u0027YYYY/MM/DD HH24:MI:SS\u0027)\r\nAND AA.SB_ID = DD.SB_ID\r\nAND AA.LOT_ID = DD.LOT_ID\r\nAND AA.OP_ID = DD.OP_ID\r\nAND AA.STEP_ID = DD.STEP_ID\r\nAND BB.SB_ID = DD.SB_ID\r\nAND BB.LOT_ID = DD.LOT_ID\r\nAND BB.OP_ID = DD.OP_ID\r\nAND BB.STEP_ID = DD.STEP_ID\r\nAND CC.SB_ID = DD.SB_ID\r\nAND CC.LOT_ID = DD.LOT_ID\r\nAND CC.OP_ID = DD.OP_ID\r\nAND CC.STEP_ID = DD.STEP_ID\r\nAND EE.SB_ID (\u002B)= DD.SB_ID\r\nAND EE.LOT_ID (\u002B)= DD.LOT_ID\r\nAND EE.OP_ID (\u002B)= DD.OP_ID\r\nAND EE.STEP_ID (\u002B)= DD.STEP_ID\r\nAND EE.WP_ID (\u002B)= DD.WP_ID\r\nORDER BY\r\n SB_ID, LOT_ID, WORK_END",
+        "ExecuteEachRow": "false"
+      }
+    },
+    {
+      "Id": "b2704785-2250-412d-bbe2-ad8be33e591f",
+      "Name": "Set Variable",
+      "StepType": "SetVariable",
+      "CanvasX": 48,
+      "CanvasY": 166,
+      "NodeWidth": 150,
+      "NodeHeight": 70,
+      "Settings": {
+        "Fields": "start_date = TODAY-2\r\nend_date = TODAY-1",
+        "DateFormat": "yyyy/MM/dd"
+      }
+    },
+    {
+      "Id": "0e9f69b6-57b7-48d5-acfb-6e658d9a7363",
+      "Name": "Insert/Update",
+      "StepType": "InsertUpdate",
+      "CanvasX": 446,
+      "CanvasY": 163,
+      "NodeWidth": 231,
+      "NodeHeight": 75,
+      "Settings": {
+        "ConnectionId": "5964561b-e00f-4a79-8771-cd1b6753e7db",
+        "TableName": "real_process_time",
+        "KeyFields": "line_id,sb_id,pd_id,lot_id,op_id,step_id,wp_id,recipe_id",
+        "UpdateFields": "line_id,sb_id,pd_id,lot_id,op_id,step_id,wp_id,recipe_id,lot_recipe_flag,wf_proc_quantity,chip_proc_quantity,work_start,proc_start,proc_end,work_end,work_wait_time_min,work_time_min,proc_time_min,proc_interval_time_min,auto_work_flag,auto_proc_flag,flow_class,lot_flow_type,update_time",
+        "CommitSize": "100"
+      }
+    }
+  ],
+  "Connections": [
+    {
+      "Id": "77888a45-e8fe-45b5-8992-b3f1c89a285b",
+      "SourceStepId": "b2704785-2250-412d-bbe2-ad8be33e591f",
+      "TargetStepId": "9cdd73a1-235d-4e5f-b7b8-e23276c44acc"
+    },
+    {
+      "Id": "5c525788-7361-46cb-bd69-391163705d90",
+      "SourceStepId": "9cdd73a1-235d-4e5f-b7b8-e23276c44acc",
+      "TargetStepId": "0e9f69b6-57b7-48d5-acfb-6e658d9a7363"
+    }
+  ]
+}
