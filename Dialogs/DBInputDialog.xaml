@@ -104,7 +104,17 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="SQL クエリ" FontWeight="Bold" Margin="0,0,0,4"/>
+                <Grid Grid.Row="0" Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="SQL クエリ" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1"
+                               Text="※ SQL 欄をダブルクリックすると大きな画面で編集できます"
+                               FontSize="11" Foreground="#777777"
+                               VerticalAlignment="Center" Margin="10,0,0,0"/>
+                </Grid>
                 <TextBox Grid.Row="1" x:Name="SQLBox"
                          Padding="6,4"
                          AcceptsReturn="True"
@@ -114,7 +124,8 @@
                          FontFamily="Consolas"
                          FontSize="12"
                          Background="#FAFAFA"
-                         BorderBrush="#CCCCCC"/>
+                         BorderBrush="#CCCCCC"
+                         MouseDoubleClick="SQLBox_MouseDoubleClick"/>
             </Grid>
 
             <!-- Splitter -->

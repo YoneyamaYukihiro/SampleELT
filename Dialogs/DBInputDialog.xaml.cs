@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using MySqlConnector;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
@@ -307,6 +308,17 @@ namespace SampleELT.Dialogs
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
+        }
+
+        private void SQLBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var dialog = new SQLEditorDialog { Owner = this };
+            dialog.Initialize(SQLBox.Text);
+            if (dialog.ShowDialog() == true)
+            {
+                SQLBox.Text = dialog.SQL;
+            }
+            e.Handled = true;
         }
     }
 }
