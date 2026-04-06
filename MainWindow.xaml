@@ -251,11 +251,6 @@
                         <Border Background="#EDE7F6" CornerRadius="4" Padding="6,4" Margin="0,10,0,6">
                             <TextBlock Text="Utility" FontWeight="Bold" FontSize="12" Foreground="#4527A0"/>
                         </Border>
-                        <Button Content="🔢 Generate Rows"
-                                Tag="{x:Static vm:StepTypeHelper.GenerateRows}"
-                                MouseDoubleClick="PaletteButton_DoubleClick"
-                                ToolTip="ダブルクリックで追加"
-                                Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="🔗 Merge Join"
                                 Tag="{x:Static vm:StepTypeHelper.MergeJoin}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"

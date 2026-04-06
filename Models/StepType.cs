@@ -15,7 +15,6 @@ namespace SampleELT.Models
         InsertUpdate,
         ExecSQL,
         Dummy,
-        GenerateRows,
         MergeJoin,
         DBUpdate,
         SetVariable,

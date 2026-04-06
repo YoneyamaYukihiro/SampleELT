@@ -28,15 +28,20 @@ namespace SampleELT.Steps
             using var conn = new OracleConnection(connectionString);
             await conn.OpenAsync(ct);
 
+            var hasNamedParams = HasNamedParams(sql);
+
             if (executeEachRow && inputData.Count > 0)
             {
                 // 前ステップの各行の値を順番にパラメータとして渡す（行ごとに実行）
-                var oracleSql = ReplacePlaceholders(sql);
+                var oracleSql = hasNamedParams ? ReplaceNamedPlaceholders(sql) : ReplacePlaceholders(sql);
                 foreach (var row in inputData)
                 {
                     ct.ThrowIfCancellationRequested();
                     using var cmd = new OracleCommand(oracleSql, conn);
-                    AddParameters(cmd.Parameters, row.Values.ToList());
+                    if (hasNamedParams)
+                        AddNamedParameters(cmd.Parameters, row);
+                    else
+                        AddParameters(cmd.Parameters, row.Values.ToList());
 
                     using var reader = await cmd.ExecuteReaderAsync(ct);
                     while (await reader.ReadAsync(ct))
@@ -49,12 +54,15 @@ namespace SampleELT.Steps
                 }
                 progress.Report($"Oracle Input (行ごと実行): {result.Count}行 読み込み完了");
             }
-            else if (!executeEachRow && inputData.Count > 0 && sql.Contains('?'))
+            else if (!executeEachRow && inputData.Count > 0 && (hasNamedParams || sql.Contains('?')))
             {
-                // 最初の行の値を ? パラメータとして使用（lookup パターン）
-                var oracleSql = ReplacePlaceholders(sql);
+                // 最初の行の値をパラメータとして使用（lookup パターン）
+                var oracleSql = hasNamedParams ? ReplaceNamedPlaceholders(sql) : ReplacePlaceholders(sql);
                 using var cmd = new OracleCommand(oracleSql, conn);
-                AddParameters(cmd.Parameters, inputData[0].Values.ToList());
+                if (hasNamedParams)
+                    AddNamedParameters(cmd.Parameters, inputData[0]);
+                else
+                    AddParameters(cmd.Parameters, inputData[0].Values.ToList());
 
                 using var reader = await cmd.ExecuteReaderAsync(ct);
                 while (await reader.ReadAsync(ct))
@@ -81,6 +89,21 @@ namespace SampleELT.Steps
             }
 
             return result;
+        }
+
+        /// <summary>SQL に :{fieldname} 形式の名前付きプレースホルダーが含まれるか判定する</summary>
+        private static bool HasNamedParams(string sql)
+            => Regex.IsMatch(sql, @":\{[a-zA-Z_]\w*\}");
+
+        /// <summary>:{fieldname} を Oracle バインド変数 :_fn_fieldname に変換する</summary>
+        private static string ReplaceNamedPlaceholders(string sql)
+            => Regex.Replace(sql, @":\{([a-zA-Z_]\w*)\}", m => $":_fn_{m.Groups[1].Value}");
+
+        /// <summary>入力行のフィールドを名前でバインドする</summary>
+        private static void AddNamedParameters(OracleParameterCollection p, Dictionary<string, object?> row)
+        {
+            foreach (var kvp in row)
+                p.Add(new OracleParameter($":_fn_{kvp.Key}", kvp.Value ?? DBNull.Value));
         }
 
         /// <summary>Oracle は ? をサポートしないため :_p0, :_p1, ... に変換する</summary>

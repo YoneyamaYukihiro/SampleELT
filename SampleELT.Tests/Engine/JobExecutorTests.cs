@@ -30,7 +30,7 @@ namespace SampleELT.Tests.Engine
                 Directory.Delete(_tempDir, recursive: true);
         }
 
-        /// <summary>GenerateRows (1行) のみを持つ最小パイプラインを JSON ファイルとして書き出す。</summary>
+        /// <summary>SetVariable (1行) のみを持つ最小パイプラインを JSON ファイルとして書き出す。</summary>
         private string CreatePipelineFile(string name, string fileName = "")
         {
             var stepId = Guid.NewGuid();
@@ -43,13 +43,13 @@ namespace SampleELT.Tests.Engine
                     {
                         Id = stepId,
                         Name = "Gen",
-                        StepType = "GenerateRows",
+                        StepType = "SetVariable",
                         CanvasX = 0.0,
                         CanvasY = 0.0,
                         Settings = new Dictionary<string, string?>
                         {
                             ["Fields"] = "VALUE=1",
-                            ["RowCount"] = "1"
+                            ["DateFormat"] = "yyyy/MM/dd"
                         }
                     }
                 },

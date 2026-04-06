@@ -20,7 +20,6 @@ namespace SampleELT.ViewModels
         public static StepType InsertUpdate => StepType.InsertUpdate;
         public static StepType ExecSQL => StepType.ExecSQL;
         public static StepType Dummy => StepType.Dummy;
-        public static StepType GenerateRows => StepType.GenerateRows;
         public static StepType MergeJoin => StepType.MergeJoin;
         public static StepType DBUpdate => StepType.DBUpdate;
         public static StepType SetVariable => StepType.SetVariable;

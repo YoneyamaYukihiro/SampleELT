@@ -39,7 +39,6 @@ namespace SampleELT.Engine
                     "InsertUpdate" => new InsertUpdateStep(),
                     "ExecSQL"      => new ExecSQLStep(),
                     "Dummy"        => new DummyStep(),
-                    "GenerateRows" => new GenerateRowsStep(),
                     "MergeJoin"    => new MergeJoinStep(),
                     "DBUpdate"     => new DBUpdateStep(),
                     "SetVariable"  => new SetVariableStep(),

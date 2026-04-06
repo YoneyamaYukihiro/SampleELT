@@ -24,6 +24,14 @@ namespace SampleELT.Steps
     ///   MONTH_END      … 当月末日
     ///   YEAR_START     … 当年初日
     ///   YEAR_END       … 当年末日
+    ///   TODAY_START    … 今日の開始時刻 (yyyy/MM/dd 00:00:00)
+    ///   TODAY_END      … 今日の終了時刻 (yyyy/MM/dd 23:59:59)
+    ///   YESTERDAY_START… 昨日の開始時刻 (yyyy/MM/dd 00:00:00)
+    ///   YESTERDAY_END  … 昨日の終了時刻 (yyyy/MM/dd 23:59:59)
+    ///   MONTH_START_DT … 当月初日の開始時刻 (yyyy/MM/dd 00:00:00)
+    ///   MONTH_END_DT   … 当月末日の終了時刻 (yyyy/MM/dd 23:59:59)
+    ///   PREV_MONTH_START… 前月初日
+    ///   PREV_MONTH_END … 前月末日
     ///   その他         … リテラル文字列として使用
     /// </summary>
     public class SetVariableStep : StepBase
@@ -86,6 +94,38 @@ namespace SampleELT.Steps
 
             if (string.Equals(expr, "YEAR_END", StringComparison.OrdinalIgnoreCase))
                 return new DateTime(today.Year, 12, 31).ToString(dateFmt);
+
+            if (string.Equals(expr, "TODAY_START", StringComparison.OrdinalIgnoreCase))
+                return today.ToString(dateFmt) + " 00:00:00";
+
+            if (string.Equals(expr, "TODAY_END", StringComparison.OrdinalIgnoreCase))
+                return today.ToString(dateFmt) + " 23:59:59";
+
+            if (string.Equals(expr, "YESTERDAY_START", StringComparison.OrdinalIgnoreCase))
+                return today.AddDays(-1).ToString(dateFmt) + " 00:00:00";
+
+            if (string.Equals(expr, "YESTERDAY_END", StringComparison.OrdinalIgnoreCase))
+                return today.AddDays(-1).ToString(dateFmt) + " 23:59:59";
+
+            if (string.Equals(expr, "MONTH_START_DT", StringComparison.OrdinalIgnoreCase))
+                return new DateTime(today.Year, today.Month, 1).ToString(dateFmt) + " 00:00:00";
+
+            if (string.Equals(expr, "MONTH_END_DT", StringComparison.OrdinalIgnoreCase))
+                return new DateTime(today.Year, today.Month,
+                    DateTime.DaysInMonth(today.Year, today.Month)).ToString(dateFmt) + " 23:59:59";
+
+            if (string.Equals(expr, "PREV_MONTH_START", StringComparison.OrdinalIgnoreCase))
+            {
+                var prev = today.AddMonths(-1);
+                return new DateTime(prev.Year, prev.Month, 1).ToString(dateFmt);
+            }
+
+            if (string.Equals(expr, "PREV_MONTH_END", StringComparison.OrdinalIgnoreCase))
+            {
+                var prev = today.AddMonths(-1);
+                return new DateTime(prev.Year, prev.Month,
+                    DateTime.DaysInMonth(prev.Year, prev.Month)).ToString(dateFmt);
+            }
 
             // TODAY±N
             var m = Regex.Match(expr, @"^TODAY([+-])(\d+)$", RegexOptions.IgnoreCase);

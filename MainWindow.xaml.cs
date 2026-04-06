@@ -309,9 +309,6 @@ namespace SampleELT
                 case StepType.Dummy:
                     OpenDummyStepDialog(stepVm);
                     break;
-                case StepType.GenerateRows:
-                    OpenGenerateRowsDialog(stepVm);
-                    break;
                 case StepType.MergeJoin:
                     OpenMergeJoinDialog(stepVm);
                     break;
@@ -671,25 +668,6 @@ namespace SampleELT
             if (dialog.ShowDialog() == true)
             {
                 stepVm.Step.Name = dialog.StepName;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenGenerateRowsDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new GenerateRowsDialog { Owner = this };
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("Fields", out var f) ? f?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("RowCount", out var rc) ? rc?.ToString() ?? "1" : "1");
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["Fields"] = dialog.Fields;
-                step.Settings["RowCount"] = dialog.RowCount;
                 stepVm.NotifyNameChanged();
                 stepVm.NotifyConnectionChanged();
             }

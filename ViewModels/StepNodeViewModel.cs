@@ -42,7 +42,6 @@ namespace SampleELT.ViewModels
             StepType.InsertUpdate => "Insert/Update",
             StepType.ExecSQL      => "Exec SQL",
             StepType.Dummy        => "Dummy",
-            StepType.GenerateRows => "Generate Rows",
             StepType.MergeJoin    => "Merge Join",
             StepType.DBUpdate     => "DB Update",
             StepType.SetVariable  => "Set Variable",
