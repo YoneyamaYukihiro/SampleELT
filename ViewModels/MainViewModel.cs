@@ -45,6 +45,7 @@ namespace SampleELT.ViewModels
         public Pipeline CurrentPipeline { get; private set; } = new Pipeline();
 
         private CancellationTokenSource? _cts;
+        private string? _currentFilePath;
 
         // Event fired when a step's settings dialog should open
         public event Action<StepNodeViewModel>? OpenSettingsRequested;
@@ -290,9 +291,18 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void SavePipeline()
         {
+            if (!string.IsNullOrEmpty(_currentFilePath))
+                SaveToFile(_currentFilePath);
+            else
+                SavePipelineAs();
+        }
+
+        [RelayCommand]
+        private void SavePipelineAs()
+        {
             var dialog = new SaveFileDialog
             {
-                Title = "パイプラインを保存",
+                Title = "名前を付けてパイプラインを保存",
                 Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
                 DefaultExt = "json",
                 FileName = CurrentPipeline.Name
@@ -300,6 +310,11 @@ namespace SampleELT.ViewModels
 
             if (dialog.ShowDialog() != true) return;
 
+            SaveToFile(dialog.FileName);
+        }
+
+        private void SaveToFile(string filePath)
+        {
             try
             {
                 var pipelineData = new PipelineSerializationModel
@@ -329,12 +344,13 @@ namespace SampleELT.ViewModels
 
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 var json = JsonSerializer.Serialize(pipelineData, options);
-                File.WriteAllText(dialog.FileName, json);
+                File.WriteAllText(filePath, json);
 
-                CurrentPipeline.Name = Path.GetFileNameWithoutExtension(dialog.FileName);
+                _currentFilePath = filePath;
+                CurrentPipeline.Name = Path.GetFileNameWithoutExtension(filePath);
                 IsModified = false;
-                StatusMessage = $"保存完了: {dialog.FileName}";
-                AddLog($"パイプライン保存: {dialog.FileName}");
+                StatusMessage = $"保存完了: {filePath}";
+                AddLog($"パイプライン保存: {filePath}");
             }
             catch (Exception ex)
             {
@@ -436,6 +452,7 @@ namespace SampleELT.ViewModels
                 }
 
                 SelectedStep = null;
+                _currentFilePath = dialog.FileName;
                 IsModified = false;
                 StatusMessage = $"読み込み完了: {dialog.FileName}";
                 AddLog($"パイプライン読み込み: {dialog.FileName}");
@@ -495,6 +512,7 @@ namespace SampleELT.ViewModels
             Connections.Clear();
             CurrentPipeline = new Pipeline();
             SelectedStep = null;
+            _currentFilePath = null;
             IsModified = false;
             StatusMessage = "新しいパイプライン";
             AddLog("新しいパイプラインを作成しました");
