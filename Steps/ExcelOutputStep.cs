@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using OfficeOpenXml;
@@ -37,6 +38,8 @@ namespace SampleELT.Steps
 
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new InvalidOperationException("出力ファイルパスが設定されていません。");
+
+            filePath = ResolveDateTokens(filePath);
 
             // ディレクトリが存在しなければ作成
             var dir = Path.GetDirectoryName(filePath);
@@ -161,6 +164,21 @@ namespace SampleELT.Steps
             if (value == null) return defaultValue;
             if (bool.TryParse(value, out var result)) return result;
             return defaultValue;
+        }
+
+        /// <summary>
+        /// ファイルパス内の {format} トークンを DateTime.Now で展開する。
+        /// 例: output_{yyyyMMdd}_{HHmmss}.xlsx → output_20260403_143022.xlsx
+        /// </summary>
+        public static string ResolveDateTokens(string path, DateTime? at = null)
+        {
+            var now = at ?? DateTime.Now;
+            return Regex.Replace(path, @"\{([^}]+)\}", m =>
+            {
+                var fmt = m.Groups[1].Value;
+                try { return now.ToString(fmt); }
+                catch { return m.Value; } // 不明なフォーマットはそのまま残す
+            });
         }
 
         public override string GetDisplayIcon() => "📄";

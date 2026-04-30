@@ -14,16 +14,18 @@ namespace SampleELT.Dialogs
         public Guid? ConnectionId { get; private set; }
         public string TableName { get; private set; } = "";
         public string Mode { get; private set; } = "INSERT";
+        public int CommitSize { get; private set; } = 100;
 
         public DBOutputDialog()
         {
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, Guid? connectionId, string tableName, string mode)
+        public void Initialize(string stepName, Guid? connectionId, string tableName, string mode, int commitSize = 100)
         {
             StepNameBox.Text = stepName;
             TableNameBox.Text = tableName;
+            CommitSizeBox.Text = commitSize.ToString();
             RefreshConnectionList(connectionId);
 
             foreach (ComboBoxItem item in ModeCombo.Items)
@@ -121,6 +123,7 @@ namespace SampleELT.Dialogs
             ConnectionId = conn.Id;
             TableName = TableNameBox.Text.Trim();
             Mode = (ModeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "INSERT";
+            CommitSize = int.TryParse(CommitSizeBox.Text.Trim(), out var cs) && cs >= 0 ? cs : 100;
             DialogResult = true;
         }
 

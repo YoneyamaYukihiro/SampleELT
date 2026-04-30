@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using MySqlConnector;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
@@ -14,20 +17,35 @@ namespace SampleELT.Dialogs
         public string TableName { get; private set; } = "";
         public string KeyFields { get; private set; } = "";
         public string UpdateFields { get; private set; } = "";
+        public int CommitSize { get; private set; } = 100;
+
+        private readonly List<ColumnItem> _columns = new();
+        private string _initKeyFields = "";
+        private string _initUpdateFields = "";
 
         public InsertUpdateDialog()
         {
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, Guid? connectionId, string tableName, string keyFields, string updateFields)
+        public void Initialize(string stepName, Guid? connectionId, string tableName,
+            string keyFields, string updateFields, int commitSize = 100)
         {
             StepNameBox.Text = stepName;
-            TableNameBox.Text = tableName;
-            KeyFieldsBox.Text = keyFields;
-            UpdateFieldsBox.Text = updateFields;
+            CommitSizeBox.Text = commitSize.ToString();
+            _initKeyFields = keyFields;
+            _initUpdateFields = updateFields;
+            // RefreshConnectionList を先に呼ぶことで SelectionChanged が空の TableCombo に対して発火し、
+            // その後にセットした TableCombo.Text が上書きされるのを防ぐ
             RefreshConnectionList(connectionId);
+            TableCombo.Text = tableName;
+
+            // テーブル名が設定済みなら表示時にカラムを自動取得
+            if (!string.IsNullOrEmpty(tableName))
+                Loaded += async (_, _) => await AutoLoadColumnsAsync();
         }
+
+        // ==================== 接続 ====================
 
         private void RefreshConnectionList(Guid? selectId)
         {
@@ -46,6 +64,20 @@ namespace SampleELT.Dialogs
                     : null;
                 ConnectionCombo.SelectedItem = selected ?? allConns[0];
             }
+        }
+
+        private void ConnectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            TableCombo.ItemsSource = null;
+            TableCombo.Text = "";
+            ClearColumns();
+        }
+
+        private void ClearColumns()
+        {
+            _columns.Clear();
+            ColumnGrid.ItemsSource = null;
+            ColumnStatusText.Text = "※ カラム取得ボタンで一覧を表示できます";
         }
 
         private void ManageConnections_Click(object sender, RoutedEventArgs e)
@@ -87,6 +119,176 @@ namespace SampleELT.Dialogs
             }
         }
 
+        // ==================== テーブル一覧取得 ====================
+
+        private async void LoadTables_Click(object sender, RoutedEventArgs e)
+        {
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn)
+            {
+                MessageBox.Show("接続を選択してください。", "テーブル一覧取得",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            LoadTablesButton.IsEnabled = false;
+            LoadTablesButton.Content = "取得中...";
+
+            try
+            {
+                var tables = await GetTablesAsync(conn);
+                var currentText = TableCombo.Text;
+                TableCombo.ItemsSource = tables;
+                TableCombo.Text = currentText;
+                if (string.IsNullOrEmpty(currentText) && tables.Count > 0)
+                    TableCombo.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"テーブル一覧の取得に失敗しました:\n{ex.Message}", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                LoadTablesButton.IsEnabled = true;
+                LoadTablesButton.Content = "↓ 一覧取得";
+            }
+        }
+
+        private static async Task<List<string>> GetTablesAsync(DbConnectionInfo conn)
+        {
+            var tables = new List<string>();
+
+            if (conn.DbType == DbType.Oracle)
+            {
+                using var c = new OracleConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new OracleCommand(
+                    "SELECT table_name FROM user_tables ORDER BY table_name", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+            else
+            {
+                using var c = new MySqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new MySqlCommand(
+                    "SELECT table_name FROM information_schema.tables " +
+                    "WHERE table_schema = DATABASE() ORDER BY table_name", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+
+            return tables;
+        }
+
+        // ==================== カラム一覧取得 ====================
+
+        private async void LoadColumns_Click(object sender, RoutedEventArgs e)
+        {
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn)
+            {
+                MessageBox.Show("接続を選択してください。", "カラム取得",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var tableName = TableCombo.Text?.Trim();
+            if (string.IsNullOrEmpty(tableName))
+            {
+                MessageBox.Show("テーブル名を入力または選択してください。", "カラム取得",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            LoadColumnsButton.IsEnabled = false;
+            LoadColumnsButton.Content = "取得中...";
+            await AutoLoadColumnsAsync();
+            LoadColumnsButton.IsEnabled = true;
+            LoadColumnsButton.Content = "🔄 カラム取得";
+        }
+
+        /// <summary>
+        /// テーブルのカラム一覧を取得してグリッドに反映する。
+        /// Initialize() の Loaded イベントと LoadColumns_Click の両方から呼ばれる。
+        /// エラー時はエラーダイアログを出さず ColumnStatusText に表示する。
+        /// </summary>
+        private async Task AutoLoadColumnsAsync()
+        {
+            if (ConnectionCombo.SelectedItem is not DbConnectionInfo conn) return;
+            var tableName = TableCombo.Text?.Trim();
+            if (string.IsNullOrEmpty(tableName)) return;
+
+            LoadColumnsButton.IsEnabled = false;
+            ColumnStatusText.Text = "取得中...";
+            try
+            {
+                var columnNames = await GetColumnsAsync(conn, tableName);
+                var existingKeys    = ParseFields(_initKeyFields);
+                var existingUpdates = ParseFields(_initUpdateFields);
+
+                _columns.Clear();
+                foreach (var name in columnNames)
+                    _columns.Add(new ColumnItem
+                    {
+                        ColumnName = name,
+                        IsKey    = existingKeys.Contains(name),
+                        IsUpdate = existingUpdates.Contains(name)
+                    });
+
+                ColumnGrid.ItemsSource = null;
+                ColumnGrid.ItemsSource = _columns;
+                ColumnStatusText.Text = $"{columnNames.Count} カラム取得済み";
+            }
+            catch
+            {
+                ColumnStatusText.Text = "カラムの自動取得に失敗しました（カラム取得ボタンで再試行できます）";
+            }
+            finally
+            {
+                LoadColumnsButton.IsEnabled = true;
+            }
+        }
+
+        private static async Task<List<string>> GetColumnsAsync(DbConnectionInfo conn, string tableName)
+        {
+            var columns = new List<string>();
+
+            if (conn.DbType == DbType.Oracle)
+            {
+                using var c = new OracleConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new OracleCommand(
+                    "SELECT column_name FROM user_tab_columns " +
+                    "WHERE table_name = UPPER(:t) ORDER BY column_id", c);
+                cmd.Parameters.Add(new OracleParameter(":t", tableName));
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    columns.Add(reader.GetString(0));
+            }
+            else
+            {
+                using var c = new MySqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new MySqlCommand(
+                    "SELECT column_name FROM information_schema.columns " +
+                    "WHERE table_schema = DATABASE() AND table_name = @t ORDER BY ordinal_position", c);
+                cmd.Parameters.AddWithValue("@t", tableName);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    columns.Add(reader.GetString(0));
+            }
+
+            return columns;
+        }
+
+        private static HashSet<string> ParseFields(string csv) =>
+            csv.Split(',').Select(s => s.Trim()).Where(s => s.Length > 0)
+               .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // ==================== OK / キャンセル ====================
+
         private void OK_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(StepNameBox.Text))
@@ -103,31 +305,42 @@ namespace SampleELT.Dialogs
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(TableNameBox.Text))
+            if (string.IsNullOrWhiteSpace(TableCombo.Text))
             {
                 MessageBox.Show("テーブル名を入力してください。", "入力エラー",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(KeyFieldsBox.Text))
+            var keyFields = string.Join(",", _columns.Where(c => c.IsKey).Select(c => c.ColumnName));
+            if (string.IsNullOrEmpty(keyFields))
             {
-                MessageBox.Show("キーフィールドを入力してください。", "入力エラー",
+                MessageBox.Show("キーフィールドをカラム選択で指定してください。", "入力エラー",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            StepName = StepNameBox.Text.Trim();
+            StepName     = StepNameBox.Text.Trim();
             ConnectionId = conn.Id;
-            TableName = TableNameBox.Text.Trim();
-            KeyFields = KeyFieldsBox.Text.Trim();
-            UpdateFields = UpdateFieldsBox.Text.Trim();
+            TableName    = TableCombo.Text.Trim();
+            KeyFields    = keyFields;
+            UpdateFields = string.Join(",", _columns.Where(c => c.IsUpdate).Select(c => c.ColumnName));
+            CommitSize   = int.TryParse(CommitSizeBox.Text.Trim(), out var cs) && cs >= 0 ? cs : 100;
             DialogResult = true;
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
+        }
+
+        // ==================== ColumnItem ====================
+
+        private class ColumnItem
+        {
+            public string ColumnName { get; set; } = "";
+            public bool IsKey { get; set; }
+            public bool IsUpdate { get; set; }
         }
     }
 }

@@ -1,0 +1,42 @@
+{
+  "Name": "New Pipeline",
+  "Steps": [
+    {
+      "Id": "f8dbfe9d-a85e-4308-b01b-f3b8231595f7",
+      "Name": "DB Input",
+      "StepType": "DBInput",
+      "CanvasX": 100,
+      "CanvasY": 100,
+      "NodeWidth": 150,
+      "NodeHeight": 70,
+      "Settings": {
+        "ConnectionId": "79297929-2eec-4f00-b85c-d4d6af0d8eb8",
+        "SQL": "SELECT *\nFROM real_process_time \r\nwhere update_time \u003E= \u00272025/01/01\u0027\r\nand update_time \u003C \u00272026/01/01\u0027",
+        "ExecuteEachRow": "false"
+      }
+    },
+    {
+      "Id": "1cb73b87-5f85-42e4-8f93-42cb33aa88d9",
+      "Name": "Insert/Update",
+      "StepType": "InsertUpdate",
+      "CanvasX": 300,
+      "CanvasY": 101,
+      "NodeWidth": 150,
+      "NodeHeight": 70,
+      "Settings": {
+        "ConnectionId": "b2c66319-769b-4471-a76c-a9fc0dadaef2",
+        "TableName": "real_process_time",
+        "KeyFields": "line_id,sb_id,pd_id,lot_id,op_id,step_id,wp_id,recipe_id",
+        "UpdateFields": "line_id,sb_id,pd_id,lot_id,op_id,step_id,wp_id,recipe_id,lot_recipe_flag,wf_proc_quantity,chip_proc_quantity,work_start,proc_start,proc_end,work_end,work_wait_time_min,work_time_min,proc_time_min,proc_interval_time_min,auto_work_flag,auto_proc_flag,flow_class,lot_flow_type,update_time",
+        "CommitSize": "100"
+      }
+    }
+  ],
+  "Connections": [
+    {
+      "Id": "6b5e6652-8aa0-4507-abd9-45065f8cf2e0",
+      "SourceStepId": "f8dbfe9d-a85e-4308-b01b-f3b8231595f7",
+      "TargetStepId": "1cb73b87-5f85-42e4-8f93-42cb33aa88d9"
+    }
+  ]
+}

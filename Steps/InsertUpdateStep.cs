@@ -44,15 +44,18 @@ namespace SampleELT.Steps
             if (keyFields.Count == 0)
                 throw new InvalidOperationException("Insert/Update: キーフィールドが設定されていません。");
 
+            int commitSize = Settings.TryGetValue("CommitSize", out var cs)
+                && int.TryParse(cs?.ToString(), out var csVal) && csVal > 0 ? csVal : 100;
+
             var conn = ConnectionRegistry.Instance.FindConnection(Settings);
             bool isOracle = conn?.DbType == DbType.Oracle;
 
             int upserted = 0;
 
             if (isOracle)
-                upserted = await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, ct);
+                upserted = await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct);
             else
-                upserted = await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, ct);
+                upserted = await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct);
 
             progress.Report($"Insert/Update: {upserted}行 処理完了");
             return inputData;
@@ -61,12 +64,12 @@ namespace SampleELT.Steps
         private static async Task<int> ExecuteOracleAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
-            List<Dictionary<string, object?>> inputData, CancellationToken ct)
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new OracleConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            using var transaction = dbConn.BeginTransaction();
             int count = 0;
+            var transaction = dbConn.BeginTransaction();
             try
             {
                 foreach (var row in inputData)
@@ -75,10 +78,19 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
-                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0)
+                                         .Where(f => allCols.Any(c => string.Equals(c, f, StringComparison.OrdinalIgnoreCase)))
+                                         .ToList();
 
-                    // Build MERGE statement
+                    // UpdateFields が明示指定されている場合、テーブルに存在しない入力カラムを除外する
+                    if (!string.IsNullOrWhiteSpace(updateFieldsRaw))
+                    {
+                        var allowed = new HashSet<string>(
+                            keyFields.Concat(updateCols), StringComparer.OrdinalIgnoreCase);
+                        allCols = allCols.Where(c => allowed.Contains(c)).ToList();
+                    }
+
                     var onClause = string.Join(" AND ", keyFields.Select((k, i) => $"t.{k} = s.{k}"));
                     var updateClause = string.Join(", ", updateCols.Select(c => $"t.{c} = s.{c}"));
                     var insertCols = string.Join(", ", allCols);
@@ -96,6 +108,13 @@ namespace SampleELT.Steps
 
                     await cmd.ExecuteNonQueryAsync(ct);
                     count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        transaction.Dispose();
+                        transaction = dbConn.BeginTransaction();
+                    }
                 }
                 await transaction.CommitAsync(ct);
             }
@@ -104,18 +123,19 @@ namespace SampleELT.Steps
                 await transaction.RollbackAsync(ct);
                 throw;
             }
+            finally { transaction.Dispose(); }
             return count;
         }
 
         private static async Task<int> ExecuteMySQLAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
-            List<Dictionary<string, object?>> inputData, CancellationToken ct)
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new MySqlConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            using var transaction = await dbConn.BeginTransactionAsync(ct);
             int count = 0;
+            var transaction = await dbConn.BeginTransactionAsync(ct);
             try
             {
                 foreach (var row in inputData)
@@ -124,8 +144,18 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
-                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0)
+                                         .Where(f => allCols.Any(c => string.Equals(c, f, StringComparison.OrdinalIgnoreCase)))
+                                         .ToList();
+
+                    // UpdateFields が明示指定されている場合、テーブルに存在しない入力カラムを除外する
+                    if (!string.IsNullOrWhiteSpace(updateFieldsRaw))
+                    {
+                        var allowed = new HashSet<string>(
+                            keyFields.Concat(updateCols), StringComparer.OrdinalIgnoreCase);
+                        allCols = allCols.Where(c => allowed.Contains(c)).ToList();
+                    }
 
                     var colList = string.Join(", ", allCols);
                     var paramList = string.Join(", ", allCols.Select((c, i) => $"@p{i}"));
@@ -140,6 +170,13 @@ namespace SampleELT.Steps
 
                     await cmd.ExecuteNonQueryAsync(ct);
                     count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = await dbConn.BeginTransactionAsync(ct);
+                    }
                 }
                 await transaction.CommitAsync(ct);
             }
@@ -148,6 +185,7 @@ namespace SampleELT.Steps
                 await transaction.RollbackAsync(ct);
                 throw;
             }
+            finally { await transaction.DisposeAsync(); }
             return count;
         }
 

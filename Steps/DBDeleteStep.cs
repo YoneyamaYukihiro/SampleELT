@@ -45,6 +45,9 @@ namespace SampleELT.Steps
             }
 
             // Detect DB type from connection
+            int commitSize = Settings.TryGetValue("CommitSize", out var cs)
+                && int.TryParse(cs?.ToString(), out var csVal) && csVal > 0 ? csVal : 100;
+
             var conn = ConnectionRegistry.Instance.FindConnection(Settings);
             bool isOracle = conn?.DbType == DbType.Oracle;
 
@@ -54,12 +57,11 @@ namespace SampleELT.Steps
             {
                 using var dbConn = new OracleConnection(connectionString);
                 await dbConn.OpenAsync(ct);
-                using var transaction = dbConn.BeginTransaction();
+                var whereClauses = keyFields.Select((k, i) => $"{k} = :p{i}").ToList();
+                var sql = $"DELETE FROM {tableName} WHERE {string.Join(" AND ", whereClauses)}";
+                var transaction = dbConn.BeginTransaction();
                 try
                 {
-                    var whereClauses = keyFields.Select((k, i) => $"{k} = :p{i}").ToList();
-                    var sql = $"DELETE FROM {tableName} WHERE {string.Join(" AND ", whereClauses)}";
-
                     foreach (var row in inputData)
                     {
                         ct.ThrowIfCancellationRequested();
@@ -69,6 +71,13 @@ namespace SampleELT.Steps
                             cmd.Parameters.Add(new OracleParameter($":p{i}", row.TryGetValue(keyFields[i], out var v) ? v ?? DBNull.Value : DBNull.Value));
                         await cmd.ExecuteNonQueryAsync(ct);
                         deleted++;
+
+                        if (deleted % commitSize == 0)
+                        {
+                            await transaction.CommitAsync(ct);
+                            transaction.Dispose();
+                            transaction = dbConn.BeginTransaction();
+                        }
                     }
                     await transaction.CommitAsync(ct);
                 }
@@ -77,17 +86,17 @@ namespace SampleELT.Steps
                     await transaction.RollbackAsync(ct);
                     throw;
                 }
+                finally { transaction.Dispose(); }
             }
             else
             {
                 using var dbConn = new MySqlConnection(connectionString);
                 await dbConn.OpenAsync(ct);
-                using var transaction = await dbConn.BeginTransactionAsync(ct);
+                var whereClauses = keyFields.Select((k, i) => $"{k} = @p{i}").ToList();
+                var sql = $"DELETE FROM {tableName} WHERE {string.Join(" AND ", whereClauses)}";
+                var transaction = await dbConn.BeginTransactionAsync(ct);
                 try
                 {
-                    var whereClauses = keyFields.Select((k, i) => $"{k} = @p{i}").ToList();
-                    var sql = $"DELETE FROM {tableName} WHERE {string.Join(" AND ", whereClauses)}";
-
                     foreach (var row in inputData)
                     {
                         ct.ThrowIfCancellationRequested();
@@ -96,6 +105,13 @@ namespace SampleELT.Steps
                             cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(keyFields[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
                         await cmd.ExecuteNonQueryAsync(ct);
                         deleted++;
+
+                        if (deleted % commitSize == 0)
+                        {
+                            await transaction.CommitAsync(ct);
+                            await transaction.DisposeAsync();
+                            transaction = await dbConn.BeginTransactionAsync(ct);
+                        }
                     }
                     await transaction.CommitAsync(ct);
                 }
@@ -104,6 +120,7 @@ namespace SampleELT.Steps
                     await transaction.RollbackAsync(ct);
                     throw;
                 }
+                finally { await transaction.DisposeAsync(); }
             }
 
             progress.Report($"DB Delete: {deleted}行 削除完了");

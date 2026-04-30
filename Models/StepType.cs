@@ -2,11 +2,11 @@ namespace SampleELT.Models
 {
     public enum StepType
     {
-        OracleInput,
-        MySQLInput,
+        OracleInput,  // 後方互換のため保持
+        MySQLInput,   // 後方互換のため保持
         ExcelInput,
-        OracleOutput,
-        MySQLOutput,
+        OracleOutput, // 後方互換のため保持
+        MySQLOutput,  // 後方互換のため保持
         ExcelOutput,
         Filter,
         Calculation,
@@ -15,9 +15,10 @@ namespace SampleELT.Models
         InsertUpdate,
         ExecSQL,
         Dummy,
-        GenerateRows,
         MergeJoin,
         DBUpdate,
-        SetVariable
+        SetVariable,
+        DBInput,      // Oracle/MySQL 統合入力
+        DBOutput      // Oracle/MySQL 統合出力
     }
 }

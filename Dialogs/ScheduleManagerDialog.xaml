@@ -1,0 +1,283 @@
+<Window x:Class="SampleELT.Dialogs.ScheduleManagerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="スケジュール管理"
+        Width="700" Height="500"
+        MinWidth="600" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="210" MinWidth="160"/>
+            <ColumnDefinition Width="4"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ==================== 左: スケジュール一覧 ==================== -->
+        <Border Grid.Row="0" Grid.Column="0"
+                BorderBrush="#DDDDDD" BorderThickness="0,0,1,0"
+                Background="#FAFAFA">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Background="#ECEFF1"
+                        Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
+                    <TextBlock Text="スケジュール一覧"
+                               FontWeight="Bold" FontSize="12" Foreground="#424242"/>
+                </Border>
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                            Margin="8,6" HorizontalAlignment="Left">
+                    <Button x:Name="AddButton" Content="追加"
+                            Width="60" Height="26" Margin="0,0,6,0"
+                            Click="AddButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                <Setter Property="FontSize" Value="12"/>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button x:Name="DeleteButton" Content="削除"
+                            Width="60" Height="26"
+                            Click="DeleteButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                <Setter Property="FontSize" Value="12"/>
+                                <Setter Property="Background" Value="#F44336"/>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+                <ListBox x:Name="ScheduleListBox"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         SelectionChanged="ScheduleListBox_SelectionChanged"
+                         Margin="4,4"/>
+            </DockPanel>
+        </Border>
+
+        <GridSplitter Grid.Row="0" Grid.Column="1"
+                      Width="4" HorizontalAlignment="Stretch"
+                      Background="#DDDDDD"/>
+
+        <!-- ==================== 右: 編集フォーム ==================== -->
+        <ScrollViewer Grid.Row="0" Grid.Column="2"
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="16,12">
+            <StackPanel x:Name="EditPanel" IsEnabled="False">
+
+                <!-- スケジュール名 -->
+                <TextBlock Text="スケジュール名" FontSize="12" FontWeight="Bold"
+                           Foreground="#424242" Margin="0,0,0,4"/>
+                <TextBox x:Name="NameTextBox" Height="28" Padding="6,4"
+                         BorderBrush="#CCCCCC" Margin="0,0,0,12"/>
+
+                <!-- 実行対象 -->
+                <TextBlock Text="実行対象" FontSize="12" FontWeight="Bold"
+                           Foreground="#424242" Margin="0,0,0,6"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <RadioButton x:Name="TargetPipelineRadio"
+                                 Content="パイプライン"
+                                 GroupName="ScheduleTarget"
+                                 FontSize="12" IsChecked="True"
+                                 Margin="0,0,16,0"
+                                 Checked="TargetRadio_Checked"/>
+                    <RadioButton x:Name="TargetJobRadio"
+                                 Content="ジョブ"
+                                 GroupName="ScheduleTarget"
+                                 FontSize="12"
+                                 Checked="TargetRadio_Checked"/>
+                </StackPanel>
+
+                <!-- パイプラインファイル -->
+                <StackPanel x:Name="PipelinePanel">
+                    <TextBlock Text="パイプラインファイル" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="PipelineFileTextBox" Height="28" Padding="6,4"
+                                 BorderBrush="#CCCCCC" Grid.Column="0"/>
+                        <Button Content="参照..." Grid.Column="1"
+                                Height="28" Padding="8,0" Margin="6,0,0,0"
+                                Click="BrowseButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="12"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <!-- ジョブファイル -->
+                <StackPanel x:Name="JobPanel" Visibility="Collapsed">
+                    <TextBlock Text="ジョブファイル" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="JobFileTextBox" Height="28" Padding="6,4"
+                                 BorderBrush="#CCCCCC" Grid.Column="0"/>
+                        <Button Content="参照..." Grid.Column="1"
+                                Height="28" Padding="8,0" Margin="6,0,0,0"
+                                Click="BrowseJobButton_Click">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                    <Setter Property="FontSize" Value="12"/>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <!-- 有効/無効 -->
+                <CheckBox x:Name="EnabledCheckBox" Content="有効にする"
+                          FontSize="12" Margin="0,0,0,14"/>
+
+                <!-- 実行モード -->
+                <TextBlock Text="実行モード" FontSize="12" FontWeight="Bold"
+                           Foreground="#424242" Margin="0,0,0,6"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <RadioButton x:Name="ModeInAppRadio"
+                                 Content="インアプリ"
+                                 GroupName="ScheduleMode"
+                                 FontSize="12" IsChecked="True"
+                                 Margin="0,0,16,0"
+                                 Checked="ModeRadio_Checked"/>
+                    <RadioButton x:Name="ModeTaskSchedulerRadio"
+                                 Content="Windowsタスクスケジューラ"
+                                 GroupName="ScheduleMode"
+                                 FontSize="12"
+                                 Checked="ModeRadio_Checked"/>
+                </StackPanel>
+                <!-- モード説明 -->
+                <Border x:Name="ModeInAppNote"
+                        Background="#E3F2FD" CornerRadius="4"
+                        Padding="8,6" Margin="0,4,0,14">
+                    <TextBlock Text="アプリが起動している間だけスケジュールを監視します。"
+                               FontSize="11" Foreground="#1565C0" TextWrapping="Wrap"/>
+                </Border>
+                <Border x:Name="ModeTaskSchedulerNote"
+                        Background="#FFF3E0" CornerRadius="4"
+                        Padding="8,6" Margin="0,4,0,14"
+                        Visibility="Collapsed">
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#E65100">
+                        <Run Text="アプリが起動していなくても Windows が自動実行します。"/>
+                        <LineBreak/>
+                        <Run Text="保存時にタスクスケジューラへ登録します。管理者権限が必要な場合があります。"/>
+                    </TextBlock>
+                </Border>
+
+                <!-- スケジュール種類 -->
+                <TextBlock Text="スケジュール種類" FontSize="12" FontWeight="Bold"
+                           Foreground="#424242" Margin="0,0,0,4"/>
+                <ComboBox x:Name="TypeComboBox" Height="28" Margin="0,0,0,12"
+                          SelectionChanged="TypeComboBox_SelectionChanged">
+                    <ComboBoxItem Content="毎日（指定時刻）"    Tag="Daily"/>
+                    <ComboBoxItem Content="毎週（指定曜日・時刻）" Tag="Weekly"/>
+                    <ComboBoxItem Content="毎時（指定分）"      Tag="Hourly"/>
+                    <ComboBoxItem Content="インターバル（N分ごと）" Tag="Interval"/>
+                </ComboBox>
+
+                <!-- 時刻設定（Daily / Weekly 共通） -->
+                <StackPanel x:Name="TimePanel">
+                    <TextBlock Text="実行時刻 (HH : MM)" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBox x:Name="HourTextBox" Width="50" Height="28"
+                                 Padding="6,4" BorderBrush="#CCCCCC" MaxLength="2"/>
+                        <TextBlock Text=" : " VerticalAlignment="Center"
+                                   FontSize="14" Foreground="#555"/>
+                        <TextBox x:Name="MinuteTextBox" Width="50" Height="28"
+                                 Padding="6,4" BorderBrush="#CCCCCC" MaxLength="2"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 曜日（Weekly のみ） -->
+                <StackPanel x:Name="WeekDayPanel" Visibility="Collapsed">
+                    <TextBlock Text="曜日" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="WeekDayComboBox" Height="28" Margin="0,0,0,12">
+                        <ComboBoxItem Content="月曜日"/>
+                        <ComboBoxItem Content="火曜日"/>
+                        <ComboBoxItem Content="水曜日"/>
+                        <ComboBoxItem Content="木曜日"/>
+                        <ComboBoxItem Content="金曜日"/>
+                        <ComboBoxItem Content="土曜日"/>
+                        <ComboBoxItem Content="日曜日"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- 毎時 指定分（Hourly のみ） -->
+                <StackPanel x:Name="HourlyPanel" Visibility="Collapsed">
+                    <TextBlock Text="毎時 XX 分に実行" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <TextBox x:Name="HourlyMinuteTextBox" Width="60" Height="28"
+                             Padding="6,4" BorderBrush="#CCCCCC"
+                             HorizontalAlignment="Left" MaxLength="2"
+                             Margin="0,0,0,12"/>
+                </StackPanel>
+
+                <!-- インターバル（Interval のみ） -->
+                <StackPanel x:Name="IntervalPanel" Visibility="Collapsed">
+                    <TextBlock Text="実行間隔（分）" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <TextBox x:Name="IntervalTextBox" Width="80" Height="28"
+                             Padding="6,4" BorderBrush="#CCCCCC"
+                             HorizontalAlignment="Left" MaxLength="5"
+                             Margin="0,0,0,12"/>
+                </StackPanel>
+
+                <!-- 最終実行情報 -->
+                <Border Background="#F5F5F5" CornerRadius="4"
+                        Padding="10,8" Margin="0,4,0,12">
+                    <StackPanel>
+                        <TextBlock Text="最終実行情報" FontSize="11" FontWeight="Bold"
+                                   Foreground="#616161" Margin="0,0,0,4"/>
+                        <TextBlock x:Name="LastRunTextBlock"
+                                   Text="（未実行）" FontSize="11"
+                                   Foreground="#757575" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 保存ボタン -->
+                <Button x:Name="SaveButton" Content="保存"
+                        Height="32" Width="100" HorizontalAlignment="Left"
+                        Click="SaveButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="Background" Value="#4CAF50"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ==================== 下: 閉じるボタン ==================== -->
+        <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                Background="#ECEFF1" Padding="12,8"
+                BorderBrush="#DDDDDD" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <TextBlock x:Name="StatusTextBlock"
+                           VerticalAlignment="Center"
+                           Foreground="#4CAF50" FontSize="12"
+                           Margin="0,0,16,0" Visibility="Collapsed"/>
+                <Button Content="閉じる" Height="30" Width="80"
+                        Click="CloseButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="Background" Value="#607D8B"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

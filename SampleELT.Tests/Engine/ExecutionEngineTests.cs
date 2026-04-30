@@ -29,25 +29,23 @@ namespace SampleELT.Tests.Engine
         [Fact]
         public async Task SingleStep_ReportsCompletion()
         {
-            var step = new GenerateRowsStep { Name = "Gen" };
-            step.Settings["Fields"]   = "X=hello";
-            step.Settings["RowCount"] = "3";
+            var step = new SetVariableStep { Name = "Gen" };
+            step.Settings["Fields"] = "X=hello";
 
             var pipeline = new Pipeline();
             pipeline.Steps.Add(step);
 
             var log = await Execute(pipeline);
 
-            // ExecutionEngine: "[Gen] 完了 (3行)"
-            Assert.Contains(log, m => m.Contains("Gen") && m.Contains("3行"));
+            // ExecutionEngine: "[Gen] 完了 (1行)"
+            Assert.Contains(log, m => m.Contains("Gen") && m.Contains("1行"));
         }
 
         [Fact]
         public async Task TwoStepsConnected_DataFlows()
         {
-            var gen = new GenerateRowsStep { Name = "Gen" };
-            gen.Settings["Fields"]   = "STATUS=ok";
-            gen.Settings["RowCount"] = "2";
+            var gen = new SetVariableStep { Name = "Gen" };
+            gen.Settings["Fields"] = "STATUS=ok";
 
             var dummy = new DummyStep { Name = "Dummy" };
 
@@ -62,8 +60,8 @@ namespace SampleELT.Tests.Engine
 
             var log = await Execute(pipeline);
 
-            // Dummy は入力をそのまま返すので2行になる
-            Assert.Contains(log, m => m.Contains("Dummy") && m.Contains("2行"));
+            // Dummy は入力をそのまま返すので1行になる
+            Assert.Contains(log, m => m.Contains("Dummy") && m.Contains("1行"));
         }
 
         [Fact]
@@ -91,9 +89,8 @@ namespace SampleELT.Tests.Engine
         [Fact]
         public async Task Cancellation_ThrowsOperationCanceled()
         {
-            var step = new GenerateRowsStep { Name = "Gen" };
-            step.Settings["Fields"]   = "X=1";
-            step.Settings["RowCount"] = "1";
+            var step = new SetVariableStep { Name = "Gen" };
+            step.Settings["Fields"] = "X=1";
 
             var pipeline = new Pipeline();
             pipeline.Steps.Add(step);

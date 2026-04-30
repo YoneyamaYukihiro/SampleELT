@@ -1,7 +1,9 @@
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
+using SampleELT.Steps;
 
 namespace SampleELT.Dialogs
 {
@@ -138,6 +140,40 @@ namespace SampleELT.Dialogs
             if (_suppressEvents || CustomDelimiterBox == null) return;
             var tag = (DelimiterCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
             CustomDelimiterBox.Visibility = tag == "custom" ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void FilePathBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateTokenPreview();
+        }
+
+        private void InsertToken_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn) return;
+            var token = btn.Tag?.ToString() ?? "";
+
+            // キャレット位置にトークンを挿入
+            var pos = FilePathBox.CaretIndex;
+            var text = FilePathBox.Text;
+            FilePathBox.Text = text.Insert(pos, token);
+            FilePathBox.CaretIndex = pos + token.Length;
+            FilePathBox.Focus();
+            UpdateTokenPreview();
+        }
+
+        private void UpdateTokenPreview()
+        {
+            if (TokenPreviewText == null) return;
+            var raw = FilePathBox.Text;
+            if (raw.Contains('{'))
+            {
+                var resolved = ExcelOutputStep.ResolveDateTokens(raw);
+                TokenPreviewText.Text = $"プレビュー: {resolved}";
+            }
+            else
+            {
+                TokenPreviewText.Text = "";
+            }
         }
 
         private void Browse_Click(object sender, RoutedEventArgs e)

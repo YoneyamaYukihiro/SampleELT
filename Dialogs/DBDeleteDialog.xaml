@@ -13,6 +13,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ステップ名 -->
@@ -59,8 +60,25 @@
             <TextBox x:Name="KeyFieldsBox" Height="28" Padding="6,4"/>
         </StackPanel>
 
+        <!-- コミットサイズ -->
+        <StackPanel Grid.Row="4" Margin="0,0,0,12">
+            <TextBlock Text="コミットサイズ（件数）" FontWeight="Bold" Margin="0,0,0,4"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="CommitSizeBox" Grid.Column="0"
+                         Height="28" Padding="6,4" Text="100"/>
+                <TextBlock Grid.Column="1"
+                           Text="件ごとにコミット（0 = 最後に一括コミット）"
+                           FontSize="11" Foreground="#757575"
+                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+            </Grid>
+        </StackPanel>
+
         <!-- ボタン -->
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>

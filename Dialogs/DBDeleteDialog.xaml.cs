@@ -13,17 +13,19 @@ namespace SampleELT.Dialogs
         public Guid? ConnectionId { get; private set; }
         public string TableName { get; private set; } = "";
         public string KeyFields { get; private set; } = "";
+        public int CommitSize { get; private set; } = 100;
 
         public DBDeleteDialog()
         {
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, Guid? connectionId, string tableName, string keyFields)
+        public void Initialize(string stepName, Guid? connectionId, string tableName, string keyFields, int commitSize = 100)
         {
             StepNameBox.Text = stepName;
             TableNameBox.Text = tableName;
             KeyFieldsBox.Text = keyFields;
+            CommitSizeBox.Text = commitSize.ToString();
             RefreshConnectionList(connectionId);
         }
 
@@ -119,6 +121,7 @@ namespace SampleELT.Dialogs
             ConnectionId = conn.Id;
             TableName = TableNameBox.Text.Trim();
             KeyFields = KeyFieldsBox.Text.Trim();
+            CommitSize = int.TryParse(CommitSizeBox.Text.Trim(), out var cs) && cs >= 0 ? cs : 100;
             DialogResult = true;
         }
 

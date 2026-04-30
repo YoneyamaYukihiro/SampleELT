@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -35,12 +36,126 @@ namespace SampleELT.ViewModels
         [ObservableProperty]
         private string _statusMessage = "準備完了";
 
+        [ObservableProperty]
+        private string _windowTitle = "SampleELT";
+
+        [ObservableProperty]
+        private bool _isModified;
+
         public Pipeline CurrentPipeline { get; private set; } = new Pipeline();
 
         private CancellationTokenSource? _cts;
+        private string? _currentFilePath;
 
         // Event fired when a step's settings dialog should open
         public event Action<StepNodeViewModel>? OpenSettingsRequested;
+
+        // Event fired when the schedule manager dialog should open
+        public event Action? OpenScheduleManagerRequested;
+
+        // Event fired when the job manager dialog should open
+        public event Action? OpenJobManagerRequested;
+
+        // Event fired when schedule status changes (run completed / registry updated)
+        public event Action? ScheduleStatusChanged;
+
+        // In-app scheduler
+        private readonly DispatcherTimer _scheduleTimer;
+
+        public MainViewModel()
+        {
+            _scheduleTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            _scheduleTimer.Tick += SchedulerTick;
+            _scheduleTimer.Start();
+        }
+
+        // ==================== SCHEDULE MANAGER ====================
+
+        [RelayCommand]
+        private void OpenScheduleManager()
+        {
+            OpenScheduleManagerRequested?.Invoke();
+        }
+
+        [RelayCommand]
+        private void OpenJobManager()
+        {
+            OpenJobManagerRequested?.Invoke();
+        }
+
+        private async void SchedulerTick(object? sender, EventArgs e)
+        {
+            var now = DateTime.Now;
+            var registry = ScheduleRegistry.Instance;
+            bool anySaved = false;
+
+            foreach (var entry in registry.Schedules.Where(s => s.IsEnabled && s.Mode == Models.ScheduleMode.InApp))
+            {
+                // 直近の実行予定時刻（now 以前）を取得
+                var lastDue = registry.CalcLastDueTime(entry, now);
+                if (lastDue == null) continue; // インターバルがまだ期限前
+
+                // この実行タイミングですでに実行済みならスキップ
+                if (entry.LastRunTime.HasValue && entry.LastRunTime.Value >= lastDue.Value) continue;
+
+                await RunScheduledEntryAsync(entry);
+                anySaved = true;
+            }
+
+            if (anySaved) registry.Save();
+        }
+
+        private async Task RunScheduledEntryAsync(ScheduleEntry entry)
+        {
+            AddLog($"===== スケジュール実行開始: {entry.Name} =====");
+            entry.LastRunTime = DateTime.Now;
+
+            var progress = new Progress<string>(msg =>
+            {
+                AddLog(msg);
+                StatusMessage = msg;
+            });
+            var cts = new CancellationTokenSource();
+
+            try
+            {
+                if (entry.Target == Models.ScheduleTarget.Job)
+                {
+                    if (string.IsNullOrWhiteSpace(entry.JobFilePath))
+                        throw new InvalidOperationException("ジョブファイルが指定されていません");
+
+                    if (!File.Exists(entry.JobFilePath))
+                        throw new FileNotFoundException($"ジョブファイルが見つかりません: {entry.JobFilePath}");
+
+                    var job = JobLoader.LoadFromFile(entry.JobFilePath);
+                    var executor = new JobExecutor();
+                    await executor.ExecuteAsync(job, progress, cts.Token);
+                }
+                else
+                {
+                    if (!File.Exists(entry.PipelineFilePath))
+                        throw new FileNotFoundException($"パイプラインファイルが見つかりません: {entry.PipelineFilePath}");
+
+                    var pipeline = PipelineLoader.LoadFromFile(entry.PipelineFilePath);
+                    var engine = new ExecutionEngine();
+                    await engine.ExecuteAsync(pipeline, progress, cts.Token);
+                }
+
+                entry.LastRunSuccess = true;
+                entry.LastRunMessage = "実行完了";
+                AddLog($"===== スケジュール実行完了: {entry.Name} =====");
+            }
+            catch (Exception ex)
+            {
+                entry.LastRunSuccess = false;
+                entry.LastRunMessage = ex.Message;
+                AddLog($"===== スケジュール実行エラー [{entry.Name}]: {ex.Message} =====");
+            }
+            finally
+            {
+                ScheduleStatusChanged?.Invoke();
+            }
+        }
 
         [RelayCommand]
         private void AddStep(StepType stepType)
@@ -63,10 +178,11 @@ namespace SampleELT.ViewModels
                 StepType.InsertUpdate => new InsertUpdateStep { Name = "Insert/Update", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.ExecSQL => new ExecSQLStep { Name = "Exec SQL", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.Dummy => new DummyStep { Name = "Dummy", CanvasX = offsetX, CanvasY = offsetY },
-                StepType.GenerateRows => new GenerateRowsStep { Name = "Generate Rows", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.MergeJoin => new MergeJoinStep { Name = "Merge Join", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.DBUpdate => new DBUpdateStep { Name = "DB Update", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.SetVariable => new SetVariableStep { Name = "Set Variable", CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBInput    => new DBInputStep  { Name = "DB Input",   CanvasX = offsetX, CanvasY = offsetY },
+                StepType.DBOutput   => new DBOutputStep { Name = "DB Output",  CanvasX = offsetX, CanvasY = offsetY },
                 _ => throw new ArgumentOutOfRangeException(nameof(stepType))
             };
 
@@ -74,6 +190,7 @@ namespace SampleELT.ViewModels
             var vm = new StepNodeViewModel(step);
             Steps.Add(vm);
             SelectedStep = vm;
+            MarkModified();
 
             AddLog($"ステップ追加: {step.Name}");
             StatusMessage = $"ステップ追加: {step.Name}";
@@ -104,12 +221,20 @@ namespace SampleELT.ViewModels
             AddLog($"ステップ削除: {SelectedStep.Step.Name}");
             StatusMessage = "ステップを削除しました";
             SelectedStep = null;
+            MarkModified();
         }
 
         [RelayCommand]
         private async Task RunPipeline()
         {
             if (IsRunning) return;
+
+            // 手動実行前に上書き保存（ファイルが既存の場合のみ）
+            if (!string.IsNullOrEmpty(_currentFilePath))
+            {
+                SaveToFile(_currentFilePath);
+                AddLog($"パイプライン保存: {_currentFilePath}");
+            }
 
             IsRunning = true;
             StatusMessage = "実行中...";
@@ -159,11 +284,13 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void ClearCanvas()
         {
+            if (!ConfirmDiscardChanges()) return;
             Steps.Clear();
             Connections.Clear();
             CurrentPipeline.Steps.Clear();
             CurrentPipeline.Connections.Clear();
             SelectedStep = null;
+            IsModified = false;
             StatusMessage = "キャンバスをクリアしました";
             AddLog("キャンバスをクリアしました");
         }
@@ -171,9 +298,18 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void SavePipeline()
         {
+            if (!string.IsNullOrEmpty(_currentFilePath))
+                SaveToFile(_currentFilePath);
+            else
+                SavePipelineAs();
+        }
+
+        [RelayCommand]
+        private void SavePipelineAs()
+        {
             var dialog = new SaveFileDialog
             {
-                Title = "パイプラインを保存",
+                Title = "名前を付けてパイプラインを保存",
                 Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
                 DefaultExt = "json",
                 FileName = CurrentPipeline.Name
@@ -181,6 +317,11 @@ namespace SampleELT.ViewModels
 
             if (dialog.ShowDialog() != true) return;
 
+            SaveToFile(dialog.FileName);
+        }
+
+        private void SaveToFile(string filePath)
+        {
             try
             {
                 var pipelineData = new PipelineSerializationModel
@@ -193,6 +334,8 @@ namespace SampleELT.ViewModels
                         StepType = s.StepType.ToString(),
                         CanvasX = s.CanvasX,
                         CanvasY = s.CanvasY,
+                        NodeWidth = s.NodeWidth,
+                        NodeHeight = s.NodeHeight,
                         Settings = s.Settings.ToDictionary(
                             kv => kv.Key,
                             kv => kv.Value?.ToString()
@@ -208,11 +351,13 @@ namespace SampleELT.ViewModels
 
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 var json = JsonSerializer.Serialize(pipelineData, options);
-                File.WriteAllText(dialog.FileName, json);
+                File.WriteAllText(filePath, json);
 
-                CurrentPipeline.Name = Path.GetFileNameWithoutExtension(dialog.FileName);
-                StatusMessage = $"保存完了: {dialog.FileName}";
-                AddLog($"パイプライン保存: {dialog.FileName}");
+                _currentFilePath = filePath;
+                CurrentPipeline.Name = Path.GetFileNameWithoutExtension(filePath);
+                IsModified = false;
+                StatusMessage = $"保存完了: {filePath}";
+                AddLog($"パイプライン保存: {filePath}");
             }
             catch (Exception ex)
             {
@@ -226,6 +371,8 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void LoadPipeline()
         {
+            if (!ConfirmDiscardChanges()) return;
+
             var dialog = new OpenFileDialog
             {
                 Title = "パイプラインを読み込む",
@@ -237,7 +384,8 @@ namespace SampleELT.ViewModels
             try
             {
                 var json = File.ReadAllText(dialog.FileName);
-                var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json, options);
                 if (pipelineData == null) return;
 
                 // Clear current state
@@ -263,10 +411,11 @@ namespace SampleELT.ViewModels
                         "InsertUpdate" => new InsertUpdateStep(),
                         "ExecSQL" => new ExecSQLStep(),
                         "Dummy" => new DummyStep(),
-                        "GenerateRows" => new GenerateRowsStep(),
                         "MergeJoin" => new MergeJoinStep(),
                         "DBUpdate" => new DBUpdateStep(),
                         "SetVariable" => new SetVariableStep(),
+                        "DBInput"     => new DBInputStep(),
+                        "DBOutput"    => new DBOutputStep(),
                         _ => null
                     };
 
@@ -275,6 +424,8 @@ namespace SampleELT.ViewModels
                     step.Name = stepData.Name;
                     step.CanvasX = stepData.CanvasX;
                     step.CanvasY = stepData.CanvasY;
+                    step.NodeWidth = stepData.NodeWidth > 0 ? stepData.NodeWidth : 150.0;
+                    step.NodeHeight = stepData.NodeHeight > 0 ? stepData.NodeHeight : 70.0;
                     step.Settings = stepData.Settings.ToDictionary(
                         kv => kv.Key,
                         kv => (object?)kv.Value
@@ -308,6 +459,8 @@ namespace SampleELT.ViewModels
                 }
 
                 SelectedStep = null;
+                _currentFilePath = dialog.FileName;
+                IsModified = false;
                 StatusMessage = $"読み込み完了: {dialog.FileName}";
                 AddLog($"パイプライン読み込み: {dialog.FileName}");
             }
@@ -347,6 +500,7 @@ namespace SampleELT.ViewModels
             CurrentPipeline.Connections.Add(conn);
             Connections.Add(new ConnectionViewModel(conn, sourceVm, targetVm));
 
+            MarkModified();
             AddLog($"接続: {sourceVm.DisplayName} → {targetVm.DisplayName}");
             StatusMessage = $"接続作成: {sourceVm.DisplayName} → {targetVm.DisplayName}";
         }
@@ -360,12 +514,40 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void NewPipeline()
         {
+            if (!ConfirmDiscardChanges()) return;
             Steps.Clear();
             Connections.Clear();
             CurrentPipeline = new Pipeline();
             SelectedStep = null;
+            _currentFilePath = null;
+            IsModified = false;
             StatusMessage = "新しいパイプライン";
             AddLog("新しいパイプラインを作成しました");
+        }
+
+        // ==================== DIRTY TRACKING ====================
+
+        public void MarkModified()
+        {
+            IsModified = true;
+        }
+
+        partial void OnIsModifiedChanged(bool value)
+        {
+            var name = string.IsNullOrWhiteSpace(CurrentPipeline.Name) ? "新しいパイプライン" : CurrentPipeline.Name;
+            WindowTitle = value ? $"SampleELT - {name} *" : $"SampleELT - {name}";
+        }
+
+        /// <summary>未保存の変更がある場合、ユーザーに確認する。続行してよければ true を返す。</summary>
+        public bool ConfirmDiscardChanges()
+        {
+            if (!IsModified) return true;
+            var result = System.Windows.MessageBox.Show(
+                "パイプラインに未保存の変更があります。変更を破棄して続行しますか？",
+                "未保存の変更",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning);
+            return result == System.Windows.MessageBoxResult.Yes;
         }
 
         private void AddLog(string message)
@@ -396,6 +578,8 @@ namespace SampleELT.ViewModels
         public string StepType { get; set; } = "";
         public double CanvasX { get; set; }
         public double CanvasY { get; set; }
+        public double NodeWidth { get; set; } = 150.0;
+        public double NodeHeight { get; set; } = 70.0;
         public Dictionary<string, string?> Settings { get; set; } = new();
     }
 
