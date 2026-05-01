@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -213,26 +214,36 @@ namespace SampleELT.Dialogs
         {
             if (_current == null) return;
 
-            var prevMode = _current.Mode;
+            // RefreshList() がリスト選択を解除すると _current が null 化されるため、
+            // ローカルにキャプチャしてから処理を進める
+            var entry = _current;
+            var prevMode = entry.Mode;
 
-            _current.Name      = NameTextBox.Text.Trim();
-            _current.IsEnabled = EnabledCheckBox.IsChecked == true;
-            _current.Target    = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
+            // 重複名チェック（上書き / 別名で保存 / キャンセル）
+            var desiredName = NameTextBox.Text.Trim();
+            if (!TryResolveDuplicateName(entry, ref desiredName))
+                return;
+            if (NameTextBox.Text.Trim() != desiredName)
+                NameTextBox.Text = desiredName;
 
-            if (_current.Target == ScheduleTarget.Pipeline)
+            entry.Name      = desiredName;
+            entry.IsEnabled = EnabledCheckBox.IsChecked == true;
+            entry.Target    = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
+
+            if (entry.Target == ScheduleTarget.Pipeline)
             {
-                _current.PipelineFilePath = PipelineFileTextBox.Text.Trim();
-                _current.JobFilePath = "";
+                entry.PipelineFilePath = PipelineFileTextBox.Text.Trim();
+                entry.JobFilePath = "";
             }
             else
             {
-                _current.PipelineFilePath = "";
-                _current.JobFilePath = JobFileTextBox.Text.Trim();
+                entry.PipelineFilePath = "";
+                entry.JobFilePath = JobFileTextBox.Text.Trim();
             }
 
-            _current.Mode = ModeTaskSchedulerRadio.IsChecked == true
-                            ? ScheduleMode.TaskScheduler : ScheduleMode.InApp;
-            _current.Type = TypeComboBox.SelectedIndex switch
+            entry.Mode = ModeTaskSchedulerRadio.IsChecked == true
+                         ? ScheduleMode.TaskScheduler : ScheduleMode.InApp;
+            entry.Type = TypeComboBox.SelectedIndex switch
             {
                 1 => ScheduleType.Weekly,
                 2 => ScheduleType.Hourly,
@@ -241,11 +252,11 @@ namespace SampleELT.Dialogs
             };
 
             if (int.TryParse(HourTextBox.Text, out int h) && h >= 0 && h <= 23)
-                _current.TimeHour = h;
+                entry.TimeHour = h;
             if (int.TryParse(MinuteTextBox.Text, out int m) && m >= 0 && m <= 59)
-                _current.TimeMinute = m;
+                entry.TimeMinute = m;
 
-            _current.WeekDay = WeekDayComboBox.SelectedIndex switch
+            entry.WeekDay = WeekDayComboBox.SelectedIndex switch
             {
                 0 => DayOfWeek.Monday,
                 1 => DayOfWeek.Tuesday,
@@ -257,36 +268,76 @@ namespace SampleELT.Dialogs
             };
 
             if (int.TryParse(HourlyMinuteTextBox.Text, out int hm) && hm >= 0 && hm <= 59)
-                _current.HourlyMinute = hm;
+                entry.HourlyMinute = hm;
             if (int.TryParse(IntervalTextBox.Text, out int iv) && iv >= 1)
-                _current.IntervalMinutes = iv;
+                entry.IntervalMinutes = iv;
 
             ScheduleRegistry.Instance.Save();
-            RefreshList();
 
             // タスクスケジューラ連携（パイプラインのみ対応）
-            if (_current.Mode == ScheduleMode.TaskScheduler && _current.Target == ScheduleTarget.Pipeline)
+            // schtasks.exe 起動や OS 例外でアプリが落ちないよう全体を try/catch で保護
+            try
             {
-                var (ok, msg) = TaskSchedulerHelper.Register(_current);
-                if (!ok)
+                if (entry.Mode == ScheduleMode.TaskScheduler && entry.Target == ScheduleTarget.Pipeline)
+                {
+                    var (ok, msg) = TaskSchedulerHelper.Register(entry);
+                    if (!ok)
+                    {
+                        MessageBox.Show(
+                            $"タスクスケジューラへの登録に失敗しました:\n{msg}",
+                            "登録エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                    else
+                    {
+                        var taskName = TaskSchedulerHelper.GetTaskName(entry);
+                        MessageBox.Show(
+                            $"タスクスケジューラへ登録しました。\n登録名: {taskName}\n\n" +
+                            "現在は「ユーザーがログオンしている時のみ実行」で登録されています。\n" +
+                            "未ログオン時にも実行したい場合は、以下の手順で手動変更してください:\n\n" +
+                            "  1. タスクスケジューラを開く\n" +
+                            "     ([Win]+R → 「taskschd.msc」)\n" +
+                            "  2. 左ペインで「タスク スケジューラ ライブラリ」→「SampleELT」フォルダを選択\n" +
+                            "  3. 対象タスクを右クリック →「プロパティ」\n" +
+                            "  4. 「全般」タブで\n" +
+                            "     「ユーザーがログオンしているかどうかにかかわらず実行する」を選択\n" +
+                            "  5. （必要に応じて）「最上位の特権で実行する」にチェック\n" +
+                            "  6. [OK] → パスワード入力プロンプトでログオンユーザーのパスワードを入力",
+                            "登録完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+                else if (entry.Mode == ScheduleMode.TaskScheduler && entry.Target == ScheduleTarget.Job)
                 {
                     MessageBox.Show(
-                        $"タスクスケジューラへの登録に失敗しました:\n{msg}",
-                        "登録エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        "ジョブはWindowsタスクスケジューラに対応していません。\nインアプリモードに切り替えてください。",
+                        "非対応", MessageBoxButton.OK, MessageBoxImage.Information);
+                    entry.Mode = ScheduleMode.InApp;
+                    ModeInAppRadio.IsChecked = true;
+                    ScheduleRegistry.Instance.Save();
+                }
+                else if (prevMode == ScheduleMode.TaskScheduler)
+                {
+                    TaskSchedulerHelper.Unregister(entry);
                 }
             }
-            else if (_current.Mode == ScheduleMode.TaskScheduler && _current.Target == ScheduleTarget.Job)
+            catch (Exception ex)
             {
                 MessageBox.Show(
-                    "ジョブはWindowsタスクスケジューラに対応していません。\nインアプリモードに切り替えてください。",
-                    "非対応", MessageBoxButton.OK, MessageBoxImage.Information);
-                _current.Mode = ScheduleMode.InApp;
-                ModeInAppRadio.IsChecked = true;
-                ScheduleRegistry.Instance.Save();
+                    $"タスクスケジューラの操作中にエラーが発生しました:\n{ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            else if (prevMode == ScheduleMode.TaskScheduler)
+
+            // Register / Unregister 内で entry.LastTaskName が更新されるため再保存
+            ScheduleRegistry.Instance.Save();
+
+            // 一覧を再描画し、保存したエントリを再選択
+            RefreshList();
+            for (int i = 0; i < ScheduleListBox.Items.Count; i++)
             {
-                TaskSchedulerHelper.Unregister(_current);
+                if (ScheduleListBox.Items[i] is ListBoxItem li && li.Tag == entry)
+                {
+                    ScheduleListBox.SelectedIndex = i;
+                    break;
+                }
             }
 
             StatusTextBlock.Text       = "保存しました";
@@ -304,5 +355,70 @@ namespace SampleELT.Dialogs
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
+        // ==================== 重複名処理 ====================
+
+        /// <summary>
+        /// 他のスケジュールと名前が重複している場合に対応を確認する。
+        /// 戻り値 false でキャンセル（保存中止）、true で続行可能。
+        /// 上書き時は重複エントリを削除（タスクスケジューラ登録があれば解除）。
+        /// 別名で保存時は desiredName を一意な名前に置き換える。
+        /// </summary>
+        private bool TryResolveDuplicateName(ScheduleEntry entry, ref string desiredName)
+        {
+            if (string.IsNullOrEmpty(desiredName)) return true;
+
+            // ref パラメータはラムダ内で参照できないためローカルにコピー
+            var nameToCheck = desiredName;
+            var conflicts = ScheduleRegistry.Instance.Schedules
+                .Where(s => !ReferenceEquals(s, entry)
+                            && string.Equals(s.Name, nameToCheck, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (conflicts.Count == 0) return true;
+
+            var msg =
+                $"同じ名前のスケジュール「{conflicts[0].Name}」が既に存在します。\n\n" +
+                "・[はい] 既存のスケジュールを上書き（削除して置き換え）\n" +
+                "・[いいえ] 別名で保存（自動的に番号を追加）\n" +
+                "・[キャンセル] 保存しない";
+
+            var result = MessageBox.Show(msg, "重複したスケジュール名",
+                MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Cancel) return false;
+
+            if (result == MessageBoxResult.Yes)
+            {
+                // 上書き: 衝突したスケジュールを削除（タスク登録もあれば解除）
+                foreach (var c in conflicts)
+                {
+                    if (c.Mode == ScheduleMode.TaskScheduler)
+                    {
+                        try { TaskSchedulerHelper.Unregister(c); }
+                        catch { /* 失敗は無視して続行 */ }
+                    }
+                    ScheduleRegistry.Instance.Schedules.Remove(c);
+                }
+                return true;
+            }
+
+            // 別名で保存: 一意な名前を生成
+            desiredName = FindUniqueName(entry, desiredName);
+            return true;
+        }
+
+        private static string FindUniqueName(ScheduleEntry entry, string baseName)
+        {
+            for (int i = 2; i < 1000; i++)
+            {
+                var candidate = $"{baseName} ({i})";
+                bool taken = ScheduleRegistry.Instance.Schedules.Any(s =>
+                    !ReferenceEquals(s, entry)
+                    && string.Equals(s.Name, candidate, StringComparison.OrdinalIgnoreCase));
+                if (!taken) return candidate;
+            }
+            return $"{baseName} ({Guid.NewGuid():N})"; // フォールバック（実質到達しない）
+        }
     }
 }

@@ -169,9 +169,12 @@
                         Padding="8,6" Margin="0,4,0,14"
                         Visibility="Collapsed">
                     <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#E65100">
-                        <Run Text="アプリが起動していなくても Windows が自動実行します。"/>
+                        <Run Text="保存時に Windows タスクスケジューラへ登録します。"/>
                         <LineBreak/>
-                        <Run Text="保存時にタスクスケジューラへ登録します。管理者権限が必要な場合があります。"/>
+                        <Run Text="既定は「ユーザーがログオンしている時のみ実行」です。"/>
+                        <LineBreak/>
+                        <Run Text="未ログオン時にも実行したい場合は、登録後にタスクスケジューラ GUI で"/>
+                        <Run Text="「ユーザーがログオンしているかどうかにかかわらず実行する」へ手動変更してください。"/>
                     </TextBlock>
                 </Border>
 

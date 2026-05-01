@@ -50,5 +50,8 @@ namespace SampleELT.Models
         public DateTime? LastRunTime { get; set; }
         public bool? LastRunSuccess { get; set; }
         public string LastRunMessage { get; set; } = "";
+
+        // 最後に Windows タスクスケジューラに登録した際のタスク名（リネーム時の旧タスク削除に使用）
+        public string LastTaskName { get; set; } = "";
     }
 }
