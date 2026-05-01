@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using MySqlConnector;
+using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 
@@ -48,14 +51,17 @@ namespace SampleELT.Steps
                 && int.TryParse(cs?.ToString(), out var csVal) && csVal > 0 ? csVal : 100;
 
             var conn = ConnectionRegistry.Instance.FindConnection(Settings);
-            bool isOracle = conn?.DbType == DbType.Oracle;
+            var dbType = conn?.DbType ?? DbType.MySQL;
 
-            int upserted = 0;
-
-            if (isOracle)
-                upserted = await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct);
-            else
-                upserted = await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct);
+            int upserted = dbType switch
+            {
+                DbType.Oracle     => await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                DbType.PostgreSQL => await ExecutePostgreSQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                DbType.SqlServer  => await ExecuteSqlServerAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                DbType.Sqlite     => await ExecuteSqliteAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                // MariaDB は MySQL と同じ
+                _                 => await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct)
+            };
 
             progress.Report($"Insert/Update: {upserted}行 処理完了");
             return inputData;
@@ -176,6 +182,199 @@ namespace SampleELT.Steps
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
                         transaction = await dbConn.BeginTransactionAsync(ct);
+                    }
+                }
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+            finally { await transaction.DisposeAsync(); }
+            return count;
+        }
+
+        private static async Task<int> ExecutePostgreSQLAsync(
+            string connectionString, string tableName,
+            List<string> keyFields, string updateFieldsRaw,
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
+        {
+            using var dbConn = new NpgsqlConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            int count = 0;
+            var transaction = await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                foreach (var row in inputData)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var allCols = row.Keys.ToList();
+
+                    var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0)
+                                         .Where(f => allCols.Any(c => string.Equals(c, f, StringComparison.OrdinalIgnoreCase)))
+                                         .ToList();
+
+                    if (!string.IsNullOrWhiteSpace(updateFieldsRaw))
+                    {
+                        var allowed = new HashSet<string>(
+                            keyFields.Concat(updateCols), StringComparer.OrdinalIgnoreCase);
+                        allCols = allCols.Where(c => allowed.Contains(c)).ToList();
+                    }
+
+                    var colList = string.Join(", ", allCols.Select(c => $"\"{c}\""));
+                    var paramList = string.Join(", ", allCols.Select((c, i) => $"@p{i}"));
+                    var conflictCols = string.Join(", ", keyFields.Select(k => $"\"{k}\""));
+                    var updateClause = string.Join(", ", updateCols.Select(c => $"\"{c}\" = EXCLUDED.\"{c}\""));
+
+                    var sql = $"INSERT INTO \"{tableName}\" ({colList}) VALUES ({paramList})" +
+                              (updateCols.Count > 0
+                                  ? $" ON CONFLICT ({conflictCols}) DO UPDATE SET {updateClause}"
+                                  : $" ON CONFLICT ({conflictCols}) DO NOTHING");
+
+                    using var cmd = new NpgsqlCommand(sql, dbConn, transaction);
+                    for (int i = 0; i < allCols.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{i}", row[allCols[i]] ?? DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync(ct);
+                    count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = await dbConn.BeginTransactionAsync(ct);
+                    }
+                }
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+            finally { await transaction.DisposeAsync(); }
+            return count;
+        }
+
+        private static async Task<int> ExecuteSqlServerAsync(
+            string connectionString, string tableName,
+            List<string> keyFields, string updateFieldsRaw,
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
+        {
+            using var dbConn = new SqlConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            int count = 0;
+            var transaction = (SqlTransaction)await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                foreach (var row in inputData)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var allCols = row.Keys.ToList();
+
+                    var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0)
+                                         .Where(f => allCols.Any(c => string.Equals(c, f, StringComparison.OrdinalIgnoreCase)))
+                                         .ToList();
+
+                    if (!string.IsNullOrWhiteSpace(updateFieldsRaw))
+                    {
+                        var allowed = new HashSet<string>(
+                            keyFields.Concat(updateCols), StringComparer.OrdinalIgnoreCase);
+                        allCols = allCols.Where(c => allowed.Contains(c)).ToList();
+                    }
+
+                    var onClause = string.Join(" AND ", keyFields.Select(k => $"t.[{k}] = s.[{k}]"));
+                    var srcCols = string.Join(", ", allCols.Select((c, i) => $"@p{i} AS [{c}]"));
+                    var insertCols = string.Join(", ", allCols.Select(c => $"[{c}]"));
+                    var insertVals = string.Join(", ", allCols.Select(c => $"s.[{c}]"));
+                    var updateClause = string.Join(", ", updateCols.Select(c => $"t.[{c}] = s.[{c}]"));
+
+                    var sql = $"MERGE INTO [{tableName}] AS t USING (SELECT {srcCols}) AS s " +
+                              $"ON ({onClause}) " +
+                              (updateCols.Count > 0 ? $"WHEN MATCHED THEN UPDATE SET {updateClause} " : "") +
+                              $"WHEN NOT MATCHED THEN INSERT ({insertCols}) VALUES ({insertVals});";
+
+                    using var cmd = new SqlCommand(sql, dbConn, transaction);
+                    for (int i = 0; i < allCols.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{i}", row[allCols[i]] ?? DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync(ct);
+                    count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = (SqlTransaction)await dbConn.BeginTransactionAsync(ct);
+                    }
+                }
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+            finally { await transaction.DisposeAsync(); }
+            return count;
+        }
+
+        private static async Task<int> ExecuteSqliteAsync(
+            string connectionString, string tableName,
+            List<string> keyFields, string updateFieldsRaw,
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
+        {
+            using var dbConn = new SqliteConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            int count = 0;
+            var transaction = (SqliteTransaction)await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                foreach (var row in inputData)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var allCols = row.Keys.ToList();
+
+                    var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => f.Length > 0)
+                                         .Where(f => allCols.Any(c => string.Equals(c, f, StringComparison.OrdinalIgnoreCase)))
+                                         .ToList();
+
+                    if (!string.IsNullOrWhiteSpace(updateFieldsRaw))
+                    {
+                        var allowed = new HashSet<string>(
+                            keyFields.Concat(updateCols), StringComparer.OrdinalIgnoreCase);
+                        allCols = allCols.Where(c => allowed.Contains(c)).ToList();
+                    }
+
+                    var colList = string.Join(", ", allCols.Select(c => $"\"{c}\""));
+                    var paramList = string.Join(", ", allCols.Select((c, i) => $"@p{i}"));
+                    var conflictCols = string.Join(", ", keyFields.Select(k => $"\"{k}\""));
+                    var updateClause = string.Join(", ", updateCols.Select(c => $"\"{c}\" = excluded.\"{c}\""));
+
+                    var sql = $"INSERT INTO \"{tableName}\" ({colList}) VALUES ({paramList})" +
+                              (updateCols.Count > 0
+                                  ? $" ON CONFLICT({conflictCols}) DO UPDATE SET {updateClause}"
+                                  : $" ON CONFLICT({conflictCols}) DO NOTHING");
+
+                    using var cmd = new SqliteCommand(sql, dbConn, transaction);
+                    for (int i = 0; i < allCols.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{i}", row[allCols[i]] ?? DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync(ct);
+                    count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = (SqliteTransaction)await dbConn.BeginTransactionAsync(ct);
                     }
                 }
                 await transaction.CommitAsync(ct);

@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using MySqlConnector;
+using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 
@@ -45,14 +48,17 @@ namespace SampleELT.Steps
                 && int.TryParse(cs?.ToString(), out var csVal) && csVal > 0 ? csVal : 100;
 
             var conn = ConnectionRegistry.Instance.FindConnection(Settings);
-            bool isOracle = conn?.DbType == DbType.Oracle;
+            var dbType = conn?.DbType ?? DbType.MySQL;
 
-            int updated = 0;
-
-            if (isOracle)
-                updated = await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct);
-            else
-                updated = await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct);
+            int updated = dbType switch
+            {
+                DbType.Oracle     => await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                DbType.PostgreSQL => await ExecutePostgreSQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                DbType.SqlServer  => await ExecuteSqlServerAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                DbType.Sqlite     => await ExecuteSqliteAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
+                // MariaDB は MySQL と同じ
+                _                 => await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct)
+            };
 
             progress.Report($"DB Update: {updated}行 更新完了");
             return inputData;
@@ -152,6 +158,165 @@ namespace SampleELT.Steps
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
                         transaction = await dbConn.BeginTransactionAsync(ct);
+                    }
+                }
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+            finally { await transaction.DisposeAsync(); }
+            return count;
+        }
+
+        private static async Task<int> ExecutePostgreSQLAsync(
+            string connectionString, string tableName,
+            List<string> keyFields, string updateFieldsRaw,
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
+        {
+            using var dbConn = new NpgsqlConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            int count = 0;
+            var transaction = await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                foreach (var row in inputData)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var allCols = row.Keys.ToList();
+
+                    var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
+                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
+
+                    if (updateCols.Count == 0) continue;
+
+                    var setClauses = updateCols.Select((c, i) => $"\"{c}\" = @p{i}").ToList();
+                    var whereClauses = keyFields.Select((k, i) => $"\"{k}\" = @p{updateCols.Count + i}").ToList();
+                    var sql = $"UPDATE \"{tableName}\" SET {string.Join(", ", setClauses)} WHERE {string.Join(" AND ", whereClauses)}";
+
+                    using var cmd = new NpgsqlCommand(sql, dbConn, transaction);
+                    for (int i = 0; i < updateCols.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
+                    for (int i = 0; i < keyFields.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync(ct);
+                    count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = await dbConn.BeginTransactionAsync(ct);
+                    }
+                }
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+            finally { await transaction.DisposeAsync(); }
+            return count;
+        }
+
+        private static async Task<int> ExecuteSqlServerAsync(
+            string connectionString, string tableName,
+            List<string> keyFields, string updateFieldsRaw,
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
+        {
+            using var dbConn = new SqlConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            int count = 0;
+            var transaction = (SqlTransaction)await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                foreach (var row in inputData)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var allCols = row.Keys.ToList();
+
+                    var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
+                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
+
+                    if (updateCols.Count == 0) continue;
+
+                    var setClauses = updateCols.Select((c, i) => $"[{c}] = @p{i}").ToList();
+                    var whereClauses = keyFields.Select((k, i) => $"[{k}] = @p{updateCols.Count + i}").ToList();
+                    var sql = $"UPDATE [{tableName}] SET {string.Join(", ", setClauses)} WHERE {string.Join(" AND ", whereClauses)}";
+
+                    using var cmd = new SqlCommand(sql, dbConn, transaction);
+                    for (int i = 0; i < updateCols.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
+                    for (int i = 0; i < keyFields.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync(ct);
+                    count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = (SqlTransaction)await dbConn.BeginTransactionAsync(ct);
+                    }
+                }
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+            finally { await transaction.DisposeAsync(); }
+            return count;
+        }
+
+        private static async Task<int> ExecuteSqliteAsync(
+            string connectionString, string tableName,
+            List<string> keyFields, string updateFieldsRaw,
+            List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
+        {
+            using var dbConn = new SqliteConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            int count = 0;
+            var transaction = (SqliteTransaction)await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                foreach (var row in inputData)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var allCols = row.Keys.ToList();
+
+                    var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
+                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
+
+                    if (updateCols.Count == 0) continue;
+
+                    var setClauses = updateCols.Select((c, i) => $"\"{c}\" = @p{i}").ToList();
+                    var whereClauses = keyFields.Select((k, i) => $"\"{k}\" = @p{updateCols.Count + i}").ToList();
+                    var sql = $"UPDATE \"{tableName}\" SET {string.Join(", ", setClauses)} WHERE {string.Join(" AND ", whereClauses)}";
+
+                    using var cmd = new SqliteCommand(sql, dbConn, transaction);
+                    for (int i = 0; i < updateCols.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
+                    for (int i = 0; i < keyFields.Count; i++)
+                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value);
+
+                    await cmd.ExecuteNonQueryAsync(ct);
+                    count++;
+
+                    if (count % commitSize == 0)
+                    {
+                        await transaction.CommitAsync(ct);
+                        await transaction.DisposeAsync();
+                        transaction = (SqliteTransaction)await dbConn.BeginTransactionAsync(ct);
                     }
                 }
                 await transaction.CommitAsync(ct);

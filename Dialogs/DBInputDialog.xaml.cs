@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using MySqlConnector;
+using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 using DataTable = System.Data.DataTable;
@@ -86,6 +89,21 @@ namespace SampleELT.Dialogs
                     using var c = new OracleConnection(conn.ConnectionString);
                     await c.OpenAsync();
                 }
+                else if (conn.DbType == DbType.PostgreSQL)
+                {
+                    using var c = new NpgsqlConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else if (conn.DbType == DbType.SqlServer)
+                {
+                    using var c = new SqlConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else if (conn.DbType == DbType.Sqlite)
+                {
+                    using var c = new SqliteConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
                 else
                 {
                     using var c = new MySqlConnection(conn.ConnectionString);
@@ -143,6 +161,40 @@ namespace SampleELT.Dialogs
                 await c.OpenAsync();
                 using var cmd = new OracleCommand(
                     "SELECT table_name FROM user_tables ORDER BY table_name", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.PostgreSQL)
+            {
+                using var c = new NpgsqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new NpgsqlCommand(
+                    "SELECT table_name FROM information_schema.tables " +
+                    "WHERE table_schema = current_schema() AND table_type = 'BASE TABLE' " +
+                    "ORDER BY table_name", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.SqlServer)
+            {
+                using var c = new SqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new SqlCommand(
+                    "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES " +
+                    "WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.Sqlite)
+            {
+                using var c = new SqliteConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new SqliteCommand(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' " +
+                    "AND name NOT LIKE 'sqlite_%' ORDER BY name", c);
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                     tables.Add(reader.GetString(0));
@@ -234,6 +286,66 @@ namespace SampleELT.Dialogs
                 using var c = new OracleConnection(conn.ConnectionString);
                 await c.OpenAsync();
                 using var cmd = new OracleCommand(sql, c);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                for (int i = 0; i < reader.FieldCount; i++)
+                    dt.Columns.Add(reader.GetName(i));
+
+                int count = 0;
+                while (await reader.ReadAsync() && count < limit)
+                {
+                    var row = dt.NewRow();
+                    for (int i = 0; i < reader.FieldCount; i++)
+                        row[i] = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                    dt.Rows.Add(row);
+                    count++;
+                }
+            }
+            else if (conn.DbType == DbType.PostgreSQL)
+            {
+                using var c = new NpgsqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new NpgsqlCommand(sql, c);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                for (int i = 0; i < reader.FieldCount; i++)
+                    dt.Columns.Add(reader.GetName(i));
+
+                int count = 0;
+                while (await reader.ReadAsync() && count < limit)
+                {
+                    var row = dt.NewRow();
+                    for (int i = 0; i < reader.FieldCount; i++)
+                        row[i] = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                    dt.Rows.Add(row);
+                    count++;
+                }
+            }
+            else if (conn.DbType == DbType.SqlServer)
+            {
+                using var c = new SqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new SqlCommand(sql, c);
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                for (int i = 0; i < reader.FieldCount; i++)
+                    dt.Columns.Add(reader.GetName(i));
+
+                int count = 0;
+                while (await reader.ReadAsync() && count < limit)
+                {
+                    var row = dt.NewRow();
+                    for (int i = 0; i < reader.FieldCount; i++)
+                        row[i] = reader.IsDBNull(i) ? DBNull.Value : reader.GetValue(i);
+                    dt.Rows.Add(row);
+                    count++;
+                }
+            }
+            else if (conn.DbType == DbType.Sqlite)
+            {
+                using var c = new SqliteConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new SqliteCommand(sql, c);
                 using var reader = await cmd.ExecuteReaderAsync();
 
                 for (int i = 0; i < reader.FieldCount; i++)

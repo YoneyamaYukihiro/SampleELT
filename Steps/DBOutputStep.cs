@@ -24,9 +24,15 @@ namespace SampleELT.Steps
             _ = Guid.TryParse(connIdStr, out var connId);
             var connInfo = ConnectionRegistry.Instance.Connections.FirstOrDefault(x => x.Id == connId);
 
-            StepBase inner = connInfo?.DbType == DbType.Oracle
-                ? new OracleOutputStep()
-                : new MySQLOutputStep();
+            StepBase inner = connInfo?.DbType switch
+            {
+                DbType.Oracle     => new OracleOutputStep(),
+                DbType.PostgreSQL => new PostgreSQLOutputStep(),
+                DbType.SqlServer  => new SqlServerOutputStep(),
+                DbType.Sqlite     => new SqliteOutputStep(),
+                // MariaDB は MySQL ドライバ (MySqlConnector) を共用
+                _                 => new MySQLOutputStep()
+            };
 
             inner.Settings = this.Settings;
             inner.AllInputStreams = this.AllInputStreams;

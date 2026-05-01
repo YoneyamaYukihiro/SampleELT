@@ -6,7 +6,11 @@ namespace SampleELT.Models
     public enum DbType
     {
         Oracle,
-        MySQL
+        MySQL,
+        PostgreSQL,
+        SqlServer,
+        MariaDB,
+        Sqlite
     }
 
     public partial class DbConnectionInfo : ObservableObject
@@ -24,6 +28,17 @@ namespace SampleELT.Models
         [ObservableProperty]
         private string _connectionString = "";
 
-        public string DisplayName => $"{(DbType == DbType.Oracle ? "🔶" : "🐬")} {Name}";
+        public string DisplayName => $"{GetIcon(DbType)} {Name}";
+
+        private static string GetIcon(DbType type) => type switch
+        {
+            DbType.Oracle     => "🔶",
+            DbType.MySQL      => "🐬",
+            DbType.PostgreSQL => "🐘",
+            DbType.SqlServer  => "🟦",
+            DbType.MariaDB    => "🦭",
+            DbType.Sqlite     => "🪶",
+            _                 => "❔"
+        };
     }
 }

@@ -1,7 +1,10 @@
 using System;
 using System.Linq;
 using System.Windows;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using MySqlConnector;
+using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 
@@ -68,6 +71,21 @@ namespace SampleELT.Dialogs
                 if (conn.DbType == DbType.Oracle)
                 {
                     using var c = new OracleConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else if (conn.DbType == DbType.PostgreSQL)
+                {
+                    using var c = new NpgsqlConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else if (conn.DbType == DbType.SqlServer)
+                {
+                    using var c = new SqlConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else if (conn.DbType == DbType.Sqlite)
+                {
+                    using var c = new SqliteConnection(conn.ConnectionString);
                     await c.OpenAsync();
                 }
                 else

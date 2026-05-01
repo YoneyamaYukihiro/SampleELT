@@ -4,7 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using MySqlConnector;
+using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 
@@ -104,6 +107,21 @@ namespace SampleELT.Dialogs
                     using var c = new OracleConnection(conn.ConnectionString);
                     await c.OpenAsync();
                 }
+                else if (conn.DbType == DbType.PostgreSQL)
+                {
+                    using var c = new NpgsqlConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else if (conn.DbType == DbType.SqlServer)
+                {
+                    using var c = new SqlConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
+                else if (conn.DbType == DbType.Sqlite)
+                {
+                    using var c = new SqliteConnection(conn.ConnectionString);
+                    await c.OpenAsync();
+                }
                 else
                 {
                     using var c = new MySqlConnection(conn.ConnectionString);
@@ -164,6 +182,40 @@ namespace SampleELT.Dialogs
                 await c.OpenAsync();
                 using var cmd = new OracleCommand(
                     "SELECT table_name FROM user_tables ORDER BY table_name", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.PostgreSQL)
+            {
+                using var c = new NpgsqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new NpgsqlCommand(
+                    "SELECT table_name FROM information_schema.tables " +
+                    "WHERE table_schema = current_schema() AND table_type = 'BASE TABLE' " +
+                    "ORDER BY table_name", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.SqlServer)
+            {
+                using var c = new SqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new SqlCommand(
+                    "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES " +
+                    "WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    tables.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.Sqlite)
+            {
+                using var c = new SqliteConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new SqliteCommand(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' " +
+                    "AND name NOT LIKE 'sqlite_%' ORDER BY name", c);
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                     tables.Add(reader.GetString(0));
@@ -266,6 +318,41 @@ namespace SampleELT.Dialogs
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                     columns.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.PostgreSQL)
+            {
+                using var c = new NpgsqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new NpgsqlCommand(
+                    "SELECT column_name FROM information_schema.columns " +
+                    "WHERE table_schema = current_schema() AND table_name = @t ORDER BY ordinal_position", c);
+                cmd.Parameters.AddWithValue("@t", tableName);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    columns.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.SqlServer)
+            {
+                using var c = new SqlConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                using var cmd = new SqlCommand(
+                    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
+                    "WHERE TABLE_NAME = @t ORDER BY ORDINAL_POSITION", c);
+                cmd.Parameters.AddWithValue("@t", tableName);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    columns.Add(reader.GetString(0));
+            }
+            else if (conn.DbType == DbType.Sqlite)
+            {
+                using var c = new SqliteConnection(conn.ConnectionString);
+                await c.OpenAsync();
+                // PRAGMA はパラメータをサポートしないためテーブル名を文字列リテラルとして組み込む
+                var safeName = tableName.Replace("'", "''");
+                using var cmd = new SqliteCommand($"PRAGMA table_info('{safeName}')", c);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                    columns.Add(reader.GetString(1)); // index 1 = name
             }
             else
             {

@@ -105,6 +105,10 @@
                               SelectionChanged="DbTypeCombo_SelectionChanged">
                         <ComboBoxItem Content="🔶 Oracle" Tag="Oracle" IsSelected="True"/>
                         <ComboBoxItem Content="🐬 MySQL" Tag="MySQL"/>
+                        <ComboBoxItem Content="🐘 PostgreSQL" Tag="PostgreSQL"/>
+                        <ComboBoxItem Content="🟦 SQL Server" Tag="SqlServer"/>
+                        <ComboBoxItem Content="🦭 MariaDB" Tag="MariaDB"/>
+                        <ComboBoxItem Content="🪶 SQLite" Tag="Sqlite"/>
                     </ComboBox>
                 </StackPanel>
 
@@ -144,8 +148,44 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- PostgreSQL: 個別フィールド -->
+                <StackPanel Grid.Row="3" x:Name="PostgreSQLSection" Visibility="Collapsed">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="サーバー" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="PgServerBox" Height="28" Padding="6,4"
+                                     Text="localhost" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="ポート" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="PgPortBox" Height="28" Padding="6,4"
+                                     Text="5432" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="データベース名" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="PgDatabaseBox" Height="28" Padding="6,4"
+                                 TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="ユーザー名" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="PgUserBox" Height="28" Padding="6,4"
+                                 Text="postgres" TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="パスワード" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <PasswordBox x:Name="PgPassBox" Height="28" Padding="6,4"
+                                     PasswordChanged="EditField_Changed"/>
+                    </StackPanel>
+                </StackPanel>
+
                 <!-- MySQL: 個別フィールド -->
-                <StackPanel Grid.Row="3" x:Name="MySQLSection" Visibility="Collapsed">
+                <StackPanel Grid.Row="4" x:Name="MySQLSection" Visibility="Collapsed">
                     <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -180,8 +220,70 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- SQL Server: 個別フィールド -->
+                <StackPanel Grid.Row="5" x:Name="SqlServerSection" Visibility="Collapsed">
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="サーバー" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="MssServerBox" Height="28" Padding="6,4"
+                                     Text="localhost" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="ポート" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBox x:Name="MssPortBox" Height="28" Padding="6,4"
+                                     Text="1433" TextChanged="EditField_Changed"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="データベース名" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="MssDatabaseBox" Height="28" Padding="6,4"
+                                 TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <CheckBox x:Name="MssIntegratedSecurityCheck" Content="Windows 認証を使用"
+                                  Checked="EditField_Changed" Unchecked="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="ユーザー名" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <TextBox x:Name="MssUserBox" Height="28" Padding="6,4"
+                                 Text="sa" TextChanged="EditField_Changed"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="パスワード" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <PasswordBox x:Name="MssPassBox" Height="28" Padding="6,4"
+                                     PasswordChanged="EditField_Changed"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- SQLite: 個別フィールド -->
+                <StackPanel Grid.Row="6" x:Name="SqliteSection" Visibility="Collapsed">
+                    <StackPanel Margin="0,0,0,8">
+                        <TextBlock Text="データベースファイル" FontWeight="Bold" Margin="0,0,0,4"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     x:Name="SqlitePathBox" Height="28" Padding="6,4"
+                                     TextChanged="EditField_Changed"/>
+                            <Button Grid.Column="1"
+                                    Content="参照..." Width="80" Height="28"
+                                    Margin="6,0,0,0"
+                                    Click="SqliteBrowse_Click"/>
+                        </Grid>
+                        <TextBlock Text="※ ファイルが存在しない場合は自動で新規作成されます。"
+                                   Foreground="Gray" FontSize="11" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
                 <!-- 接続テストボタン -->
-                <Button Grid.Row="4"
+                <Button Grid.Row="7"
                         Content="🔗 接続テスト"
                         HorizontalAlignment="Left"
                         Width="120" Height="28"
@@ -190,7 +292,7 @@
                         Style="{StaticResource PrimaryButtonStyle}"/>
 
                 <!-- 保存ボタン -->
-                <Button Grid.Row="5"
+                <Button Grid.Row="8"
                         x:Name="SaveConnButton"
                         Content="💾 この接続を保存"
                         HorizontalAlignment="Left"

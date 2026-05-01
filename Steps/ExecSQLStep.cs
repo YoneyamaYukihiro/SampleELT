@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using MySqlConnector;
+using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 
@@ -30,16 +33,26 @@ namespace SampleELT.Steps
                 && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
             var conn = ConnectionRegistry.Instance.FindConnection(Settings);
-            bool isOracle = conn?.DbType == DbType.Oracle;
+            var dbType = conn?.DbType ?? DbType.MySQL;
 
-            if (isOracle)
+            switch (dbType)
             {
-                await ExecuteOracleAsync(connectionString, TrimSql(rawSql), executeEachRow, inputData, progress, ct);
-            }
-            else
-            {
-                var csb = new MySqlConnectionStringBuilder(connectionString) { AllowUserVariables = true };
-                await ExecuteMySQLAsync(csb.ConnectionString, rawSql, executeEachRow, inputData, progress, ct);
+                case DbType.Oracle:
+                    await ExecuteOracleAsync(connectionString, TrimSql(rawSql), executeEachRow, inputData, progress, ct);
+                    break;
+                case DbType.PostgreSQL:
+                    await ExecutePostgreSQLAsync(connectionString, TrimSql(rawSql), executeEachRow, inputData, progress, ct);
+                    break;
+                case DbType.SqlServer:
+                    await ExecuteSqlServerAsync(connectionString, TrimSql(rawSql), executeEachRow, inputData, progress, ct);
+                    break;
+                case DbType.Sqlite:
+                    await ExecuteSqliteAsync(connectionString, TrimSql(rawSql), executeEachRow, inputData, progress, ct);
+                    break;
+                default:
+                    var csb = new MySqlConnectionStringBuilder(connectionString) { AllowUserVariables = true };
+                    await ExecuteMySQLAsync(csb.ConnectionString, rawSql, executeEachRow, inputData, progress, ct);
+                    break;
             }
 
             return inputData;
@@ -120,6 +133,129 @@ namespace SampleELT.Steps
                     int rows = await cmd.ExecuteNonQueryAsync(ct);
                     await transaction.CommitAsync(ct);
                     progress.Report($"Exec SQL (MySQL): {rows}行 影響");
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        }
+
+        private static async Task ExecutePostgreSQLAsync(
+            string connectionString, string sql, bool executeEachRow,
+            List<Dictionary<string, object?>> inputData,
+            IProgress<string> progress, CancellationToken ct)
+        {
+            using var dbConn = new NpgsqlConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            using var transaction = await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                if (executeEachRow && inputData.Count > 0)
+                {
+                    int executed = 0;
+                    foreach (var row in inputData)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        using var cmd = new NpgsqlCommand(sql, dbConn, transaction);
+                        var values = row.Values.ToList();
+                        for (int i = 0; i < values.Count; i++)
+                            cmd.Parameters.AddWithValue($"@p{i}", values[i] ?? DBNull.Value);
+                        await cmd.ExecuteNonQueryAsync(ct);
+                        executed++;
+                    }
+                    await transaction.CommitAsync(ct);
+                    progress.Report($"Exec SQL (PostgreSQL): {executed}行 実行完了");
+                }
+                else
+                {
+                    using var cmd = new NpgsqlCommand(sql, dbConn, transaction);
+                    int rows = await cmd.ExecuteNonQueryAsync(ct);
+                    await transaction.CommitAsync(ct);
+                    progress.Report($"Exec SQL (PostgreSQL): {rows}行 影響");
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        }
+
+        private static async Task ExecuteSqlServerAsync(
+            string connectionString, string sql, bool executeEachRow,
+            List<Dictionary<string, object?>> inputData,
+            IProgress<string> progress, CancellationToken ct)
+        {
+            using var dbConn = new SqlConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            using var transaction = (SqlTransaction)await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                if (executeEachRow && inputData.Count > 0)
+                {
+                    int executed = 0;
+                    foreach (var row in inputData)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        using var cmd = new SqlCommand(sql, dbConn, transaction);
+                        var values = row.Values.ToList();
+                        for (int i = 0; i < values.Count; i++)
+                            cmd.Parameters.AddWithValue($"@p{i}", values[i] ?? DBNull.Value);
+                        await cmd.ExecuteNonQueryAsync(ct);
+                        executed++;
+                    }
+                    await transaction.CommitAsync(ct);
+                    progress.Report($"Exec SQL (SQL Server): {executed}行 実行完了");
+                }
+                else
+                {
+                    using var cmd = new SqlCommand(sql, dbConn, transaction);
+                    int rows = await cmd.ExecuteNonQueryAsync(ct);
+                    await transaction.CommitAsync(ct);
+                    progress.Report($"Exec SQL (SQL Server): {rows}行 影響");
+                }
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        }
+
+        private static async Task ExecuteSqliteAsync(
+            string connectionString, string sql, bool executeEachRow,
+            List<Dictionary<string, object?>> inputData,
+            IProgress<string> progress, CancellationToken ct)
+        {
+            using var dbConn = new SqliteConnection(connectionString);
+            await dbConn.OpenAsync(ct);
+            using var transaction = (SqliteTransaction)await dbConn.BeginTransactionAsync(ct);
+            try
+            {
+                if (executeEachRow && inputData.Count > 0)
+                {
+                    int executed = 0;
+                    foreach (var row in inputData)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        using var cmd = new SqliteCommand(sql, dbConn, transaction);
+                        var values = row.Values.ToList();
+                        for (int i = 0; i < values.Count; i++)
+                            cmd.Parameters.AddWithValue($"@p{i}", values[i] ?? DBNull.Value);
+                        await cmd.ExecuteNonQueryAsync(ct);
+                        executed++;
+                    }
+                    await transaction.CommitAsync(ct);
+                    progress.Report($"Exec SQL (SQLite): {executed}行 実行完了");
+                }
+                else
+                {
+                    using var cmd = new SqliteCommand(sql, dbConn, transaction);
+                    int rows = await cmd.ExecuteNonQueryAsync(ct);
+                    await transaction.CommitAsync(ct);
+                    progress.Report($"Exec SQL (SQLite): {rows}行 影響");
                 }
             }
             catch

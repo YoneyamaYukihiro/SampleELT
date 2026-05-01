@@ -1,7 +1,11 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
+using Microsoft.Win32;
 using MySqlConnector;
+using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
 
@@ -39,67 +43,165 @@ namespace SampleELT.Dialogs
             _suppressChangeEvents = true;
 
             ConnNameBox.Text = conn.Name;
+            UpdateSectionVisibility(conn.DbType);
+            DbTypeCombo.SelectedIndex = DbTypeToComboIndex(conn.DbType);
 
-            if (conn.DbType == DbType.Oracle)
+            switch (conn.DbType)
             {
-                DbTypeCombo.SelectedIndex = 0;
-                OracleSection.Visibility = Visibility.Visible;
-                MySQLSection.Visibility = Visibility.Collapsed;
-                try
-                {
-                    var builder = new OracleConnectionStringBuilder(conn.ConnectionString);
-                    ParseOracleDataSource(builder.DataSource ?? "",
-                        out var host, out var port, out var service);
-                    OracleServerBox.Text  = host;
-                    OraclePortBox.Text    = port;
-                    OracleServiceBox.Text = service;
-                    OracleUserBox.Text    = builder.UserID;
-                    OraclePassBox.Password = builder.Password;
-                }
-                catch
-                {
-                    OracleServerBox.Text  = "localhost";
-                    OraclePortBox.Text    = "1521";
-                    OracleServiceBox.Text = "ORCL";
-                }
-            }
-            else
-            {
-                DbTypeCombo.SelectedIndex = 1;
-                OracleSection.Visibility = Visibility.Collapsed;
-                MySQLSection.Visibility = Visibility.Visible;
-                // Parse MySQL connection string into fields
-                try
-                {
-                    var builder = new MySqlConnectionStringBuilder(conn.ConnectionString);
-                    MySQLServerBox.Text = builder.Server;
-                    MySQLPortBox.Text = builder.Port.ToString();
-                    MySQLDatabaseBox.Text = builder.Database;
-                    MySQLUserBox.Text = builder.UserID;
-                    MySQLPassBox.Password = builder.Password;
-                }
-                catch
-                {
-                    MySQLServerBox.Text = "localhost";
-                    MySQLPortBox.Text = "3306";
-                }
+                case DbType.Oracle:
+                    try
+                    {
+                        var builder = new OracleConnectionStringBuilder(conn.ConnectionString);
+                        ParseOracleDataSource(builder.DataSource ?? "",
+                            out var host, out var port, out var service);
+                        OracleServerBox.Text   = host;
+                        OraclePortBox.Text     = port;
+                        OracleServiceBox.Text  = service;
+                        OracleUserBox.Text     = builder.UserID;
+                        OraclePassBox.Password = builder.Password;
+                    }
+                    catch
+                    {
+                        OracleServerBox.Text  = "localhost";
+                        OraclePortBox.Text    = "1521";
+                        OracleServiceBox.Text = "ORCL";
+                    }
+                    break;
+                case DbType.MySQL:
+                case DbType.MariaDB:
+                    try
+                    {
+                        var builder = new MySqlConnectionStringBuilder(conn.ConnectionString);
+                        MySQLServerBox.Text   = builder.Server;
+                        MySQLPortBox.Text     = builder.Port.ToString();
+                        MySQLDatabaseBox.Text = builder.Database;
+                        MySQLUserBox.Text     = builder.UserID;
+                        MySQLPassBox.Password = builder.Password;
+                    }
+                    catch
+                    {
+                        MySQLServerBox.Text = "localhost";
+                        MySQLPortBox.Text   = "3306";
+                    }
+                    break;
+                case DbType.PostgreSQL:
+                    try
+                    {
+                        var builder = new NpgsqlConnectionStringBuilder(conn.ConnectionString);
+                        PgServerBox.Text   = builder.Host ?? "localhost";
+                        PgPortBox.Text     = builder.Port.ToString();
+                        PgDatabaseBox.Text = builder.Database ?? "";
+                        PgUserBox.Text     = builder.Username ?? "postgres";
+                        PgPassBox.Password = builder.Password ?? "";
+                    }
+                    catch
+                    {
+                        PgServerBox.Text = "localhost";
+                        PgPortBox.Text   = "5432";
+                    }
+                    break;
+                case DbType.SqlServer:
+                    try
+                    {
+                        var builder = new SqlConnectionStringBuilder(conn.ConnectionString);
+                        ParseSqlServerDataSource(builder.DataSource ?? "",
+                            out var host, out var port);
+                        MssServerBox.Text   = host;
+                        MssPortBox.Text     = port;
+                        MssDatabaseBox.Text = builder.InitialCatalog ?? "";
+                        MssIntegratedSecurityCheck.IsChecked = builder.IntegratedSecurity;
+                        MssUserBox.Text     = builder.UserID ?? "sa";
+                        MssPassBox.Password = builder.Password ?? "";
+                    }
+                    catch
+                    {
+                        MssServerBox.Text = "localhost";
+                        MssPortBox.Text   = "1433";
+                    }
+                    break;
+                case DbType.Sqlite:
+                    try
+                    {
+                        var builder = new SqliteConnectionStringBuilder(conn.ConnectionString);
+                        SqlitePathBox.Text = builder.DataSource ?? "";
+                    }
+                    catch
+                    {
+                        SqlitePathBox.Text = "";
+                    }
+                    break;
             }
 
             _suppressChangeEvents = false;
         }
 
+        private void UpdateSectionVisibility(DbType dbType)
+        {
+            OracleSection.Visibility     = dbType == DbType.Oracle     ? Visibility.Visible : Visibility.Collapsed;
+            PostgreSQLSection.Visibility = dbType == DbType.PostgreSQL ? Visibility.Visible : Visibility.Collapsed;
+            MySQLSection.Visibility      = (dbType == DbType.MySQL || dbType == DbType.MariaDB) ? Visibility.Visible : Visibility.Collapsed;
+            SqlServerSection.Visibility  = dbType == DbType.SqlServer  ? Visibility.Visible : Visibility.Collapsed;
+            SqliteSection.Visibility     = dbType == DbType.Sqlite     ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static int DbTypeToComboIndex(DbType dbType) => dbType switch
+        {
+            DbType.Oracle     => 0,
+            DbType.MySQL      => 1,
+            DbType.PostgreSQL => 2,
+            DbType.SqlServer  => 3,
+            DbType.MariaDB    => 4,
+            DbType.Sqlite     => 5,
+            _                 => 0
+        };
+
+        /// <summary>"host,port" or "host\instance" 形式の DataSource を分解する。</summary>
+        private static void ParseSqlServerDataSource(
+            string dataSource, out string host, out string port)
+        {
+            host = "localhost"; port = "1433";
+            if (string.IsNullOrWhiteSpace(dataSource)) return;
+
+            var commaIdx = dataSource.IndexOf(',');
+            if (commaIdx > 0)
+            {
+                host = dataSource[..commaIdx];
+                port = dataSource[(commaIdx + 1)..];
+            }
+            else
+            {
+                host = dataSource;
+            }
+        }
+
         private void DbTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_suppressChangeEvents) return;
-            if (OracleSection == null || MySQLSection == null) return;
+            if (OracleSection == null || MySQLSection == null
+                || PostgreSQLSection == null || SqlServerSection == null
+                || SqliteSection == null) return;
 
-            var isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
-            OracleSection.Visibility = isOracle ? Visibility.Visible : Visibility.Collapsed;
-            MySQLSection.Visibility = isOracle ? Visibility.Collapsed : Visibility.Visible;
+            var dbType = ParseSelectedDbType();
+            UpdateSectionVisibility(dbType);
 
-            // DbType をリアルタイム更新 → DisplayName (🔶/🐬) も即座に反映
+            // DbType をリアルタイム更新 → DisplayName (🔶/🐬/🐘/🟦/🦭/🪶) も即座に反映
             if (_currentConnection != null)
-                _currentConnection.DbType = isOracle ? DbType.Oracle : DbType.MySQL;
+                _currentConnection.DbType = dbType;
+        }
+
+        private DbType ParseSelectedDbType()
+        {
+            var tag = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            return tag switch
+            {
+                "Oracle"     => DbType.Oracle,
+                "MySQL"      => DbType.MySQL,
+                "PostgreSQL" => DbType.PostgreSQL,
+                "SqlServer"  => DbType.SqlServer,
+                "MariaDB"    => DbType.MariaDB,
+                "Sqlite"     => DbType.Sqlite,
+                _            => DbType.Oracle
+            };
         }
 
         private void EditField_Changed(object sender, EventArgs e)
@@ -156,22 +258,51 @@ namespace SampleELT.Dialogs
 
             _currentConnection.Name = ConnNameBox.Text.Trim();
 
-            var isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
-            _currentConnection.DbType = isOracle ? DbType.Oracle : DbType.MySQL;
+            var dbType = ParseSelectedDbType();
+            _currentConnection.DbType = dbType;
 
-            if (isOracle)
+            switch (dbType)
             {
-                if (string.IsNullOrWhiteSpace(OracleServerBox.Text))
-                {
-                    MessageBox.Show("サーバーを入力してください。", "入力エラー",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                _currentConnection.ConnectionString = BuildOracleConnectionString();
-            }
-            else
-            {
-                _currentConnection.ConnectionString = BuildMySQLConnectionString();
+                case DbType.Oracle:
+                    if (string.IsNullOrWhiteSpace(OracleServerBox.Text))
+                    {
+                        MessageBox.Show("サーバーを入力してください。", "入力エラー",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    _currentConnection.ConnectionString = BuildOracleConnectionString();
+                    break;
+                case DbType.PostgreSQL:
+                    if (string.IsNullOrWhiteSpace(PgServerBox.Text))
+                    {
+                        MessageBox.Show("サーバーを入力してください。", "入力エラー",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    _currentConnection.ConnectionString = BuildPostgreSQLConnectionString();
+                    break;
+                case DbType.SqlServer:
+                    if (string.IsNullOrWhiteSpace(MssServerBox.Text))
+                    {
+                        MessageBox.Show("サーバーを入力してください。", "入力エラー",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    _currentConnection.ConnectionString = BuildSqlServerConnectionString();
+                    break;
+                case DbType.Sqlite:
+                    if (string.IsNullOrWhiteSpace(SqlitePathBox.Text))
+                    {
+                        MessageBox.Show("データベースファイルのパスを指定してください。", "入力エラー",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    _currentConnection.ConnectionString = BuildSqliteConnectionString();
+                    break;
+                default:
+                    // MySQL / MariaDB は同じ MySqlConnector ドライバを使用
+                    _currentConnection.ConnectionString = BuildMySQLConnectionString();
+                    break;
             }
 
             ConnectionRegistry.Instance.Save();
@@ -191,6 +322,70 @@ namespace SampleELT.Dialogs
                 Database = MySQLDatabaseBox.Text.Trim(),
                 UserID = MySQLUserBox.Text.Trim(),
                 Password = MySQLPassBox.Password
+            };
+            return builder.ConnectionString;
+        }
+
+        private string BuildSqliteConnectionString()
+        {
+            var builder = new SqliteConnectionStringBuilder
+            {
+                DataSource = SqlitePathBox.Text.Trim()
+            };
+            return builder.ConnectionString;
+        }
+
+        private void SqliteBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "SQLite データベースファイルを選択",
+                Filter = "SQLite DB (*.db;*.sqlite;*.sqlite3)|*.db;*.sqlite;*.sqlite3|すべてのファイル (*.*)|*.*",
+                CheckFileExists = false
+            };
+            if (!string.IsNullOrEmpty(SqlitePathBox.Text))
+            {
+                try { dialog.InitialDirectory = System.IO.Path.GetDirectoryName(SqlitePathBox.Text); }
+                catch { /* ignore invalid path */ }
+            }
+            if (dialog.ShowDialog() == true)
+            {
+                SqlitePathBox.Text = dialog.FileName;
+            }
+        }
+
+        private string BuildSqlServerConnectionString()
+        {
+            if (!int.TryParse(MssPortBox.Text.Trim(), out int port)) port = 1433;
+            var server = MssServerBox.Text.Trim();
+            var dataSource = port == 1433 ? server : $"{server},{port}";
+
+            var builder = new SqlConnectionStringBuilder
+            {
+                DataSource              = dataSource,
+                InitialCatalog          = MssDatabaseBox.Text.Trim(),
+                IntegratedSecurity      = MssIntegratedSecurityCheck.IsChecked == true,
+                TrustServerCertificate  = true
+            };
+            if (!builder.IntegratedSecurity)
+            {
+                builder.UserID   = MssUserBox.Text.Trim();
+                builder.Password = MssPassBox.Password;
+            }
+            return builder.ConnectionString;
+        }
+
+        private string BuildPostgreSQLConnectionString()
+        {
+            if (!int.TryParse(PgPortBox.Text.Trim(), out int port)) port = 5432;
+
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host     = PgServerBox.Text.Trim(),
+                Port     = port,
+                Database = PgDatabaseBox.Text.Trim(),
+                Username = PgUserBox.Text.Trim(),
+                Password = PgPassBox.Password
             };
             return builder.ConnectionString;
         }
@@ -239,35 +434,47 @@ namespace SampleELT.Dialogs
 
         private async void TestConnection_Click(object sender, RoutedEventArgs e)
         {
-            string cs;
-            bool isOracle;
-
-            if (_currentConnection != null)
-            {
-                isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
-                cs = isOracle ? BuildOracleConnectionString() : BuildMySQLConnectionString();
-            }
-            else
+            if (_currentConnection == null)
             {
                 MessageBox.Show("接続を選択してください。", "接続テスト",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            isOracle = (DbTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "Oracle";
-            cs = isOracle ? BuildOracleConnectionString() : BuildMySQLConnectionString();
+            var dbType = ParseSelectedDbType();
+            var cs = dbType switch
+            {
+                DbType.Oracle     => BuildOracleConnectionString(),
+                DbType.PostgreSQL => BuildPostgreSQLConnectionString(),
+                DbType.SqlServer  => BuildSqlServerConnectionString(),
+                DbType.Sqlite     => BuildSqliteConnectionString(),
+                _                 => BuildMySQLConnectionString()
+            };
 
             try
             {
-                if (isOracle)
+                switch (dbType)
                 {
-                    using var conn = new OracleConnection(cs);
-                    await conn.OpenAsync();
-                }
-                else
-                {
-                    using var conn = new MySqlConnection(cs);
-                    await conn.OpenAsync();
+                    case DbType.Oracle:
+                        using (var conn = new OracleConnection(cs))
+                            await conn.OpenAsync();
+                        break;
+                    case DbType.PostgreSQL:
+                        using (var conn = new NpgsqlConnection(cs))
+                            await conn.OpenAsync();
+                        break;
+                    case DbType.SqlServer:
+                        using (var conn = new SqlConnection(cs))
+                            await conn.OpenAsync();
+                        break;
+                    case DbType.Sqlite:
+                        using (var conn = new SqliteConnection(cs))
+                            await conn.OpenAsync();
+                        break;
+                    default:
+                        using (var conn = new MySqlConnection(cs))
+                            await conn.OpenAsync();
+                        break;
                 }
                 MessageBox.Show("接続成功！", "接続テスト",
                     MessageBoxButton.OK, MessageBoxImage.Information);
