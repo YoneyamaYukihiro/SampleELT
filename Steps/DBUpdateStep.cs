@@ -50,7 +50,7 @@ namespace SampleELT.Steps
             var conn = ConnectionRegistry.Instance.FindConnection(Settings);
             var dbType = conn?.DbType ?? DbType.MySQL;
 
-            int updated = dbType switch
+            var (processed, updated) = dbType switch
             {
                 DbType.Oracle     => await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
                 DbType.PostgreSQL => await ExecutePostgreSQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
@@ -60,18 +60,47 @@ namespace SampleELT.Steps
                 _                 => await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct)
             };
 
-            progress.Report($"DB Update: {updated}行 更新完了");
+            if (updated == 0 && processed > 0)
+            {
+                progress.Report(
+                    $"⚠ DB Update: 入力 {processed} 行を処理しましたが、DB は 0 行も更新されていません。" +
+                    " キー値が DB に存在しない／キー列名の大文字小文字違い／入力行にキー列が無い等の可能性があります。");
+            }
+            else if (updated < processed)
+            {
+                progress.Report($"DB Update: 入力 {processed} 行 / DB 更新 {updated} 行 (一部のキーが DB に存在しません)");
+            }
+            else
+            {
+                progress.Report($"DB Update: 入力 {processed} 行 / DB 更新 {updated} 行");
+            }
             return inputData;
         }
 
-        private static async Task<int> ExecuteOracleAsync(
+        /// <summary>
+        /// 入力行から指定キーの値を大小区別なしで取得する。
+        /// DB Input が返すカラム名のケースが期待と異なっていても WHERE 句のバインドが空にならないようにする。
+        /// </summary>
+        private static object GetValueIgnoreCase(Dictionary<string, object?> row, string key)
+        {
+            if (row.TryGetValue(key, out var v) && v != null) return v;
+            foreach (var kv in row)
+            {
+                if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+                    return kv.Value ?? DBNull.Value;
+            }
+            return DBNull.Value;
+        }
+
+        private static async Task<(int processed, int updated)> ExecuteOracleAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new OracleConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int updated   = 0;
             var transaction = dbConn.BeginTransaction();
             try
             {
@@ -81,7 +110,7 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
                         : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
 
                     if (updateCols.Count == 0) continue;
@@ -93,14 +122,15 @@ namespace SampleELT.Steps
                     using var cmd = new OracleCommand(sql, dbConn);
                     cmd.Transaction = transaction;
                     for (int i = 0; i < updateCols.Count; i++)
-                        cmd.Parameters.Add(new OracleParameter($":p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value));
+                        cmd.Parameters.Add(new OracleParameter($":p{i}", GetValueIgnoreCase(row, updateCols[i])));
                     for (int i = 0; i < keyFields.Count; i++)
-                        cmd.Parameters.Add(new OracleParameter($":p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value));
+                        cmd.Parameters.Add(new OracleParameter($":p{updateCols.Count + i}", GetValueIgnoreCase(row, keyFields[i])));
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    int affected = await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
+                    updated += affected;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         transaction.Dispose();
@@ -115,17 +145,18 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { transaction.Dispose(); }
-            return count;
+            return (processed, updated);
         }
 
-        private static async Task<int> ExecuteMySQLAsync(
+        private static async Task<(int processed, int updated)> ExecuteMySQLAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new MySqlConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int updated   = 0;
             var transaction = await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -135,7 +166,7 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
                         : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
 
                     if (updateCols.Count == 0) continue;
@@ -146,14 +177,15 @@ namespace SampleELT.Steps
 
                     using var cmd = new MySqlCommand(sql, dbConn, transaction);
                     for (int i = 0; i < updateCols.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{i}", GetValueIgnoreCase(row, updateCols[i]));
                     for (int i = 0; i < keyFields.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", GetValueIgnoreCase(row, keyFields[i]));
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    int affected = await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
+                    updated += affected;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -168,17 +200,18 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, updated);
         }
 
-        private static async Task<int> ExecutePostgreSQLAsync(
+        private static async Task<(int processed, int updated)> ExecutePostgreSQLAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new NpgsqlConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int updated   = 0;
             var transaction = await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -188,7 +221,7 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
                         : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
 
                     if (updateCols.Count == 0) continue;
@@ -199,14 +232,15 @@ namespace SampleELT.Steps
 
                     using var cmd = new NpgsqlCommand(sql, dbConn, transaction);
                     for (int i = 0; i < updateCols.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{i}", GetValueIgnoreCase(row, updateCols[i]));
                     for (int i = 0; i < keyFields.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", GetValueIgnoreCase(row, keyFields[i]));
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    int affected = await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
+                    updated += affected;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -221,17 +255,18 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, updated);
         }
 
-        private static async Task<int> ExecuteSqlServerAsync(
+        private static async Task<(int processed, int updated)> ExecuteSqlServerAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new SqlConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int updated   = 0;
             var transaction = (SqlTransaction)await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -241,7 +276,7 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
                         : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
 
                     if (updateCols.Count == 0) continue;
@@ -252,14 +287,15 @@ namespace SampleELT.Steps
 
                     using var cmd = new SqlCommand(sql, dbConn, transaction);
                     for (int i = 0; i < updateCols.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{i}", GetValueIgnoreCase(row, updateCols[i]));
                     for (int i = 0; i < keyFields.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", GetValueIgnoreCase(row, keyFields[i]));
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    int affected = await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
+                    updated += affected;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -274,17 +310,18 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, updated);
         }
 
-        private static async Task<int> ExecuteSqliteAsync(
+        private static async Task<(int processed, int updated)> ExecuteSqliteAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new SqliteConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int updated   = 0;
             var transaction = (SqliteTransaction)await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -294,7 +331,7 @@ namespace SampleELT.Steps
                     var allCols = row.Keys.ToList();
 
                     var updateCols = string.IsNullOrWhiteSpace(updateFieldsRaw)
-                        ? allCols.Where(c => !keyFields.Contains(c)).ToList()
+                        ? allCols.Where(c => !keyFields.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList()
                         : updateFieldsRaw.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToList();
 
                     if (updateCols.Count == 0) continue;
@@ -305,14 +342,15 @@ namespace SampleELT.Steps
 
                     using var cmd = new SqliteCommand(sql, dbConn, transaction);
                     for (int i = 0; i < updateCols.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{i}", row.TryGetValue(updateCols[i], out var v) ? v ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{i}", GetValueIgnoreCase(row, updateCols[i]));
                     for (int i = 0; i < keyFields.Count; i++)
-                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", row.TryGetValue(keyFields[i], out var v2) ? v2 ?? DBNull.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue($"@p{updateCols.Count + i}", GetValueIgnoreCase(row, keyFields[i]));
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    int affected = await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
+                    updated += affected;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -327,7 +365,7 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, updated);
         }
 
         public override string GetDisplayIcon() => "✏️";
