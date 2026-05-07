@@ -37,7 +37,9 @@
                 <ComboBoxItem Content="notEquals"/>
                 <ComboBoxItem Content="contains"/>
                 <ComboBoxItem Content="greaterThan"/>
+                <ComboBoxItem Content="greaterOrEqual"/>
                 <ComboBoxItem Content="lessThan"/>
+                <ComboBoxItem Content="lessOrEqual"/>
                 <ComboBoxItem Content="isNull"/>
                 <ComboBoxItem Content="isNotNull"/>
             </ComboBox>

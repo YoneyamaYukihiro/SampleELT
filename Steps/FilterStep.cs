@@ -9,7 +9,7 @@ namespace SampleELT.Steps
     /// <summary>
     /// 条件に一致する行のみを通過させるステップ。
     /// Settings["FieldName"]  : 左辺フィールド名
-    /// Settings["Operator"]   : equals / notEquals / contains / greaterThan / lessThan / isNull / isNotNull
+    /// Settings["Operator"]   : equals / notEquals / contains / greaterThan / greaterOrEqual / lessThan / lessOrEqual / isNull / isNotNull
     /// Settings["Value"]      : 比較する値（リテラル）
     /// Settings["RightField"] : 右辺フィールド名（設定時は Value より優先し、フィールド同士を比較する）
     /// </summary>
@@ -71,16 +71,21 @@ namespace SampleELT.Steps
             if (rightValue == null || rightValue == DBNull.Value)
                 return false;
 
-            // DateTime 同士の比較
-            if (leftValue is DateTime leftDt && rightValue is DateTime rightDt)
+            // どちらかが DateTime なら、もう一方も DateTime に解釈して比較
+            DateTime? leftAsDate = leftValue as DateTime? ?? TryParseDate(leftValue);
+            DateTime? rightAsDate = rightValue as DateTime? ?? TryParseDate(rightValue);
+            if (leftAsDate.HasValue && rightAsDate.HasValue)
             {
+                var cmp = leftAsDate.Value.CompareTo(rightAsDate.Value);
                 return op switch
                 {
-                    "equals"      => leftDt == rightDt,
-                    "notEquals"   => leftDt != rightDt,
-                    "greaterThan" => leftDt > rightDt,
-                    "lessThan"    => leftDt < rightDt,
-                    _             => false
+                    "equals"         => cmp == 0,
+                    "notEquals"      => cmp != 0,
+                    "greaterThan"    => cmp > 0,
+                    "greaterOrEqual" => cmp >= 0,
+                    "lessThan"       => cmp < 0,
+                    "lessOrEqual"    => cmp <= 0,
+                    _                => false
                 };
             }
 
@@ -90,13 +95,28 @@ namespace SampleELT.Steps
 
             return op switch
             {
-                "equals"      => string.Equals(leftStr, rightStr, StringComparison.OrdinalIgnoreCase),
-                "notEquals"   => !string.Equals(leftStr, rightStr, StringComparison.OrdinalIgnoreCase),
-                "contains"    => leftStr.Contains(rightStr, StringComparison.OrdinalIgnoreCase),
-                "greaterThan" => CompareValues(leftStr, rightStr) > 0,
-                "lessThan"    => CompareValues(leftStr, rightStr) < 0,
-                _             => false
+                "equals"         => string.Equals(leftStr, rightStr, StringComparison.OrdinalIgnoreCase),
+                "notEquals"      => !string.Equals(leftStr, rightStr, StringComparison.OrdinalIgnoreCase),
+                "contains"       => leftStr.Contains(rightStr, StringComparison.OrdinalIgnoreCase),
+                "greaterThan"    => CompareValues(leftStr, rightStr) > 0,
+                "greaterOrEqual" => CompareValues(leftStr, rightStr) >= 0,
+                "lessThan"       => CompareValues(leftStr, rightStr) < 0,
+                "lessOrEqual"    => CompareValues(leftStr, rightStr) <= 0,
+                _                => false
             };
+        }
+
+        private static DateTime? TryParseDate(object? v)
+        {
+            if (v == null || v == DBNull.Value) return null;
+            if (v is DateTime dt) return dt;
+            var s = v.ToString();
+            if (string.IsNullOrEmpty(s)) return null;
+            // 一般的な日付フォーマットを許容（yyyy/MM/dd, yyyy-MM-dd, yyyy/MM/dd HH:mm:ss など）
+            if (DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture,
+                                  System.Globalization.DateTimeStyles.AssumeLocal, out var parsed))
+                return parsed;
+            return null;
         }
 
         private static int CompareValues(string left, string right)

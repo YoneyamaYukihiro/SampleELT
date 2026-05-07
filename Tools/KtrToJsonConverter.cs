@@ -136,6 +136,17 @@ namespace SampleELT.Tools
                 });
             }
 
+            // SetVariable が検出されたパイプラインの場合、期間内絞り込みの定型を案内
+            if (setVarFieldOrder.Count > 0 && nameToJson.Values.Any(s => s.StepType == "DBInput"))
+            {
+                var fieldList = string.Join(", ", setVarFieldOrder.Select(f => $":{{{f}}} AS {f.ToUpper()}_VAR"));
+                result.Warnings.Add(
+                    "ヒント: 期間内の行のみを Update したい場合は、各 DBInput の SELECT に " +
+                    $"`{fieldList}` を追加し、Update 直前に Filter ステップ" +
+                    $"（{setVarFieldOrder.First().ToUpper()}_VAR / {setVarFieldOrder.Last().ToUpper()}_VAR を使った範囲条件）" +
+                    "を挟んでください。Filter は greaterThan / lessOrEqual 演算子と RightField を使うと表現できます。");
+            }
+
             // JSON シリアライズ
             result.PipelineJson = SerializePipeline(result.PipelineName, nameToJson.Values, jsonHops);
             return result;
