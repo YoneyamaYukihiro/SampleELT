@@ -226,19 +226,53 @@ namespace SampleELT.Dialogs
             if (NameTextBox.Text.Trim() != desiredName)
                 NameTextBox.Text = desiredName;
 
+            // 実行対象ファイルのバリデーション
+            var newTarget = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
+            var newPath = newTarget == ScheduleTarget.Pipeline
+                ? PipelineFileTextBox.Text.Trim()
+                : JobFileTextBox.Text.Trim();
+            var fileLabel = newTarget == ScheduleTarget.Pipeline ? "パイプラインファイル" : "ジョブファイル";
+
+            // 1) 未指定チェック
+            if (string.IsNullOrWhiteSpace(newPath))
+            {
+                MessageBox.Show(
+                    $"{fileLabel}が指定されていません。\n「参照...」ボタンから選択してください。",
+                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 3) 存在チェック（無ければ続行確認）
+            if (!System.IO.File.Exists(newPath))
+            {
+                var resp = MessageBox.Show(
+                    $"指定された{fileLabel}が見つかりません:\n{newPath}\n\n" +
+                    "このまま保存しますか？（実行時にエラーになります）",
+                    "ファイル未確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (resp != MessageBoxResult.Yes) return;
+            }
+
             entry.Name      = desiredName;
             entry.IsEnabled = EnabledCheckBox.IsChecked == true;
-            entry.Target    = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
+            entry.Target    = newTarget;
 
-            if (entry.Target == ScheduleTarget.Pipeline)
+            if (newTarget == ScheduleTarget.Pipeline)
             {
-                entry.PipelineFilePath = PipelineFileTextBox.Text.Trim();
+                entry.PipelineFilePath = newPath;
                 entry.JobFilePath = "";
             }
             else
             {
                 entry.PipelineFilePath = "";
-                entry.JobFilePath = JobFileTextBox.Text.Trim();
+                entry.JobFilePath = newPath;
+            }
+
+            // 2) 過去の失敗履歴をクリア（設定を変更したので引きずらない）
+            if (entry.LastRunSuccess == false)
+            {
+                entry.LastRunTime    = null;
+                entry.LastRunSuccess = null;
+                entry.LastRunMessage = "";
             }
 
             entry.Mode = ModeTaskSchedulerRadio.IsChecked == true
