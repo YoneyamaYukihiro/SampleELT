@@ -7,10 +7,12 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Microsoft.Win32;
 using SampleELT.Controls;
 using SampleELT.Dialogs;
 using SampleELT.Models;
 using SampleELT.Steps;
+using SampleELT.Tools;
 using SampleELT.ViewModels;
 
 namespace SampleELT
@@ -1087,6 +1089,94 @@ namespace SampleELT
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void ImportKtr_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_vm.ConfirmDiscardChanges()) return;
+
+            var openDlg = new OpenFileDialog
+            {
+                Title = "KTR ファイルを取り込み",
+                Filter = "Kettle Transformation (*.ktr)|*.ktr|XML files (*.xml)|*.xml|All files (*.*)|*.*"
+            };
+            if (openDlg.ShowDialog(this) != true) return;
+
+            KtrConvertResult result;
+            try
+            {
+                result = KtrToJsonConverter.Convert(openDlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"KTR の解析に失敗しました:\n{ex.Message}", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 新規接続を Connection Manager に登録（パスワードは空）
+            if (result.NewConnections.Count > 0)
+            {
+                foreach (var c in result.NewConnections)
+                    ConnectionRegistry.Instance.Connections.Add(c);
+                ConnectionRegistry.Instance.Save();
+            }
+
+            // 出力先を選択
+            var saveDlg = new SaveFileDialog
+            {
+                Title = "変換結果の保存先",
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                FileName = System.IO.Path.GetFileNameWithoutExtension(openDlg.FileName) + ".json",
+                InitialDirectory = System.IO.Path.GetDirectoryName(openDlg.FileName) ?? ""
+            };
+            if (saveDlg.ShowDialog(this) != true) return;
+
+            try
+            {
+                File.WriteAllText(saveDlg.FileName, result.PipelineJson);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"JSON の保存に失敗しました:\n{ex.Message}", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // サマリ表示
+            var summary = new System.Text.StringBuilder();
+            summary.AppendLine($"パイプライン名: {result.PipelineName}");
+            summary.AppendLine($"出力先: {saveDlg.FileName}");
+            summary.AppendLine();
+            if (result.MatchedConnections.Count > 0)
+            {
+                summary.AppendLine("● 既存の接続を流用:");
+                foreach (var c in result.MatchedConnections)
+                    summary.AppendLine($"  - {c.Name} ({c.DbType})");
+                summary.AppendLine();
+            }
+            if (result.NewConnections.Count > 0)
+            {
+                summary.AppendLine("● 新規接続を Connection Manager に登録 (パスワード未設定):");
+                foreach (var c in result.NewConnections)
+                    summary.AppendLine($"  - {c.Name} ({c.DbType})");
+                summary.AppendLine();
+            }
+            if (result.Warnings.Count > 0)
+            {
+                summary.AppendLine("● 警告:");
+                foreach (var w in result.Warnings)
+                    summary.AppendLine($"  - {w}");
+                summary.AppendLine();
+            }
+            summary.AppendLine("変換した JSON を今すぐ開きますか？");
+
+            var ans = MessageBox.Show(summary.ToString(), "KTR 取り込み完了",
+                MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (ans == MessageBoxResult.Yes)
+            {
+                _vm.LoadPipelineFromFile(saveDlg.FileName);
+            }
         }
 
         private void RefreshSchedule_Click(object sender, RoutedEventArgs e)

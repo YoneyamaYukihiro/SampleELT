@@ -28,6 +28,8 @@
                 <MenuItem Header="名前を付けて保存(_A)..." Command="{Binding SavePipelineAsCommand}"
                           InputGestureText="Ctrl+Shift+S"/>
                 <Separator/>
+                <MenuItem Header="KTR を取り込み(_K)..." Click="ImportKtr_Click"/>
+                <Separator/>
                 <MenuItem Header="終了(_X)" Click="Exit_Click"/>
             </MenuItem>
             <MenuItem Header="実行(_R)">
@@ -142,6 +144,18 @@
 
         <!-- Status Bar (bottom) -->
         <StatusBar DockPanel.Dock="Bottom" Background="#ECEFF1" Height="28">
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal" Margin="4,0">
+                    <TextBlock Text="📄" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding CurrentFileDisplay}"
+                               ToolTip="{Binding CurrentFileDisplay}"
+                               VerticalAlignment="Center"
+                               FontFamily="Consolas"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="600"/>
+                </StackPanel>
+            </StatusBarItem>
+            <Separator/>
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" Margin="4,0"/>
             </StatusBarItem>

@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<transformation>
+  <info>
+    <name>bat_daily(WorkWaitTime)</name>
+    <description>待ち時間を計算(real_process_time取得後に実施)</description>
+    <extended_description/>
+    <trans_version/>
+    <trans_status>0</trans_status>
+    <directory>&#47;</directory>
+    <parameters>
+    </parameters>
+    <log>
+      <read/>
+      <write/>
+      <input/>
+      <output/>
+      <update/>
+      <rejected/>
+      <connection/>
+      <table/>
+      <step_performance_table/>
+      <use_batchid>Y</use_batchid>
+      <use_logfield>N</use_logfield>
+      <size_limit_lines/>
+    </log>
+    <maxdate>
+      <connection/>
+      <table/>
+      <field/>
+      <offset>0.0</offset>
+      <maxdiff>0.0</maxdiff>
+    </maxdate>
+    <size_rowset>10000</size_rowset>
+    <sleep_time_empty>50</sleep_time_empty>
+    <sleep_time_full>50</sleep_time_full>
+    <unique_connections>N</unique_connections>
+    <feedback_shown>Y</feedback_shown>
+    <feedback_size>50000</feedback_size>
+    <using_thread_priorities>Y</using_thread_priorities>
+    <shared_objects_file/>
+    <capture_step_performance>N</capture_step_performance>
+    <step_performance_capturing_delay>1000</step_performance_capturing_delay>
+    <dependencies>
+    </dependencies>
+    <partitionschemas>
+    </partitionschemas>
+    <slaveservers>
+    </slaveservers>
+    <clusterschemas>
+    </clusterschemas>
+  <modified_user>admin</modified_user>
+  <modified_date>2026&#47;03&#47;23 16:10:53.000</modified_date>
+  </info>
+  <notepads>
+  </notepads>
+  <connection>
+    <name>Pcdt</name>
+    <server>jpeaws3612</server>
+    <type>MYSQL</type>
+    <access>Native</access>
+    <database>pcdt</database>
+    <port>3306</port>
+    <username>pcdt_rel</username>
+    <password>Encrypted 2be98afc86aa7f2e4cb09ad74ca80aad6</password>
+    <servername/>
+    <data_tablespace/>
+    <index_tablespace/>
+    <attributes>
+      <attribute><code>EXTRA_OPTION_MYSQL.defaultFetchSize</code><attribute>500</attribute></attribute>
+      <attribute><code>EXTRA_OPTION_MYSQL.useCursorFetch</code><attribute>true</attribute></attribute>
+      <attribute><code>FORCE_IDENTIFIERS_TO_LOWERCASE</code><attribute>N</attribute></attribute>
+      <attribute><code>FORCE_IDENTIFIERS_TO_UPPERCASE</code><attribute>N</attribute></attribute>
+      <attribute><code>IS_CLUSTERED</code><attribute>N</attribute></attribute>
+      <attribute><code>PORT_NUMBER</code><attribute>3306</attribute></attribute>
+      <attribute><code>QUOTE_ALL_FIELDS</code><attribute>N</attribute></attribute>
+      <attribute><code>STREAM_RESULTS</code><attribute>Y</attribute></attribute>
+      <attribute><code>SUPPORTS_BOOLEAN_DATA_TYPE</code><attribute>N</attribute></attribute>
+      <attribute><code>USE_POOLING</code><attribute>N</attribute></attribute>
+    </attributes>
+  </connection>
+  <order>
+  <hop> <from>Generate Rows</from><to>Modified Java Script Value</to><enabled>Y</enabled> </hop>  <hop> <from>Modified Java Script Value</from><to>Select values</to><enabled>Y</enabled> </hop>  <hop> <from>Select values</from><to>SelectWpProcIntervalTime</to><enabled>Y</enabled> </hop>  <hop> <from>Select values</from><to>SelectWpProcIntervalTime 2</to><enabled>Y</enabled> </hop>  <hop> <from>SelectWpProcIntervalTime</from><to>Merge Join</to><enabled>Y</enabled> </hop>  <hop> <from>SelectWpProcIntervalTime 2</from><to>Merge Join</to><enabled>Y</enabled> </hop>  <hop> <from>Merge Join</from><to>Formula</to><enabled>Y</enabled> </hop>  <hop> <from>Formula</from><to>Update</to><enabled>Y</enabled> </hop>  </order>
+  <step>
+    <name>Formula</name>
+    <type>Formula</type>
+    <description/>
+    <distribute>N</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+       <formula><field_name>WORK_WAIT_TIME_MIN</field_name>
+<formula_string>([WORK_START]-[PREVIOUS_WORK_END])*24*60
+
+</formula_string>
+<value_type>Number</value_type>
+<value_length>-1</value_length>
+<value_precision>2</value_precision>
+<replace_field/>
+</formula>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>524</xloc>
+      <yloc>232</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>Generate Rows</name>
+    <type>RowGenerator</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <fields>
+      <field>
+        <name>start_date</name>
+        <type>String</type>
+        <format/>
+        <currency/>
+        <decimal/>
+        <group/>
+        <nullif>0</nullif>
+        <length>-1</length>
+        <precision>-1</precision>
+      </field>
+      <field>
+        <name>end_date</name>
+        <type>String</type>
+        <format/>
+        <currency/>
+        <decimal/>
+        <group/>
+        <nullif>0</nullif>
+        <length>-1</length>
+        <precision>-1</precision>
+      </field>
+    </fields>
+    <limit>1</limit>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>142</xloc>
+      <yloc>60</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>Merge Join</name>
+    <type>MergeJoin</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+<join_type>INNER</join_type>
+<step1>SelectWpProcIntervalTime</step1>
+<step2>SelectWpProcIntervalTime 2</step2>
+    <keys_1>
+      <key>ROWNUM</key>
+      <key>LINE_ID</key>
+      <key>SB_ID</key>
+      <key>PD_ID</key>
+      <key>LOT_ID</key>
+    </keys_1>
+    <keys_2>
+      <key>ROWNUM</key>
+      <key>LINE_ID</key>
+      <key>SB_ID</key>
+      <key>PD_ID</key>
+      <key>LOT_ID</key>
+    </keys_2>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>411</xloc>
+      <yloc>232</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>Modified Java Script Value</name>
+    <type>ScriptValueMod</type>
+    <description/>
+    <distribute>N</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <compatible>Y</compatible>
+    <jsScripts>      <jsScript>        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>&#47;&#47;日時の取得
+var today = new Date();
+var yesterday = new Date(); 
+yesterday.setDate(yesterday.getDate()-1);
+
+&#47;&#47;集計開始年月取得
+var startYaer = yesterday.getYear() + 1900;
+var startMonth = yesterday.getMonth() + 1;
+var startDay = yesterday.getDate();
+
+&#47;&#47;集計終了年月取得（当月）
+var endYaer = today.getYear() + 1900;
+var endMonth = today.getMonth() + 1;
+var endDay = today.getDate();
+
+var s = startYaer + &apos;&#47;&apos; + startMonth + &apos;&#47;&apos; + startDay;
+var e = endYaer + &apos;&#47;&apos; + endMonth + &apos;&#47;&apos; + endDay;
+&#47;&#47;var s = &quot;2026&#47;03&#47;22&quot;;
+&#47;&#47;var e = &quot;2026&#47;03&#47;23&quot;;
+
+start_date.setValue(s);
+end_date.setValue(e);
+</jsScript_script>
+      </jsScript>    </jsScripts>    <fields>      <field>        <name>today</name>
+        <rename>today</rename>
+        <type>Date</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>yesterday</name>
+        <rename>yesterday</rename>
+        <type>Date</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>startYaer</name>
+        <rename>startYaer</rename>
+        <type>Number</type>
+        <length>16</length>
+        <precision>2</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>startMonth</name>
+        <rename>startMonth</rename>
+        <type>Number</type>
+        <length>16</length>
+        <precision>2</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>startDay</name>
+        <rename>startDay</rename>
+        <type>Number</type>
+        <length>16</length>
+        <precision>2</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>endYaer</name>
+        <rename>endYaer</rename>
+        <type>Number</type>
+        <length>16</length>
+        <precision>2</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>endMonth</name>
+        <rename>endMonth</rename>
+        <type>Number</type>
+        <length>16</length>
+        <precision>2</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>endDay</name>
+        <rename>endDay</rename>
+        <type>Number</type>
+        <length>16</length>
+        <precision>2</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>s1</name>
+        <rename>s1</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>      <field>        <name>e1</name>
+        <rename>e1</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>    </fields>     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>142</xloc>
+      <yloc>133</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>Select values</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>N</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <fields>      <field>        <name>start_date</name>
+        <rename/>
+        <length>-2</length>
+        <precision>-2</precision>
+      </field>      <field>        <name>end_date</name>
+        <rename/>
+        <length>-2</length>
+        <precision>-2</precision>
+      </field>        <select_unspecified>N</select_unspecified>
+    </fields>     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>140</xloc>
+      <yloc>227</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>SelectWpProcIntervalTime</name>
+    <type>TableInput</type>
+    <description/>
+    <distribute>N</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>Pcdt</connection>
+    <sql>SELECT
+	@i:=@i+1 AS ROWNUM,
+	AA.*
+FROM
+	(SELECT @i:=0) AS DUMMY,
+	(SELECT DISTINCT
+		A.LINE_ID,
+		A.SB_ID,
+		A.PD_ID,
+		A.LOT_ID,
+		A.OP_ID,
+		A.STEP_ID,
+		A.WORK_START,
+		A.WORK_END
+	FROM
+		REAL_PROCESS_TIME A,
+		(
+		SELECT
+			LINE_ID,
+			SB_ID,
+			PD_ID,
+			LOT_ID
+		FROM
+			REAL_PROCESS_TIME
+		WHERE
+			LINE_ID = &apos;H1&apos;
+		AND	SB_ID = &apos;1A0&apos;
+		AND	WORK_END &gt; ?
+		AND	WORK_END &lt;= ?
+		AND	LOT_FLOW_TYPE IS NULL
+		GROUP BY
+			LINE_ID, SB_ID, PD_ID, LOT_ID
+		) B
+	WHERE
+		A.LINE_ID = B.LINE_ID
+	AND	A.SB_ID = B.SB_ID
+	AND	A.PD_ID = B.PD_ID
+	AND	A.LOT_ID = B.LOT_ID
+	ORDER BY
+		LOT_ID,
+		WORK_END
+	) AA</sql>
+    <limit>0</limit>
+    <lookup>Select values</lookup>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>N</variables_active>
+    <lazy_conversion_active>N</lazy_conversion_active>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>283</xloc>
+      <yloc>195</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>SelectWpProcIntervalTime 2</name>
+    <type>TableInput</type>
+    <description/>
+    <distribute>N</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>Pcdt</connection>
+    <sql>SELECT
+	@i:=@i+1 AS ROWNUM,
+	AA.*
+FROM
+	(SELECT @i:=1) AS DUMMY,
+	(SELECT DISTINCT
+		A.LINE_ID,
+		A.SB_ID,
+		A.PD_ID,
+		A.LOT_ID,
+		A.OP_ID AS PREVIOUS_OP_ID,
+		A.STEP_ID AS PREVIOUS_STEP_ID,
+		A.WORK_START AS PREVIOUS_WORK_START,
+		A.WORK_END AS PREVIOUS_WORK_END
+	FROM
+		REAL_PROCESS_TIME A,
+		(
+		SELECT
+			LINE_ID,
+			SB_ID,
+			PD_ID,
+			LOT_ID
+		FROM
+			REAL_PROCESS_TIME
+		WHERE
+			LINE_ID = &apos;H1&apos;
+		AND	SB_ID = &apos;1A0&apos;
+		AND	WORK_END &gt; ?
+		AND	WORK_END &lt;= ?
+		AND	LOT_FLOW_TYPE IS NULL
+		GROUP BY
+			LINE_ID, SB_ID, PD_ID, LOT_ID
+		) B
+	WHERE
+		A.LINE_ID = B.LINE_ID
+	AND	A.SB_ID = B.SB_ID
+	AND	A.PD_ID = B.PD_ID
+	AND	A.LOT_ID = B.LOT_ID
+	ORDER BY
+		LOT_ID,
+		WORK_END
+	) AA</sql>
+    <limit>0</limit>
+    <lookup>Select values</lookup>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>N</variables_active>
+    <lazy_conversion_active>N</lazy_conversion_active>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>284</xloc>
+      <yloc>283</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step>
+    <name>Update</name>
+    <type>Update</type>
+    <description/>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+         <partitioning>
+           <method>none</method>
+           <schema_name/>
+           </partitioning>
+    <connection>Pcdt</connection>
+    <skip_lookup>N</skip_lookup>
+    <commit>100</commit>
+    <error_ignored>N</error_ignored>
+    <ignore_flag_field/>
+    <lookup>
+      <schema/>
+      <table>real_process_time</table>
+      <key>
+        <name>LINE_ID</name>
+        <field>LINE_ID</field>
+        <condition>=</condition>
+        <name2/>
+        </key>
+      <key>
+        <name>SB_ID</name>
+        <field>SB_ID</field>
+        <condition>=</condition>
+        <name2/>
+        </key>
+      <key>
+        <name>PD_ID</name>
+        <field>PD_ID</field>
+        <condition>=</condition>
+        <name2/>
+        </key>
+      <key>
+        <name>LOT_ID</name>
+        <field>LOT_ID</field>
+        <condition>=</condition>
+        <name2/>
+        </key>
+      <key>
+        <name>OP_ID</name>
+        <field>OP_ID</field>
+        <condition>=</condition>
+        <name2/>
+        </key>
+      <key>
+        <name>STEP_ID</name>
+        <field>STEP_ID</field>
+        <condition>=</condition>
+        <name2/>
+        </key>
+      <value>
+        <name>WORK_WAIT_TIME_MIN</name>
+        <rename>WORK_WAIT_TIME_MIN</rename>
+        </value>
+      </lookup>
+     <cluster_schema/>
+ <remotesteps>   <input>   </input>   <output>   </output> </remotesteps>    <GUI>
+      <xloc>633</xloc>
+      <yloc>232</yloc>
+      <draw>Y</draw>
+      </GUI>
+    </step>
+
+  <step_error_handling>
+  </step_error_handling>
+   <slave-step-copy-partition-distribution>
+</slave-step-copy-partition-distribution>
+   <slave_transformation>N</slave_transformation>
+</transformation>

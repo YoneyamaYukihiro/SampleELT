@@ -1,0 +1,123 @@
+{
+  "Name": "bat_daily(WorkWaitTime)",
+  "Steps": [
+    {
+      "Id": "7a1c5e4b-2f8d-4b0a-9c3e-1f6d8e2a5b71",
+      "Name": "Set Variable",
+      "StepType": "SetVariable",
+      "CanvasX": 28,
+      "CanvasY": 181,
+      "NodeWidth": 150,
+      "NodeHeight": 70,
+      "Settings": {
+        "Fields": "start_date = YESTERDAY\r\nend_date = TODAY",
+        "DateFormat": "yyyy/MM/dd"
+      }
+    },
+    {
+      "Id": "3b9f2a7d-6c1e-4d8a-bf52-9e3c7b1a4d68",
+      "Name": "SelectWpProcIntervalTime",
+      "StepType": "DBInput",
+      "CanvasX": 201,
+      "CanvasY": 132,
+      "NodeWidth": 220,
+      "NodeHeight": 80,
+      "Settings": {
+        "ConnectionId": "79297929-2eec-4f00-b85c-d4d6af0d8eb8",
+        "SQL": "SELECT\r\n\t@i:=@i\u002B1 AS ROWNUM,\r\n\tAA.*\r\nFROM\r\n\t(SELECT @i:=0) AS DUMMY,\r\n\t(SELECT DISTINCT\r\n\t\tA.LINE_ID,\r\n\t\tA.SB_ID,\r\n\t\tA.PD_ID,\r\n\t\tA.LOT_ID,\r\n\t\tA.OP_ID,\r\n\t\tA.STEP_ID,\r\n\t\tA.WORK_START,\r\n\t\tA.WORK_END\r\n\tFROM\r\n\t\tREAL_PROCESS_TIME A,\r\n\t\t(\r\n\t\tSELECT\r\n\t\t\tLINE_ID,\r\n\t\t\tSB_ID,\r\n\t\t\tPD_ID,\r\n\t\t\tLOT_ID\r\n\t\tFROM\r\n\t\t\tREAL_PROCESS_TIME\r\n\t\tWHERE\r\n\t\t\tLINE_ID = \u0027H1\u0027\r\n\t\tAND\tSB_ID = \u00271A0\u0027\r\n\t\tAND\tWORK_END \u003E :{start_date}\r\n\t\tAND\tWORK_END \u003C= :{end_date}\r\n\t\tAND\tLOT_FLOW_TYPE IS NULL\r\n\t\tGROUP BY\r\n\t\t\tLINE_ID, SB_ID, PD_ID, LOT_ID\r\n\t\t) B\r\n\tWHERE\r\n\t\tA.LINE_ID = B.LINE_ID\r\n\tAND\tA.SB_ID = B.SB_ID\r\n\tAND\tA.PD_ID = B.PD_ID\r\n\tAND\tA.LOT_ID = B.LOT_ID\r\n\tORDER BY\r\n\t\tLOT_ID,\r\n\t\tWORK_END\r\n\t) AA",
+        "ExecuteEachRow": "false"
+      }
+    },
+    {
+      "Id": "8d2f6b1e-7a3c-4e9d-bc14-5f8e2c7a3b69",
+      "Name": "SelectWpProcIntervalTime 2",
+      "StepType": "DBInput",
+      "CanvasX": 197,
+      "CanvasY": 228,
+      "NodeWidth": 230,
+      "NodeHeight": 80,
+      "Settings": {
+        "ConnectionId": "79297929-2eec-4f00-b85c-d4d6af0d8eb8",
+        "SQL": "SELECT\r\n\t@i:=@i\u002B1 AS ROWNUM,\r\n\tAA.*\r\nFROM\r\n\t(SELECT @i:=1) AS DUMMY,\r\n\t(SELECT DISTINCT\r\n\t\tA.LINE_ID,\r\n\t\tA.SB_ID,\r\n\t\tA.PD_ID,\r\n\t\tA.LOT_ID,\r\n\t\tA.OP_ID AS PREVIOUS_OP_ID,\r\n\t\tA.STEP_ID AS PREVIOUS_STEP_ID,\r\n\t\tA.WORK_START AS PREVIOUS_WORK_START,\r\n\t\tA.WORK_END AS PREVIOUS_WORK_END\r\n\tFROM\r\n\t\tREAL_PROCESS_TIME A,\r\n\t\t(\r\n\t\tSELECT\r\n\t\t\tLINE_ID,\r\n\t\t\tSB_ID,\r\n\t\t\tPD_ID,\r\n\t\t\tLOT_ID\r\n\t\tFROM\r\n\t\t\tREAL_PROCESS_TIME\r\n\t\tWHERE\r\n\t\t\tLINE_ID = \u0027H1\u0027\r\n\t\tAND\tSB_ID = \u00271A0\u0027\r\n\t\tAND\tWORK_END \u003E :{start_date}\r\n\t\tAND\tWORK_END \u003C= :{end_date}\r\n\t\tAND\tLOT_FLOW_TYPE IS NULL\r\n\t\tGROUP BY\r\n\t\t\tLINE_ID, SB_ID, PD_ID, LOT_ID\r\n\t\t) B\r\n\tWHERE\r\n\t\tA.LINE_ID = B.LINE_ID\r\n\tAND\tA.SB_ID = B.SB_ID\r\n\tAND\tA.PD_ID = B.PD_ID\r\n\tAND\tA.LOT_ID = B.LOT_ID\r\n\tORDER BY\r\n\t\tLOT_ID,\r\n\t\tWORK_END\r\n\t) AA",
+        "ExecuteEachRow": "false"
+      }
+    },
+    {
+      "Id": "5e7c1a9d-3f8b-4c2a-be67-1d9f5a3c8b24",
+      "Name": "Merge Join",
+      "StepType": "MergeJoin",
+      "CanvasX": 486,
+      "CanvasY": 189,
+      "NodeWidth": 170,
+      "NodeHeight": 75,
+      "Settings": {
+        "JoinType": "INNER",
+        "KeyFields": "ROWNUM,LINE_ID,SB_ID,PD_ID,LOT_ID"
+      }
+    },
+    {
+      "Id": "4c8b3e9a-1d6f-4a7c-bd92-2e5f7c1b8a36",
+      "Name": "Formula",
+      "StepType": "Calculation",
+      "CanvasX": 681,
+      "CanvasY": 189,
+      "NodeWidth": 170,
+      "NodeHeight": 75,
+      "Settings": {
+        "OutputFieldName": "WORK_WAIT_TIME_MIN",
+        "ExpressionType": "dateDiffMinutes",
+        "Field1": "WORK_START",
+        "Field2": "PREVIOUS_WORK_END",
+        "Constant": "0"
+      }
+    },
+    {
+      "Id": "9f3a7d2c-5b1e-4f8a-ac63-7d2e5b8c1a47",
+      "Name": "Update",
+      "StepType": "DBUpdate",
+      "CanvasX": 870,
+      "CanvasY": 290,
+      "NodeWidth": 170,
+      "NodeHeight": 75,
+      "Settings": {
+        "ConnectionId": "79297929-2eec-4f00-b85c-d4d6af0d8eb8",
+        "TableName": "real_process_time",
+        "KeyFields": "line_id,sb_id,pd_id,lot_id,op_id,step_id",
+        "UpdateFields": "work_wait_time_min",
+        "CommitSize": "100"
+      }
+    }
+  ],
+  "Connections": [
+    {
+      "Id": "0608e3e5-6e22-433b-8790-2b7ada0825e5",
+      "SourceStepId": "7a1c5e4b-2f8d-4b0a-9c3e-1f6d8e2a5b71",
+      "TargetStepId": "3b9f2a7d-6c1e-4d8a-bf52-9e3c7b1a4d68"
+    },
+    {
+      "Id": "60e815c2-1dd7-4312-bf53-f86274528aeb",
+      "SourceStepId": "7a1c5e4b-2f8d-4b0a-9c3e-1f6d8e2a5b71",
+      "TargetStepId": "8d2f6b1e-7a3c-4e9d-bc14-5f8e2c7a3b69"
+    },
+    {
+      "Id": "a51962f9-d494-4825-8f1b-4ec0b0679c29",
+      "SourceStepId": "3b9f2a7d-6c1e-4d8a-bf52-9e3c7b1a4d68",
+      "TargetStepId": "5e7c1a9d-3f8b-4c2a-be67-1d9f5a3c8b24"
+    },
+    {
+      "Id": "d9319dcf-7f96-4b3a-a51c-0bad98c25400",
+      "SourceStepId": "8d2f6b1e-7a3c-4e9d-bc14-5f8e2c7a3b69",
+      "TargetStepId": "5e7c1a9d-3f8b-4c2a-be67-1d9f5a3c8b24"
+    },
+    {
+      "Id": "d529d165-20fc-4394-926e-10b9b5f0be3b",
+      "SourceStepId": "5e7c1a9d-3f8b-4c2a-be67-1d9f5a3c8b24",
+      "TargetStepId": "4c8b3e9a-1d6f-4a7c-bd92-2e5f7c1b8a36"
+    },
+    {
+      "Id": "dae64357-5a02-4725-9cc4-d8e7d488c243",
+      "SourceStepId": "4c8b3e9a-1d6f-4a7c-bd92-2e5f7c1b8a36",
+      "TargetStepId": "9f3a7d2c-5b1e-4f8a-ac63-7d2e5b8c1a47"
+    }
+  ]
+}

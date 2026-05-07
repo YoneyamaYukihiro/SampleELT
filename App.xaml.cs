@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using SampleELT.Engine;
 using SampleELT.Models;
+using SampleELT.Tools;
 
 namespace SampleELT
 {
@@ -31,6 +32,21 @@ namespace SampleELT
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 AttachConsole(-1); // 親コンソールにアタッチ（なければ無視）
                 _ = RunHeadlessAsync(args[runIdx + 1]);
+                return;
+            }
+
+            // CLI 変換モード: --convert-ktr <input.ktr> [<output.json>]
+            int convIdx = Array.IndexOf(args, "--convert-ktr");
+            if (convIdx >= 0 && convIdx + 1 < args.Length)
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                AttachConsole(-1);
+                var input = args[convIdx + 1];
+                var output = convIdx + 2 < args.Length && !args[convIdx + 2].StartsWith("--")
+                    ? args[convIdx + 2]
+                    : null;
+                int code = ConvertKtrCli(input, output);
+                Shutdown(code);
                 return;
             }
 
@@ -90,6 +106,60 @@ namespace SampleELT
             }
 
             Shutdown(exitCode);
+        }
+
+        private static int ConvertKtrCli(string inputPath, string? outputPath)
+        {
+            try
+            {
+                inputPath = Path.GetFullPath(inputPath);
+                if (!File.Exists(inputPath))
+                {
+                    Console.Error.WriteLine($"KTR ファイルが見つかりません: {inputPath}");
+                    return 1;
+                }
+
+                var result = KtrToJsonConverter.Convert(inputPath);
+
+                if (result.NewConnections.Count > 0)
+                {
+                    foreach (var c in result.NewConnections)
+                        ConnectionRegistry.Instance.Connections.Add(c);
+                    ConnectionRegistry.Instance.Save();
+                }
+
+                outputPath ??= Path.Combine(
+                    Path.GetDirectoryName(inputPath) ?? ".",
+                    Path.GetFileNameWithoutExtension(inputPath) + ".json");
+                File.WriteAllText(outputPath, result.PipelineJson);
+
+                Console.WriteLine($"変換完了: {outputPath}");
+                Console.WriteLine($"  パイプライン名: {result.PipelineName}");
+                if (result.MatchedConnections.Count > 0)
+                {
+                    Console.WriteLine("  既存接続を流用:");
+                    foreach (var c in result.MatchedConnections)
+                        Console.WriteLine($"    - {c.Name} ({c.DbType})");
+                }
+                if (result.NewConnections.Count > 0)
+                {
+                    Console.WriteLine("  新規接続を Connection Manager に登録 (パスワード未設定):");
+                    foreach (var c in result.NewConnections)
+                        Console.WriteLine($"    - {c.Name} ({c.DbType})");
+                }
+                if (result.Warnings.Count > 0)
+                {
+                    Console.WriteLine("  警告:");
+                    foreach (var w in result.Warnings)
+                        Console.WriteLine($"    - {w}");
+                }
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"変換失敗: {ex.Message}");
+                return 1;
+            }
         }
     }
 }

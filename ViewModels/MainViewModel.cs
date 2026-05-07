@@ -42,10 +42,15 @@ namespace SampleELT.ViewModels
         [ObservableProperty]
         private bool _isModified;
 
+        [ObservableProperty]
+        private string? _currentFilePath;
+
+        [ObservableProperty]
+        private string _currentFileDisplay = "(未保存)";
+
         public Pipeline CurrentPipeline { get; private set; } = new Pipeline();
 
         private CancellationTokenSource? _cts;
-        private string? _currentFilePath;
 
         // Event fired when a step's settings dialog should open
         public event Action<StepNodeViewModel>? OpenSettingsRequested;
@@ -230,10 +235,10 @@ namespace SampleELT.ViewModels
             if (IsRunning) return;
 
             // 手動実行前に上書き保存（ファイルが既存の場合のみ）
-            if (!string.IsNullOrEmpty(_currentFilePath))
+            if (!string.IsNullOrEmpty(CurrentFilePath))
             {
-                SaveToFile(_currentFilePath);
-                AddLog($"パイプライン保存: {_currentFilePath}");
+                SaveToFile(CurrentFilePath);
+                AddLog($"パイプライン保存: {CurrentFilePath}");
             }
 
             IsRunning = true;
@@ -298,8 +303,8 @@ namespace SampleELT.ViewModels
         [RelayCommand]
         private void SavePipeline()
         {
-            if (!string.IsNullOrEmpty(_currentFilePath))
-                SaveToFile(_currentFilePath);
+            if (!string.IsNullOrEmpty(CurrentFilePath))
+                SaveToFile(CurrentFilePath);
             else
                 SavePipelineAs();
         }
@@ -353,7 +358,7 @@ namespace SampleELT.ViewModels
                 var json = JsonSerializer.Serialize(pipelineData, options);
                 File.WriteAllText(filePath, json);
 
-                _currentFilePath = filePath;
+                CurrentFilePath = filePath;
                 CurrentPipeline.Name = Path.GetFileNameWithoutExtension(filePath);
                 IsModified = false;
                 StatusMessage = $"保存完了: {filePath}";
@@ -380,10 +385,14 @@ namespace SampleELT.ViewModels
             };
 
             if (dialog.ShowDialog() != true) return;
+            LoadPipelineFromFile(dialog.FileName);
+        }
 
+        public void LoadPipelineFromFile(string filePath)
+        {
             try
             {
-                var json = File.ReadAllText(dialog.FileName);
+                var json = File.ReadAllText(filePath);
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json, options);
                 if (pipelineData == null) return;
@@ -459,10 +468,10 @@ namespace SampleELT.ViewModels
                 }
 
                 SelectedStep = null;
-                _currentFilePath = dialog.FileName;
+                CurrentFilePath = filePath;
                 IsModified = false;
-                StatusMessage = $"読み込み完了: {dialog.FileName}";
-                AddLog($"パイプライン読み込み: {dialog.FileName}");
+                StatusMessage = $"読み込み完了: {filePath}";
+                AddLog($"パイプライン読み込み: {filePath}");
             }
             catch (Exception ex)
             {
@@ -519,7 +528,7 @@ namespace SampleELT.ViewModels
             Connections.Clear();
             CurrentPipeline = new Pipeline();
             SelectedStep = null;
-            _currentFilePath = null;
+            CurrentFilePath = null;
             IsModified = false;
             StatusMessage = "新しいパイプライン";
             AddLog("新しいパイプラインを作成しました");
@@ -534,8 +543,25 @@ namespace SampleELT.ViewModels
 
         partial void OnIsModifiedChanged(bool value)
         {
-            var name = string.IsNullOrWhiteSpace(CurrentPipeline.Name) ? "新しいパイプライン" : CurrentPipeline.Name;
-            WindowTitle = value ? $"SampleELT - {name} *" : $"SampleELT - {name}";
+            UpdateWindowTitleAndFileDisplay();
+        }
+
+        partial void OnCurrentFilePathChanged(string? value)
+        {
+            UpdateWindowTitleAndFileDisplay();
+        }
+
+        private void UpdateWindowTitleAndFileDisplay()
+        {
+            var fileLabel = string.IsNullOrEmpty(CurrentFilePath)
+                ? (string.IsNullOrWhiteSpace(CurrentPipeline.Name) ? "新しいパイプライン" : CurrentPipeline.Name)
+                : Path.GetFileName(CurrentFilePath);
+
+            WindowTitle = IsModified ? $"SampleELT - {fileLabel} *" : $"SampleELT - {fileLabel}";
+
+            CurrentFileDisplay = string.IsNullOrEmpty(CurrentFilePath)
+                ? "(未保存)"
+                : CurrentFilePath!;
         }
 
         /// <summary>未保存の変更がある場合、ユーザーに確認する。続行してよければ true を返す。</summary>
