@@ -53,7 +53,7 @@ namespace SampleELT.Steps
             var conn = ConnectionRegistry.Instance.FindConnection(Settings);
             var dbType = conn?.DbType ?? DbType.MySQL;
 
-            int upserted = dbType switch
+            var (processed, inserted, updated, unchanged) = dbType switch
             {
                 DbType.Oracle     => await ExecuteOracleAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
                 DbType.PostgreSQL => await ExecutePostgreSQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct),
@@ -63,18 +63,31 @@ namespace SampleELT.Steps
                 _                 => await ExecuteMySQLAsync(connectionString, tableName, keyFields, updateFieldsRaw, inputData, commitSize, ct)
             };
 
-            progress.Report($"Insert/Update: {upserted}行 処理完了");
+            // MySQL/MariaDB は ExecuteNonQuery の戻り値で Insert/Update/変更なし を判別できる
+            // 他 DB は MERGE / ON CONFLICT で内訳が取れないため影響行数の合計のみ表示
+            bool hasBreakdown = dbType == DbType.MySQL || dbType == DbType.MariaDB;
+            if (hasBreakdown)
+            {
+                var msg = $"Insert/Update: 入力 {processed} 行 / DB Insert {inserted} 行 + Update {updated} 行";
+                if (unchanged > 0) msg += $" (変更なし {unchanged} 行)";
+                progress.Report(msg);
+            }
+            else
+            {
+                progress.Report($"Insert/Update: 入力 {processed} 行 / DB 影響 {inserted} 行");
+            }
             return inputData;
         }
 
-        private static async Task<int> ExecuteOracleAsync(
+        private static async Task<(int processed, int inserted, int updated, int unchanged)> ExecuteOracleAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new OracleConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int affected  = 0;
             var transaction = dbConn.BeginTransaction();
             try
             {
@@ -112,10 +125,10 @@ namespace SampleELT.Steps
                     for (int i = 0; i < allCols.Count; i++)
                         cmd.Parameters.Add(new OracleParameter($":p{i}", row[allCols[i]] ?? DBNull.Value));
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    affected += await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         transaction.Dispose();
@@ -130,17 +143,20 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { transaction.Dispose(); }
-            return count;
+            return (processed, affected, 0, 0);
         }
 
-        private static async Task<int> ExecuteMySQLAsync(
+        private static async Task<(int processed, int inserted, int updated, int unchanged)> ExecuteMySQLAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new MySqlConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int inserted  = 0;
+            int updated   = 0;
+            int unchanged = 0;
             var transaction = await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -174,10 +190,17 @@ namespace SampleELT.Steps
                     for (int i = 0; i < allCols.Count; i++)
                         cmd.Parameters.AddWithValue($"@p{i}", row[allCols[i]] ?? DBNull.Value);
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    // MySQL ON DUPLICATE KEY UPDATE の戻り値:
+                    //   1 = 新規 INSERT
+                    //   2 = UPDATE (値が変化)
+                    //   0 = UPDATE 対象だが値が同一 (no-change)
+                    int rc = await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
+                    if (rc == 1) inserted++;
+                    else if (rc == 2) updated++;
+                    else unchanged++;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -192,17 +215,18 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, inserted, updated, unchanged);
         }
 
-        private static async Task<int> ExecutePostgreSQLAsync(
+        private static async Task<(int processed, int inserted, int updated, int unchanged)> ExecutePostgreSQLAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new NpgsqlConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int affected  = 0;
             var transaction = await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -238,10 +262,10 @@ namespace SampleELT.Steps
                     for (int i = 0; i < allCols.Count; i++)
                         cmd.Parameters.AddWithValue($"@p{i}", row[allCols[i]] ?? DBNull.Value);
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    affected += await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -256,17 +280,18 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, affected, 0, 0);
         }
 
-        private static async Task<int> ExecuteSqlServerAsync(
+        private static async Task<(int processed, int inserted, int updated, int unchanged)> ExecuteSqlServerAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new SqlConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int affected  = 0;
             var transaction = (SqlTransaction)await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -303,10 +328,10 @@ namespace SampleELT.Steps
                     for (int i = 0; i < allCols.Count; i++)
                         cmd.Parameters.AddWithValue($"@p{i}", row[allCols[i]] ?? DBNull.Value);
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    affected += await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -321,17 +346,18 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, affected, 0, 0);
         }
 
-        private static async Task<int> ExecuteSqliteAsync(
+        private static async Task<(int processed, int inserted, int updated, int unchanged)> ExecuteSqliteAsync(
             string connectionString, string tableName,
             List<string> keyFields, string updateFieldsRaw,
             List<Dictionary<string, object?>> inputData, int commitSize, CancellationToken ct)
         {
             using var dbConn = new SqliteConnection(connectionString);
             await dbConn.OpenAsync(ct);
-            int count = 0;
+            int processed = 0;
+            int affected  = 0;
             var transaction = (SqliteTransaction)await dbConn.BeginTransactionAsync(ct);
             try
             {
@@ -367,10 +393,10 @@ namespace SampleELT.Steps
                     for (int i = 0; i < allCols.Count; i++)
                         cmd.Parameters.AddWithValue($"@p{i}", row[allCols[i]] ?? DBNull.Value);
 
-                    await cmd.ExecuteNonQueryAsync(ct);
-                    count++;
+                    affected += await cmd.ExecuteNonQueryAsync(ct);
+                    processed++;
 
-                    if (count % commitSize == 0)
+                    if (processed % commitSize == 0)
                     {
                         await transaction.CommitAsync(ct);
                         await transaction.DisposeAsync();
@@ -385,7 +411,7 @@ namespace SampleELT.Steps
                 throw;
             }
             finally { await transaction.DisposeAsync(); }
-            return count;
+            return (processed, affected, 0, 0);
         }
 
         public override string GetDisplayIcon() => "🔄";
