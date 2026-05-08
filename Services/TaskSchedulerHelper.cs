@@ -58,8 +58,15 @@ namespace SampleELT.Services
             if (string.IsNullOrEmpty(exePath))
                 return (false, "実行ファイルのパスを取得できませんでした");
 
-            if (string.IsNullOrWhiteSpace(entry.PipelineFilePath))
-                return (false, "パイプラインファイルが指定されていません");
+            // Target に応じて使用する CLI モードと対象ファイルパスを決定
+            var (cliFlag, targetFile) = entry.Target == ScheduleTarget.Job
+                ? ("--run-job", entry.JobFilePath)
+                : ("--run",     entry.PipelineFilePath);
+
+            if (string.IsNullOrWhiteSpace(targetFile))
+                return (false, entry.Target == ScheduleTarget.Job
+                    ? "ジョブファイルが指定されていません"
+                    : "パイプラインファイルが指定されていません");
 
             var schedArgs = BuildScheduleArgs(entry);
             if (schedArgs == null)
@@ -74,7 +81,7 @@ namespace SampleELT.Services
             }
 
             // /TR の引数内にダブルクォートがあるため、全体を \" でエスケープ
-            var tr = $"\\\"{exePath}\\\" --run \\\"{entry.PipelineFilePath}\\\"";
+            var tr = $"\\\"{exePath}\\\" {cliFlag} \\\"{targetFile}\\\"";
 
             // 既定では「ユーザーがログオンしている時のみ実行」で登録される。
             // ログオン未状態でも動作させたい場合は、登録後に Windows タスクスケジューラ GUI で

@@ -35,6 +35,16 @@ namespace SampleELT
                 return;
             }
 
+            // CLI ヘッドレスモード: --run-job <job.json> (タスクスケジューラ用)
+            int runJobIdx = Array.IndexOf(args, "--run-job");
+            if (runJobIdx >= 0 && runJobIdx + 1 < args.Length)
+            {
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                AttachConsole(-1);
+                _ = RunHeadlessJobAsync(args[runJobIdx + 1]);
+                return;
+            }
+
             // CLI 変換モード: --convert-ktr <input.ktr> [<output.json>]
             int convIdx = Array.IndexOf(args, "--convert-ktr");
             if (convIdx >= 0 && convIdx + 1 < args.Length)
@@ -90,6 +100,62 @@ namespace SampleELT
 
                 await engine.ExecuteAsync(pipeline, progress, CancellationToken.None);
                 Log("===== 実行完了 =====");
+            }
+            catch (Exception ex)
+            {
+                Log($"===== エラー: {ex.Message} =====");
+                exitCode = 1;
+            }
+            finally
+            {
+                if (logFile != null)
+                {
+                    try { File.WriteAllLines(logFile, logs); }
+                    catch { }
+                }
+            }
+
+            Shutdown(exitCode);
+        }
+
+        /// <summary>
+        /// CLI からジョブを実行する (タスクスケジューラから呼び出される想定)。
+        /// Job ファイルを読み込み、含まれる全パイプラインを順次実行する。
+        /// 結果はジョブファイルと同じディレクトリに <c>{name}_{timestamp}.log</c> として保存される。
+        /// </summary>
+        private async Task RunHeadlessJobAsync(string jobFile)
+        {
+            int exitCode = 0;
+            var logs = new List<string>();
+
+            void Log(string msg)
+            {
+                var line = $"[{DateTime.Now:HH:mm:ss}] {msg}";
+                logs.Add(line);
+                Console.WriteLine(line);
+            }
+
+            string? logFile = null;
+            try
+            {
+                jobFile = Path.GetFullPath(jobFile);
+                logFile = Path.Combine(
+                    Path.GetDirectoryName(jobFile) ?? ".",
+                    Path.GetFileNameWithoutExtension(jobFile)
+                        + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".log");
+
+                Log("===== ジョブ実行開始 =====");
+                Log($"ファイル: {jobFile}");
+
+                if (!File.Exists(jobFile))
+                    throw new FileNotFoundException($"ジョブファイルが見つかりません: {jobFile}");
+
+                var job = JobLoader.LoadFromFile(jobFile);
+                var progress = new Progress<string>(Log);
+                var executor = new JobExecutor();
+
+                await executor.ExecuteAsync(job, progress, CancellationToken.None);
+                Log("===== ジョブ実行完了 =====");
             }
             catch (Exception ex)
             {

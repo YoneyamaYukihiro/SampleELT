@@ -308,11 +308,11 @@ namespace SampleELT.Dialogs
 
             ScheduleRegistry.Instance.Save();
 
-            // タスクスケジューラ連携（パイプラインのみ対応）
+            // タスクスケジューラ連携 (Pipeline / Job ともに対応)
             // schtasks.exe 起動や OS 例外でアプリが落ちないよう全体を try/catch で保護
             try
             {
-                if (entry.Mode == ScheduleMode.TaskScheduler && entry.Target == ScheduleTarget.Pipeline)
+                if (entry.Mode == ScheduleMode.TaskScheduler)
                 {
                     var (ok, msg) = TaskSchedulerHelper.Register(entry);
                     if (!ok)
@@ -324,8 +324,9 @@ namespace SampleELT.Dialogs
                     else
                     {
                         var taskName = TaskSchedulerHelper.GetTaskName(entry);
+                        var targetLabel = entry.Target == ScheduleTarget.Job ? "ジョブ" : "パイプライン";
                         MessageBox.Show(
-                            $"タスクスケジューラへ登録しました。\n登録名: {taskName}\n\n" +
+                            $"タスクスケジューラへ {targetLabel} を登録しました。\n登録名: {taskName}\n\n" +
                             "現在は「ユーザーがログオンしている時のみ実行」で登録されています。\n" +
                             "未ログオン時にも実行したい場合は、以下の手順で手動変更してください:\n\n" +
                             "  1. タスクスケジューラを開く\n" +
@@ -338,15 +339,6 @@ namespace SampleELT.Dialogs
                             "  6. [OK] → パスワード入力プロンプトでログオンユーザーのパスワードを入力",
                             "登録完了", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
-                }
-                else if (entry.Mode == ScheduleMode.TaskScheduler && entry.Target == ScheduleTarget.Job)
-                {
-                    MessageBox.Show(
-                        "ジョブはWindowsタスクスケジューラに対応していません。\nインアプリモードに切り替えてください。",
-                        "非対応", MessageBoxButton.OK, MessageBoxImage.Information);
-                    entry.Mode = ScheduleMode.InApp;
-                    ModeInAppRadio.IsChecked = true;
-                    ScheduleRegistry.Instance.Save();
                 }
                 else if (prevMode == ScheduleMode.TaskScheduler)
                 {
