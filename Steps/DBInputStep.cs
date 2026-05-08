@@ -1,42 +1,28 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using SampleELT.Engine;
 using SampleELT.Models;
+using SampleELT.Models.Stores;
 
 namespace SampleELT.Steps
 {
     /// <summary>
-    /// Oracle / MySQL 両対応の統合 DB 入力ステップ。
-    /// 設定された DB 接続の種類に応じて OracleInputStep または MySQLInputStep に委譲する。
+    /// 接続の DbType に応じて適切な <see cref="DbProvider"/> を選択し、共通 Executor に委譲する統合 DB 入力ステップ。
     /// </summary>
     public class DBInputStep : StepBase
     {
         public override StepType StepType => StepType.DBInput;
 
-        public override async Task<List<Dictionary<string, object?>>> ExecuteAsync(
+        public override Task<List<Dictionary<string, object?>>> ExecuteAsync(
             List<Dictionary<string, object?>> inputData,
             IProgress<string> progress,
             CancellationToken ct)
         {
-            var connIdStr = Settings.TryGetValue("ConnectionId", out var c) ? c?.ToString() : null;
-            _ = Guid.TryParse(connIdStr, out var connId);
-            var connInfo = ConnectionRegistry.Instance.Connections.FirstOrDefault(x => x.Id == connId);
-
-            StepBase inner = connInfo?.DbType switch
-            {
-                DbType.Oracle     => new OracleInputStep(),
-                DbType.PostgreSQL => new PostgreSQLInputStep(),
-                DbType.SqlServer  => new SqlServerInputStep(),
-                DbType.Sqlite     => new SqliteInputStep(),
-                // MariaDB は MySQL ドライバ (MySqlConnector) を共用
-                _                 => new MySQLInputStep()
-            };
-
-            inner.Settings = this.Settings;
-            inner.AllInputStreams = this.AllInputStreams;
-            return await inner.ExecuteAsync(inputData, progress, ct);
+            var connInfo = IConnectionStore.Default.FindConnection(Settings);
+            var provider = DbProvider.For(connInfo?.DbType ?? DbType.MySQL);
+            return DbInputExecutor.ExecuteAsync(provider, Settings, inputData, progress, ct);
         }
 
         public override string GetDisplayIcon() => "🔌";

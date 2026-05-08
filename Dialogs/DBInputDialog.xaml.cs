@@ -22,13 +22,22 @@ namespace SampleELT.Dialogs
         public string SQL { get; private set; } = "";
         public bool ExecuteEachRow { get; private set; }
 
+        // 設定された場合、接続リストをこの DbType に絞り込む (旧 OracleInputDialog / MySQLInputDialog 互換)
+        private DbType? _dbTypeFilter;
+
         public DBInputDialog()
         {
             InitializeComponent();
         }
 
-        public void Initialize(string stepName, Guid? connectionId, string sql, bool executeEachRow = false)
+        public void Initialize(
+            string stepName,
+            Guid? connectionId,
+            string sql,
+            bool executeEachRow = false,
+            DbType? dbTypeFilter = null)
         {
+            _dbTypeFilter = dbTypeFilter;
             StepNameBox.Text = stepName;
             SQLBox.Text = sql;
             ExecuteEachRowCheck.IsChecked = executeEachRow;
@@ -39,7 +48,9 @@ namespace SampleELT.Dialogs
 
         private void RefreshConnectionList(Guid? selectId)
         {
-            var allConns = ConnectionRegistry.Instance.Connections.ToList();
+            var allConns = ConnectionRegistry.Instance.Connections
+                .Where(c => _dbTypeFilter == null || c.DbType == _dbTypeFilter.Value)
+                .ToList();
             ConnectionCombo.ItemsSource = allConns;
 
             if (allConns.Count == 0)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,6 +12,7 @@ using Microsoft.Win32;
 using SampleELT.Controls;
 using SampleELT.Dialogs;
 using SampleELT.Models;
+using SampleELT.Services;
 using SampleELT.Steps;
 using SampleELT.Tools;
 using SampleELT.ViewModels;
@@ -20,6 +22,7 @@ namespace SampleELT
     public partial class MainWindow : Window
     {
         private MainViewModel _vm = null!;
+        private readonly StepDialogService _dialogService = new();
 
         // Drag state for step nodes
         private bool _isDragging;
@@ -57,7 +60,7 @@ namespace SampleELT
 
         protected override void OnClosing(CancelEventArgs e)
         {
-            if (!_vm.ConfirmDiscardChanges())
+            if (!_vm.TryConfirmClose())
                 e.Cancel = true;
             base.OnClosing(e);
         }
@@ -152,6 +155,8 @@ namespace SampleELT
                 _isResizing = false;
                 _resizingStep = null;
                 fe.ReleaseMouseCapture();
+                if (stepVm.NodeWidth != _resizeStartWidth || stepVm.NodeHeight != _resizeStartHeight)
+                    _vm.MarkModified();
                 e.Handled = true;
                 return;
             }
@@ -178,6 +183,8 @@ namespace SampleELT
                 _isDragging = false;
                 _draggingStep = null;
                 fe.ReleaseMouseCapture();
+                if (stepVm.X != _dragStartNodeX || stepVm.Y != _dragStartNodeY)
+                    _vm.MarkModified();
                 e.Handled = true;
             }
         }
@@ -264,486 +271,22 @@ namespace SampleELT
         {
             var step = stepVm.Step;
 
-            switch (step.StepType)
-            {
-                case StepType.DBInput:
-                    OpenDBInputDialog(stepVm);
-                    break;
-                case StepType.OracleInput:
-                    OpenOracleInputDialog(stepVm);
-                    break;
-                case StepType.MySQLInput:
-                    OpenMySQLInputDialog(stepVm);
-                    break;
-                case StepType.ExcelInput:
-                    OpenExcelInputDialog(stepVm);
-                    break;
-                case StepType.DBOutput:
-                    OpenDBOutputDialog(stepVm, "");
-                    break;
-                case StepType.OracleOutput:
-                    OpenDBOutputDialog(stepVm, "Oracle");
-                    break;
-                case StepType.MySQLOutput:
-                    OpenDBOutputDialog(stepVm, "MySQL");
-                    break;
-                case StepType.ExcelOutput:
-                    OpenExcelOutputDialog(stepVm);
-                    break;
-                case StepType.Filter:
-                    OpenFilterDialog(stepVm);
-                    break;
-                case StepType.Calculation:
-                    OpenCalculationDialog(stepVm);
-                    break;
-                case StepType.SelectValues:
-                    OpenSelectValuesDialog(stepVm);
-                    break;
-                case StepType.DBDelete:
-                    OpenDBDeleteDialog(stepVm);
-                    break;
-                case StepType.InsertUpdate:
-                    OpenInsertUpdateDialog(stepVm);
-                    break;
-                case StepType.ExecSQL:
-                    OpenExecSQLDialog(stepVm);
-                    break;
-                case StepType.Dummy:
-                    OpenDummyStepDialog(stepVm);
-                    break;
-                case StepType.MergeJoin:
-                    OpenMergeJoinDialog(stepVm);
-                    break;
-                case StepType.DBUpdate:
-                    OpenDBUpdateDialog(stepVm);
-                    break;
-                case StepType.SetVariable:
-                    OpenSetVariableDialog(stepVm);
-                    break;
-            }
-            // ダイアログが閉じた後は設定が変わった可能性があるため常に dirty とする
-            _vm.MarkModified();
-        }
+            // ダイアログ前の状態をスナップショット（キャンセル時に dirty にしないため）
+            var snapshotName = step.Name;
+            var snapshotSettings = step.Settings.ToDictionary(
+                kv => kv.Key,
+                kv => kv.Value?.ToString());
 
-        private void OpenDBInputDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new DBInputDialog { Owner = this };
+            _dialogService.ShowSettingsDialog(this, stepVm);
 
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
-                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
-                executeEachRow);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["SQL"] = dialog.SQL;
-                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenOracleInputDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new OracleInputDialog { Owner = this };
-
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
-                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
-                executeEachRow);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["SQL"] = dialog.SQL;
-                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenMySQLInputDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new MySQLInputDialog { Owner = this };
-
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
-                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
-                executeEachRow);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["SQL"] = dialog.SQL;
-                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenExcelInputDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new ExcelInputDialog { Owner = this };
-
-            var hhRaw = step.Settings.TryGetValue("HasHeader", out var hh) ? hh?.ToString() : null;
-            bool hasHeader = hhRaw == null || !bool.TryParse(hhRaw, out var hhBool) ? true : hhBool;
-
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("FilePath",  out var fp)  ? fp?.ToString()  ?? "" : "",
-                step.Settings.TryGetValue("SheetName", out var sn)  ? sn?.ToString()  ?? "" : "",
-                hasHeader,
-                step.Settings.TryGetValue("Format",    out var fmt) ? fmt?.ToString() ?? "Excel" : "Excel",
-                step.Settings.TryGetValue("Delimiter", out var dl)  ? dl?.ToString()  ?? "," : ",",
-                step.Settings.TryGetValue("Encoding",  out var enc) ? enc?.ToString() ?? "UTF-8" : "UTF-8");
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["FilePath"]  = dialog.FilePath;
-                step.Settings["Format"]    = dialog.Format;
-                step.Settings["SheetName"] = dialog.SheetName;
-                step.Settings["HasHeader"] = dialog.HasHeader.ToString();
-                step.Settings["Delimiter"] = dialog.Delimiter;
-                step.Settings["Encoding"]  = dialog.Encoding;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenDBOutputDialog(StepNodeViewModel stepVm, string defaultDbType)
-        {
-            var step = stepVm.Step;
-            var dialog = new DBOutputDialog { Owner = this };
-
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            int commitSize = step.Settings.TryGetValue("CommitSize", out var cs)
-                && int.TryParse(cs?.ToString(), out var csVal) ? csVal : 100;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Mode", out var m) ? m?.ToString() ?? "INSERT" : "INSERT",
-                commitSize);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["TableName"] = dialog.TableName;
-                step.Settings["Mode"] = dialog.Mode;
-                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenExcelOutputDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new ExcelOutputDialog { Owner = this };
-
-            var ihRaw = step.Settings.TryGetValue("IncludeHeader", out var ih) ? ih?.ToString() : null;
-            bool includeHeader = ihRaw == null || !bool.TryParse(ihRaw, out var ihBool) ? true : ihBool;
-
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("FilePath", out var fp) ? fp?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Format", out var fmt) ? fmt?.ToString() ?? "Excel" : "Excel",
-                step.Settings.TryGetValue("SheetName", out var sn) ? sn?.ToString() ?? "Sheet1" : "Sheet1",
-                step.Settings.TryGetValue("Delimiter", out var dl) ? dl?.ToString() ?? "," : ",",
-                step.Settings.TryGetValue("Encoding", out var enc) ? enc?.ToString() ?? "UTF-8" : "UTF-8",
-                includeHeader);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["FilePath"] = dialog.FilePath;
-                step.Settings["Format"] = dialog.Format;
-                step.Settings["SheetName"] = dialog.SheetName;
-                step.Settings["Delimiter"] = dialog.Delimiter;
-                step.Settings["Encoding"] = dialog.Encoding;
-                step.Settings["IncludeHeader"] = dialog.IncludeHeader.ToString();
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenFilterDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new FilterDialog { Owner = this };
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("FieldName",  out var fn) ? fn?.ToString()   ?? "" : "",
-                step.Settings.TryGetValue("Operator",   out var op) ? op?.ToString()   ?? "equals" : "equals",
-                step.Settings.TryGetValue("Value",      out var v)  ? v?.ToString()    ?? "" : "",
-                step.Settings.TryGetValue("RightField", out var rf) ? rf?.ToString()   ?? "" : "");
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["FieldName"]  = dialog.FieldName;
-                step.Settings["Operator"]   = dialog.Operator;
-                step.Settings["Value"]      = dialog.Value;
-                step.Settings["RightField"] = dialog.RightField;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenCalculationDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new CalculationDialog { Owner = this };
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("OutputFieldName", out var ofn) ? ofn?.ToString() ?? "Result" : "Result",
-                step.Settings.TryGetValue("ExpressionType", out var et) ? et?.ToString() ?? "add" : "add",
-                step.Settings.TryGetValue("Field1", out var f1) ? f1?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Field2", out var f2) ? f2?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("Constant", out var c) ? c?.ToString() ?? "0" : "0");
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["OutputFieldName"] = dialog.OutputFieldName;
-                step.Settings["ExpressionType"] = dialog.ExpressionType;
-                step.Settings["Field1"] = dialog.Field1;
-                step.Settings["Field2"] = dialog.Field2;
-                step.Settings["Constant"] = dialog.Constant;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenSelectValuesDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new SelectValuesDialog { Owner = this };
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("FieldMappings", out var fm) ? fm?.ToString() ?? "" : "");
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["FieldMappings"] = dialog.FieldMappings;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenDBDeleteDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new DBDeleteDialog { Owner = this };
-
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            int commitSizeDel = step.Settings.TryGetValue("CommitSize", out var csDel)
-                && int.TryParse(csDel?.ToString(), out var csDelVal) ? csDelVal : 100;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
-                commitSizeDel);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["TableName"] = dialog.TableName;
-                step.Settings["KeyFields"] = dialog.KeyFields;
-                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenInsertUpdateDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new InsertUpdateDialog { Owner = this };
-
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            int commitSizeIU = step.Settings.TryGetValue("CommitSize", out var csIU)
-                && int.TryParse(csIU?.ToString(), out var csIUVal) ? csIUVal : 100;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "",
-                commitSizeIU);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["TableName"] = dialog.TableName;
-                step.Settings["KeyFields"] = dialog.KeyFields;
-                step.Settings["UpdateFields"] = dialog.UpdateFields;
-                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenExecSQLDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new ExecSQLDialog { Owner = this };
-
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            bool executeEachRow = step.Settings.TryGetValue("ExecuteEachRow", out var eer)
-                && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("SQL", out var sql) ? sql?.ToString() ?? "" : "",
-                executeEachRow);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["SQL"] = dialog.SQL;
-                step.Settings["ExecuteEachRow"] = dialog.ExecuteEachRow ? "true" : "false";
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenDummyStepDialog(StepNodeViewModel stepVm)
-        {
-            var dialog = new DummyStepDialog { Owner = this };
-            dialog.Initialize(stepVm.Step.Name);
-            if (dialog.ShowDialog() == true)
-            {
-                stepVm.Step.Name = dialog.StepName;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenMergeJoinDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new MergeJoinDialog { Owner = this };
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("JoinType", out var jt) ? jt?.ToString() ?? "INNER" : "INNER",
-                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "");
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["JoinType"] = dialog.JoinType;
-                step.Settings["KeyFields"] = dialog.KeyFields;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenDBUpdateDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new DBUpdateDialog { Owner = this };
-
-            Guid? connId = step.Settings.TryGetValue("ConnectionId", out var cid) && cid != null
-                ? Guid.TryParse(cid.ToString(), out var g) ? g : (Guid?)null
-                : null;
-
-            int commitSizeUpd = step.Settings.TryGetValue("CommitSize", out var csUpd)
-                && int.TryParse(csUpd?.ToString(), out var csUpdVal) ? csUpdVal : 100;
-
-            dialog.Initialize(
-                step.Name,
-                connId,
-                step.Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("UpdateFields", out var uf) ? uf?.ToString() ?? "" : "",
-                commitSizeUpd);
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["ConnectionId"] = dialog.ConnectionId?.ToString();
-                step.Settings["TableName"] = dialog.TableName;
-                step.Settings["KeyFields"] = dialog.KeyFields;
-                step.Settings["UpdateFields"] = dialog.UpdateFields;
-                step.Settings["CommitSize"] = dialog.CommitSize.ToString();
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
-        }
-
-        private void OpenSetVariableDialog(StepNodeViewModel stepVm)
-        {
-            var step = stepVm.Step;
-            var dialog = new SetVariableDialog { Owner = this };
-            dialog.Initialize(
-                step.Name,
-                step.Settings.TryGetValue("Fields",     out var flds) ? flds?.ToString() ?? "" : "",
-                step.Settings.TryGetValue("DateFormat", out var df)   ? df?.ToString()   ?? "yyyy/MM/dd" : "yyyy/MM/dd");
-
-            if (dialog.ShowDialog() == true)
-            {
-                step.Name = dialog.StepName;
-                step.Settings["Fields"]     = dialog.Fields;
-                step.Settings["DateFormat"] = dialog.DateFormat;
-                stepVm.NotifyNameChanged();
-                stepVm.NotifyConnectionChanged();
-            }
+            // 実際に値が変わった時だけ dirty にする
+            bool changed = step.Name != snapshotName
+                || step.Settings.Count != snapshotSettings.Count
+                || step.Settings.Any(kv =>
+                       !snapshotSettings.TryGetValue(kv.Key, out var prev)
+                       || prev != kv.Value?.ToString());
+            if (changed)
+                _vm.MarkModified();
         }
 
         // ==================== HELPER METHODS ====================

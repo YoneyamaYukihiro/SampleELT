@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using SampleELT.Models.Stores;
 
 namespace SampleELT.Models
 {
-    public class JobRegistry
+    public class JobRegistry : IJobStore
     {
         private static readonly Lazy<JobRegistry> _lazy = new(() => new JobRegistry());
         public static JobRegistry Instance => _lazy.Value;
@@ -14,6 +15,8 @@ namespace SampleELT.Models
             AppDomain.CurrentDomain.BaseDirectory, "jobs.json");
 
         public List<Job> Jobs { get; private set; } = new();
+
+        IReadOnlyList<Job> IJobStore.Jobs => Jobs;
 
         private JobRegistry() { }
 

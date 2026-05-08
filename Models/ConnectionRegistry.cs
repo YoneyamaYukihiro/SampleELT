@@ -4,10 +4,11 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using SampleELT.Models.Stores;
 
 namespace SampleELT.Models
 {
-    public class ConnectionRegistry
+    public class ConnectionRegistry : IConnectionStore
     {
         public static ConnectionRegistry Instance { get; } = new();
 

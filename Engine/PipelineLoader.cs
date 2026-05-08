@@ -3,8 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using SampleELT.Models;
+using SampleELT.Models.Serialization;
 using SampleELT.Steps;
-using SampleELT.ViewModels;
 
 namespace SampleELT.Engine
 {

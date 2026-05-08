@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using SampleELT.Models.Stores;
 
 namespace SampleELT.Models
 {
-    public class ScheduleRegistry
+    public class ScheduleRegistry : IScheduleStore
     {
         private static readonly Lazy<ScheduleRegistry> _lazy = new(() => new ScheduleRegistry());
         public static ScheduleRegistry Instance => _lazy.Value;
@@ -14,6 +15,11 @@ namespace SampleELT.Models
             AppDomain.CurrentDomain.BaseDirectory, "schedules.json");
 
         public List<ScheduleEntry> Schedules { get; private set; } = new();
+
+        IReadOnlyList<ScheduleEntry> IScheduleStore.Schedules => Schedules;
+
+        DateTime? IScheduleStore.CalcLastDueTime(ScheduleEntry entry, DateTime now)
+            => CalcLastDueTime(entry, now);
 
         private ScheduleRegistry() { }
 

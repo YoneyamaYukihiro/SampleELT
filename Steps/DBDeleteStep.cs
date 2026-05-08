@@ -9,6 +9,7 @@ using MySqlConnector;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
+using SampleELT.Models.Stores;
 
 namespace SampleELT.Steps
 {
@@ -27,7 +28,7 @@ namespace SampleELT.Steps
             IProgress<string> progress,
             CancellationToken ct)
         {
-            var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
+            var connectionString = IConnectionStore.Default.ResolveConnectionString(Settings);
             var tableName = Settings.TryGetValue("TableName", out var tn) ? tn?.ToString() ?? "" : "";
             var keyFieldsRaw = Settings.TryGetValue("KeyFields", out var kf) ? kf?.ToString() ?? "" : "";
 
@@ -51,7 +52,7 @@ namespace SampleELT.Steps
             int commitSize = Settings.TryGetValue("CommitSize", out var cs)
                 && int.TryParse(cs?.ToString(), out var csVal) && csVal > 0 ? csVal : 100;
 
-            var conn = ConnectionRegistry.Instance.FindConnection(Settings);
+            var conn = IConnectionStore.Default.FindConnection(Settings);
             var dbType = conn?.DbType ?? DbType.MySQL;
 
             int deleted = 0;

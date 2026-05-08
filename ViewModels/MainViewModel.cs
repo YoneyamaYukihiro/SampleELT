@@ -6,12 +6,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using SampleELT.Engine;
 using SampleELT.Models;
+using SampleELT.Models.Serialization;
+using SampleELT.Services;
 using SampleELT.Steps;
 
 namespace SampleELT.ViewModels
@@ -64,14 +65,18 @@ namespace SampleELT.ViewModels
         // Event fired when schedule status changes (run completed / registry updated)
         public event Action? ScheduleStatusChanged;
 
-        // In-app scheduler
-        private readonly DispatcherTimer _scheduleTimer;
+        // In-app scheduler (責務分離: タイマーと実行ロジックは PipelineSchedulerService が持つ)
+        private readonly PipelineSchedulerService _scheduler;
 
         public MainViewModel()
         {
-            _scheduleTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
-            _scheduleTimer.Tick += SchedulerTick;
-            _scheduleTimer.Start();
+            _scheduler = new PipelineSchedulerService(new Progress<string>(msg =>
+            {
+                AddLog(msg);
+                StatusMessage = msg;
+            }));
+            _scheduler.StatusChanged += () => ScheduleStatusChanged?.Invoke();
+            _scheduler.Start();
         }
 
         // ==================== SCHEDULE MANAGER ====================
@@ -86,80 +91,6 @@ namespace SampleELT.ViewModels
         private void OpenJobManager()
         {
             OpenJobManagerRequested?.Invoke();
-        }
-
-        private async void SchedulerTick(object? sender, EventArgs e)
-        {
-            var now = DateTime.Now;
-            var registry = ScheduleRegistry.Instance;
-            bool anySaved = false;
-
-            foreach (var entry in registry.Schedules.Where(s => s.IsEnabled && s.Mode == Models.ScheduleMode.InApp))
-            {
-                // 直近の実行予定時刻（now 以前）を取得
-                var lastDue = registry.CalcLastDueTime(entry, now);
-                if (lastDue == null) continue; // インターバルがまだ期限前
-
-                // この実行タイミングですでに実行済みならスキップ
-                if (entry.LastRunTime.HasValue && entry.LastRunTime.Value >= lastDue.Value) continue;
-
-                await RunScheduledEntryAsync(entry);
-                anySaved = true;
-            }
-
-            if (anySaved) registry.Save();
-        }
-
-        private async Task RunScheduledEntryAsync(ScheduleEntry entry)
-        {
-            AddLog($"===== スケジュール実行開始: {entry.Name} =====");
-            entry.LastRunTime = DateTime.Now;
-
-            var progress = new Progress<string>(msg =>
-            {
-                AddLog(msg);
-                StatusMessage = msg;
-            });
-            var cts = new CancellationTokenSource();
-
-            try
-            {
-                if (entry.Target == Models.ScheduleTarget.Job)
-                {
-                    if (string.IsNullOrWhiteSpace(entry.JobFilePath))
-                        throw new InvalidOperationException("ジョブファイルが指定されていません");
-
-                    if (!File.Exists(entry.JobFilePath))
-                        throw new FileNotFoundException($"ジョブファイルが見つかりません: {entry.JobFilePath}");
-
-                    var job = JobLoader.LoadFromFile(entry.JobFilePath);
-                    var executor = new JobExecutor();
-                    await executor.ExecuteAsync(job, progress, cts.Token);
-                }
-                else
-                {
-                    if (!File.Exists(entry.PipelineFilePath))
-                        throw new FileNotFoundException($"パイプラインファイルが見つかりません: {entry.PipelineFilePath}");
-
-                    var pipeline = PipelineLoader.LoadFromFile(entry.PipelineFilePath);
-                    var engine = new ExecutionEngine();
-                    await engine.ExecuteAsync(pipeline, progress, cts.Token);
-                }
-
-                entry.LastRunSuccess = true;
-                entry.LastRunMessage = "実行完了";
-                AddLog($"===== スケジュール実行完了: {entry.Name} =====");
-            }
-            catch (Exception ex)
-            {
-                entry.LastRunSuccess = false;
-                entry.LastRunMessage = ex.Message;
-                AddLog($"===== スケジュール実行エラー [{entry.Name}]: {ex.Message} =====");
-            }
-            finally
-            {
-                ScheduleStatusChanged?.Invoke();
-            }
         }
 
         [RelayCommand]
@@ -301,16 +232,21 @@ namespace SampleELT.ViewModels
         }
 
         [RelayCommand]
-        private void SavePipeline()
-        {
-            if (!string.IsNullOrEmpty(CurrentFilePath))
-                SaveToFile(CurrentFilePath);
-            else
-                SavePipelineAs();
-        }
+        private void SavePipeline() => TrySave();
 
         [RelayCommand]
-        private void SavePipelineAs()
+        private void SavePipelineAs() => TrySaveAs();
+
+        /// <summary>現在のファイルに保存。未保存の場合は名前を付けて保存にフォールバック。</summary>
+        public bool TrySave()
+        {
+            return !string.IsNullOrEmpty(CurrentFilePath)
+                ? SaveToFile(CurrentFilePath)
+                : TrySaveAs();
+        }
+
+        /// <summary>名前を付けて保存。ユーザーがファイル選択をキャンセルした場合は false。</summary>
+        public bool TrySaveAs()
         {
             var dialog = new SaveFileDialog
             {
@@ -320,12 +256,12 @@ namespace SampleELT.ViewModels
                 FileName = CurrentPipeline.Name
             };
 
-            if (dialog.ShowDialog() != true) return;
+            if (dialog.ShowDialog() != true) return false;
 
-            SaveToFile(dialog.FileName);
+            return SaveToFile(dialog.FileName);
         }
 
-        private void SaveToFile(string filePath)
+        private bool SaveToFile(string filePath)
         {
             try
             {
@@ -363,6 +299,7 @@ namespace SampleELT.ViewModels
                 IsModified = false;
                 StatusMessage = $"保存完了: {filePath}";
                 AddLog($"パイプライン保存: {filePath}");
+                return true;
             }
             catch (Exception ex)
             {
@@ -370,6 +307,7 @@ namespace SampleELT.ViewModels
                 AddLog($"保存エラー: {ex.Message}");
                 System.Windows.MessageBox.Show($"保存に失敗しました:\n{ex.Message}", "エラー",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                return false;
             }
         }
 
@@ -576,6 +514,30 @@ namespace SampleELT.ViewModels
             return result == System.Windows.MessageBoxResult.Yes;
         }
 
+        /// <summary>
+        /// 終了時に未保存の変更があれば「保存して終了 / 保存せず終了 / キャンセル」を確認する。
+        /// 「保存して終了」を選んだ場合は保存処理まで実行する。終了してよい場合 true を返す。
+        /// </summary>
+        public bool TryConfirmClose()
+        {
+            if (!IsModified) return true;
+            var result = System.Windows.MessageBox.Show(
+                "パイプラインに未保存の変更があります。\n\n" +
+                "「はい」: 保存して終了\n" +
+                "「いいえ」: 保存せず終了\n" +
+                "「キャンセル」: 終了をキャンセル",
+                "未保存の変更",
+                System.Windows.MessageBoxButton.YesNoCancel,
+                System.Windows.MessageBoxImage.Warning);
+
+            return result switch
+            {
+                System.Windows.MessageBoxResult.Yes    => TrySave(), // 保存に成功した場合のみ終了
+                System.Windows.MessageBoxResult.No     => true,      // 保存せず終了
+                _                                       => false     // キャンセル
+            };
+        }
+
         private void AddLog(string message)
         {
             var timestamp = DateTime.Now.ToString("HH:mm:ss");
@@ -587,32 +549,5 @@ namespace SampleELT.ViewModels
             SelectedStep = stepVm;
             DeleteSelectedStep();
         }
-    }
-
-    // Serialization helper models
-    public class PipelineSerializationModel
-    {
-        public string Name { get; set; } = "New Pipeline";
-        public List<StepSerializationModel> Steps { get; set; } = new();
-        public List<ConnectionSerializationModel> Connections { get; set; } = new();
-    }
-
-    public class StepSerializationModel
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = "";
-        public string StepType { get; set; } = "";
-        public double CanvasX { get; set; }
-        public double CanvasY { get; set; }
-        public double NodeWidth { get; set; } = 150.0;
-        public double NodeHeight { get; set; } = 70.0;
-        public Dictionary<string, string?> Settings { get; set; } = new();
-    }
-
-    public class ConnectionSerializationModel
-    {
-        public Guid Id { get; set; }
-        public Guid SourceStepId { get; set; }
-        public Guid TargetStepId { get; set; }
     }
 }

@@ -9,6 +9,7 @@ using MySqlConnector;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using SampleELT.Models;
+using SampleELT.Models.Stores;
 
 namespace SampleELT.Steps
 {
@@ -27,12 +28,12 @@ namespace SampleELT.Steps
             IProgress<string> progress,
             CancellationToken ct)
         {
-            var connectionString = ConnectionRegistry.Instance.ResolveConnectionString(Settings);
+            var connectionString = IConnectionStore.Default.ResolveConnectionString(Settings);
             var rawSql = Settings.TryGetValue("SQL", out var s) ? s?.ToString() ?? "" : "";
             var executeEachRow = Settings.TryGetValue("ExecuteEachRow", out var eer)
                 && eer?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
 
-            var conn = ConnectionRegistry.Instance.FindConnection(Settings);
+            var conn = IConnectionStore.Default.FindConnection(Settings);
             var dbType = conn?.DbType ?? DbType.MySQL;
 
             switch (dbType)
