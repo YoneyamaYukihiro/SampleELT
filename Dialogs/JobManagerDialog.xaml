@@ -13,14 +13,9 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="210" MinWidth="160"/>
-            <ColumnDefinition Width="4"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
 
         <!-- ==================== 上: ファイル操作ツールバー ==================== -->
-        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+        <Border Grid.Row="0"
                 Background="#ECEFF1" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1"
                 Padding="8,5">
             <StackPanel Orientation="Horizontal">
@@ -68,52 +63,8 @@
             </StackPanel>
         </Border>
 
-        <!-- ==================== 左: ジョブ一覧 ==================== -->
-        <Border Grid.Row="1" Grid.Column="0"
-                BorderBrush="#DDDDDD" BorderThickness="0,0,1,0"
-                Background="#FAFAFA">
-            <DockPanel>
-                <Border DockPanel.Dock="Top" Background="#ECEFF1"
-                        Padding="8,6" BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
-                    <TextBlock Text="ジョブ一覧"
-                               FontWeight="Bold" FontSize="12" Foreground="#424242"/>
-                </Border>
-                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-                            Margin="8,6" HorizontalAlignment="Left">
-                    <Button x:Name="AddJobButton" Content="追加"
-                            Width="60" Height="26" Margin="0,0,6,0"
-                            Click="AddJobButton_Click">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                                <Setter Property="FontSize" Value="12"/>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    <Button x:Name="DeleteJobButton" Content="削除"
-                            Width="60" Height="26"
-                            Click="DeleteJobButton_Click">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                                <Setter Property="FontSize" Value="12"/>
-                                <Setter Property="Background" Value="#F44336"/>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                </StackPanel>
-                <ListBox x:Name="JobListBox"
-                         BorderThickness="0"
-                         Background="Transparent"
-                         SelectionChanged="JobListBox_SelectionChanged"
-                         Margin="4,4"/>
-            </DockPanel>
-        </Border>
-
-        <GridSplitter Grid.Row="1" Grid.Column="1"
-                      Width="4" HorizontalAlignment="Stretch"
-                      Background="#DDDDDD"/>
-
-        <!-- ==================== 右: 編集フォーム ==================== -->
-        <Grid Grid.Row="1" Grid.Column="2">
+        <!-- ==================== 編集フォーム ==================== -->
+        <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -278,8 +229,8 @@
             </Border>
         </Grid>
 
-        <!-- ==================== 下: 保存・閉じるボタン ==================== -->
-        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+        <!-- ==================== 下: 閉じるボタン ==================== -->
+        <Border Grid.Row="2"
                 Background="#ECEFF1" Padding="12,8"
                 BorderBrush="#DDDDDD" BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -287,15 +238,6 @@
                            VerticalAlignment="Center"
                            Foreground="#4CAF50" FontSize="12"
                            Margin="0,0,16,0" Visibility="Collapsed"/>
-                <Button x:Name="SaveJobButton" Content="保存"
-                        Height="30" Width="80" Margin="0,0,8,0"
-                        Click="SaveJobButton_Click">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                            <Setter Property="Background" Value="#4CAF50"/>
-                        </Style>
-                    </Button.Style>
-                </Button>
                 <Button Content="閉じる" Height="30" Width="80"
                         Click="CloseButton_Click">
                     <Button.Style>

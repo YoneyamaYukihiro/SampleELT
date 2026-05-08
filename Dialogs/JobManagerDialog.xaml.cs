@@ -22,6 +22,10 @@ namespace SampleELT.Dialogs
         public JobStepViewModel(JobStep source) => Source = source;
     }
 
+    /// <summary>
+    /// ジョブ管理ダイアログ。一度に 1 ジョブを編集する。
+    /// ジョブ本体は <c>.job.json</c> ファイルとして保存される（履歴／レジストリは持たない）。
+    /// </summary>
     public partial class JobManagerDialog : Window
     {
         private Job? _currentJob;
@@ -31,8 +35,8 @@ namespace SampleELT.Dialogs
         public JobManagerDialog()
         {
             InitializeComponent();
-            JobRegistry.Instance.Load();
-            RefreshJobList();
+            // 起動直後は空: ユーザーが「新規」または「開く」を押すまで編集領域は無効
+            DisableEditPanels();
         }
 
         protected override void OnClosing(CancelEventArgs e)
@@ -46,7 +50,6 @@ namespace SampleELT.Dialogs
         {
             if (_currentJob == null) return;
             _isJobDirty = true;
-            // ジョブ名にアスタリスクを表示
             var name = string.IsNullOrWhiteSpace(_currentJob.Name) ? "ジョブ" : _currentJob.Name;
             Title = $"ジョブ管理 - {name} *";
         }
@@ -54,7 +57,15 @@ namespace SampleELT.Dialogs
         private void ClearJobDirty()
         {
             _isJobDirty = false;
-            Title = "ジョブ管理";
+            if (_currentJob != null)
+            {
+                var name = string.IsNullOrWhiteSpace(_currentJob.Name) ? "ジョブ" : _currentJob.Name;
+                Title = $"ジョブ管理 - {name}";
+            }
+            else
+            {
+                Title = "ジョブ管理";
+            }
         }
 
         private bool ConfirmDiscardJobChanges()
@@ -68,91 +79,110 @@ namespace SampleELT.Dialogs
             return result == MessageBoxResult.Yes;
         }
 
-        // ==================== ジョブ一覧操作 ====================
-
-        private void RefreshJobList()
+        private void DisableEditPanels()
         {
-            JobListBox.Items.Clear();
-            foreach (var job in JobRegistry.Instance.Jobs)
-            {
-                JobListBox.Items.Add(new ListBoxItem
-                {
-                    Content = $"{(job.IsEnabled ? "●" : "○")} {job.Name}",
-                    Tag = job
-                });
-            }
+            _currentJob = null;
+            _currentStep = null;
+            EditPanel.IsEnabled = false;
+            StepsPanel.IsEnabled = false;
+            StepEditPanel.IsEnabled = false;
+            ClearJobDirty();
         }
 
-        private void JobListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (JobListBox.SelectedItem is ListBoxItem item && item.Tag is Job job)
-            {
-                // 切替前に未保存チェック
-                if (!ConfirmDiscardJobChanges())
-                {
-                    // 選択を元に戻す（イベント再発火を避けるため e.RemovedItems を利用）
-                    if (e.RemovedItems.Count > 0)
-                    {
-                        JobListBox.SelectionChanged -= JobListBox_SelectionChanged;
-                        JobListBox.SelectedItem = e.RemovedItems[0];
-                        JobListBox.SelectionChanged += JobListBox_SelectionChanged;
-                    }
-                    return;
-                }
+        // ==================== 新規 / 開く ====================
 
+        private void NewJobFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmDiscardJobChanges()) return;
+
+            // メモリ上で新規作成。保存はユーザーが「💾 保存」または「📋 名前を付けて保存」を押した時。
+            var job = new Job { Name = "新しいジョブ" };
+            _currentJob = job;
+            LoadJobToForm(job);
+            EditPanel.IsEnabled = true;
+            StepsPanel.IsEnabled = true;
+            // 新規未保存はそのまま dirty として扱う
+            MarkJobDirty();
+        }
+
+        private void OpenJobFileButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmDiscardJobChanges()) return;
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "ジョブファイルを開く",
+                Filter = "Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json|All files (*.*)|*.*"
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            try
+            {
+                var job = JobLoader.LoadFromFile(dialog.FileName);
                 _currentJob = job;
                 LoadJobToForm(job);
                 EditPanel.IsEnabled = true;
                 StepsPanel.IsEnabled = true;
                 ClearJobDirty();
             }
-            else
+            catch (Exception ex)
             {
-                _currentJob = null;
-                EditPanel.IsEnabled = false;
-                StepsPanel.IsEnabled = false;
-                StepEditPanel.IsEnabled = false;
-                ClearJobDirty();
+                MessageBox.Show($"ファイルを開けませんでした:\n{ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void AddJobButton_Click(object sender, RoutedEventArgs e)
+        // ==================== 保存 ====================
+
+        private void SaveJobFileButton_Click(object sender, RoutedEventArgs e)
         {
-            var job = new Job { Name = "新しいジョブ" };
-            JobRegistry.Instance.Jobs.Add(job);
-            JobRegistry.Instance.Save();
-            RefreshJobList();
-
-            for (int i = 0; i < JobListBox.Items.Count; i++)
+            if (_currentJob == null) return;
+            if (string.IsNullOrEmpty(_currentJob.FilePath))
             {
-                if (JobListBox.Items[i] is ListBoxItem li && li.Tag == job)
-                {
-                    JobListBox.SelectedIndex = i;
-                    break;
-                }
+                // 未保存の新規ジョブは SaveAs にフォールバック
+                SaveAsJobFileButton_Click(sender, e);
+                return;
             }
+            SaveCurrentJobToFile(_currentJob.FilePath);
         }
 
-        private void DeleteJobButton_Click(object sender, RoutedEventArgs e)
+        private void SaveAsJobFileButton_Click(object sender, RoutedEventArgs e)
         {
             if (_currentJob == null) return;
 
-            var result = MessageBox.Show(
-                $"ジョブ「{_currentJob.Name}」を削除しますか？",
-                "削除確認",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+            var dialog = new SaveFileDialog
+            {
+                Title = "ジョブファイルに保存",
+                Filter = "Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json",
+                FileName = string.IsNullOrEmpty(_currentJob.FilePath)
+                    ? _currentJob.Name
+                    : Path.GetFileNameWithoutExtension(_currentJob.FilePath)
+            };
+            if (dialog.ShowDialog() != true) return;
 
-            if (result != MessageBoxResult.Yes) return;
+            SaveCurrentJobToFile(dialog.FileName);
+        }
 
-            JobRegistry.Instance.Jobs.Remove(_currentJob);
-            JobRegistry.Instance.Save();
-            _currentJob = null;
-            _currentStep = null;
-            EditPanel.IsEnabled = false;
-            StepsPanel.IsEnabled = false;
-            StepEditPanel.IsEnabled = false;
-            RefreshJobList();
+        private void SaveCurrentJobToFile(string filePath)
+        {
+            if (_currentJob == null) return;
+
+            // フォームの内容を反映してから書き出し
+            _currentJob.Name = NameTextBox.Text.Trim();
+            _currentJob.IsEnabled = EnabledCheckBox.IsChecked == true;
+
+            try
+            {
+                JobLoader.SaveToFile(_currentJob, filePath);
+                UpdateFilePathLabel(_currentJob);
+                ClearJobDirty();
+                ShowStatus($"保存しました: {Path.GetFileName(filePath)}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"保存に失敗しました:\n{ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // ==================== ジョブフォーム ====================
@@ -182,30 +212,6 @@ namespace SampleELT.Dialogs
         private void JobForm_Changed(object sender, RoutedEventArgs e)
         {
             if (_currentJob != null) MarkJobDirty();
-        }
-
-        private void SaveJobButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_currentJob == null) return;
-
-            _currentJob.Name = NameTextBox.Text.Trim();
-            _currentJob.IsEnabled = EnabledCheckBox.IsChecked == true;
-
-            JobRegistry.Instance.Save();
-            RefreshJobList();
-
-            StatusTextBlock.Text = "保存しました";
-            StatusTextBlock.Visibility = Visibility.Visible;
-            var timer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(2)
-            };
-            timer.Tick += (_, _) =>
-            {
-                StatusTextBlock.Visibility = Visibility.Collapsed;
-                timer.Stop();
-            };
-            timer.Start();
         }
 
         // ==================== パイプラインステップ操作 ====================
@@ -249,7 +255,6 @@ namespace SampleELT.Dialogs
             MarkJobDirty();
             RefreshStepsList(_currentJob);
 
-            // 追加したステップを選択
             foreach (JobStepViewModel vm in StepsListView.Items)
             {
                 if (vm.Source == step)
@@ -286,7 +291,6 @@ namespace SampleELT.Dialogs
                 RefreshStepsList(_currentJob);
             }
 
-            // 編集したステップを再選択
             foreach (JobStepViewModel vm in StepsListView.Items)
             {
                 if (vm.Source == _currentStep)
@@ -359,128 +363,22 @@ namespace SampleELT.Dialogs
                 sorted[i].Order = i;
         }
 
-        // ==================== ファイル操作 ====================
+        // ==================== 補助 ====================
 
-        private void NewJobFileButton_Click(object sender, RoutedEventArgs e)
+        private void ShowStatus(string text)
         {
-            var job = new Job { Name = "新しいジョブ" };
-            JobRegistry.Instance.Jobs.Add(job);
-            JobRegistry.Instance.Save();
-            RefreshJobList();
-
-            for (int i = 0; i < JobListBox.Items.Count; i++)
+            StatusTextBlock.Text = text;
+            StatusTextBlock.Visibility = Visibility.Visible;
+            var timer = new System.Windows.Threading.DispatcherTimer
             {
-                if (JobListBox.Items[i] is ListBoxItem li && li.Tag == job)
-                {
-                    JobListBox.SelectedIndex = i;
-                    break;
-                }
-            }
-        }
-
-        private void OpenJobFileButton_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new OpenFileDialog
-            {
-                Title = "ジョブファイルを開く",
-                Filter = "Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json|All files (*.*)|*.*"
+                Interval = TimeSpan.FromSeconds(3)
             };
-            if (dialog.ShowDialog() != true) return;
-
-            try
+            timer.Tick += (_, _) =>
             {
-                var job = JobLoader.LoadFromFile(dialog.FileName);
-
-                // 同じパスのジョブが既にあれば差し替え
-                var existing = JobRegistry.Instance.Jobs.Find(j => j.FilePath == dialog.FileName);
-                if (existing != null)
-                    JobRegistry.Instance.Jobs.Remove(existing);
-
-                JobRegistry.Instance.Jobs.Add(job);
-                JobRegistry.Instance.Save();
-                RefreshJobList();
-
-                // 開いたジョブを選択
-                for (int i = 0; i < JobListBox.Items.Count; i++)
-                {
-                    if (JobListBox.Items[i] is ListBoxItem li && li.Tag == job)
-                    {
-                        JobListBox.SelectedIndex = i;
-                        break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ファイルを開けませんでした:\n{ex.Message}", "エラー",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void SaveJobFileButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_currentJob == null) return;
-
-            if (string.IsNullOrEmpty(_currentJob.FilePath))
-            {
-                SaveAsJobFileButton_Click(sender, e);
-                return;
-            }
-
-            SaveCurrentJobToFile(_currentJob.FilePath);
-        }
-
-        private void SaveAsJobFileButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_currentJob == null) return;
-
-            var dialog = new SaveFileDialog
-            {
-                Title = "ジョブファイルに保存",
-                Filter = "Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json",
-                FileName = string.IsNullOrEmpty(_currentJob.FilePath)
-                    ? _currentJob.Name
-                    : Path.GetFileNameWithoutExtension(_currentJob.FilePath)
+                StatusTextBlock.Visibility = Visibility.Collapsed;
+                timer.Stop();
             };
-            if (dialog.ShowDialog() != true) return;
-
-            SaveCurrentJobToFile(dialog.FileName);
-        }
-
-        private void SaveCurrentJobToFile(string filePath)
-        {
-            if (_currentJob == null) return;
-
-            // フォームの内容を先に反映
-            _currentJob.Name = NameTextBox.Text.Trim();
-            _currentJob.IsEnabled = EnabledCheckBox.IsChecked == true;
-
-            try
-            {
-                JobLoader.SaveToFile(_currentJob, filePath);
-                JobRegistry.Instance.Save();
-                UpdateFilePathLabel(_currentJob);
-                RefreshJobList();
-                ClearJobDirty();
-
-                StatusTextBlock.Text = $"保存しました: {Path.GetFileName(filePath)}";
-                StatusTextBlock.Visibility = Visibility.Visible;
-                var timer = new System.Windows.Threading.DispatcherTimer
-                {
-                    Interval = TimeSpan.FromSeconds(3)
-                };
-                timer.Tick += (_, _) =>
-                {
-                    StatusTextBlock.Visibility = Visibility.Collapsed;
-                    timer.Stop();
-                };
-                timer.Start();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"保存に失敗しました:\n{ex.Message}", "エラー",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            timer.Start();
         }
 
         private void UpdateFilePathLabel(Job? job)

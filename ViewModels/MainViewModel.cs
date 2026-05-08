@@ -319,11 +319,63 @@ namespace SampleELT.ViewModels
             var dialog = new OpenFileDialog
             {
                 Title = "パイプラインを読み込む",
-                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
+                Filter = "Pipeline files (*.json)|*.json|All files (*.*)|*.*"
             };
 
             if (dialog.ShowDialog() != true) return;
+
+            // 選択されたファイルがジョブファイルだった場合は別の経路に誘導する
+            // (OpenFileDialog の Win32 フィルタでは .job.json を除外できないため、選択後に検出する)
+            if (LooksLikeJobFile(dialog.FileName))
+            {
+                var ans = System.Windows.MessageBox.Show(
+                    "選択したファイルはジョブファイル (.job.json) です。\n" +
+                    "パイプラインの「開く」では読み込めません。\n\n" +
+                    "ジョブマネージャー (🔗 ジョブ) を開きますか？",
+                    "ジョブファイルです",
+                    System.Windows.MessageBoxButton.YesNo,
+                    System.Windows.MessageBoxImage.Information);
+                if (ans == System.Windows.MessageBoxResult.Yes)
+                    OpenJobManagerRequested?.Invoke();
+                return;
+            }
+
             LoadPipelineFromFile(dialog.FileName);
+        }
+
+        /// <summary>
+        /// 指定ファイルがジョブファイルらしいかを判定する。
+        /// 拡張子 (.job.json) と内容 (Steps[0] に PipelineFilePath があるか) で判定。
+        /// </summary>
+        private static bool LooksLikeJobFile(string filePath)
+        {
+            // 1. 拡張子で判定 (典型的な命名規則)
+            if (filePath.EndsWith(".job.json", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // 2. 内容で判定 (Steps[0] に PipelineFilePath プロパティがあれば Job)
+            try
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(filePath));
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.Object
+                    && root.TryGetProperty("Steps", out var steps)
+                    && steps.ValueKind == JsonValueKind.Array
+                    && steps.GetArrayLength() > 0)
+                {
+                    var first = steps[0];
+                    if (first.ValueKind == JsonValueKind.Object
+                        && first.TryGetProperty("PipelineFilePath", out _))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                // 読み込み・解析エラー時は Job ではないとみなす (LoadPipelineFromFile 側で通常のエラー処理)
+            }
+            return false;
         }
 
         public void LoadPipelineFromFile(string filePath)
