@@ -6,6 +6,7 @@
         xmlns:vm="clr-namespace:SampleELT.ViewModels"
         xmlns:models="clr-namespace:SampleELT.Models"
         Title="{Binding WindowTitle}"
+        Icon="pack://application:,,,/Assets/app.ico"
         Width="1200" Height="800"
         MinWidth="900" MinHeight="600">
 
