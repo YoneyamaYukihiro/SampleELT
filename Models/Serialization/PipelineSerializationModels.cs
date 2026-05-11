@@ -7,6 +7,7 @@ namespace SampleELT.Models.Serialization
     public class PipelineSerializationModel
     {
         public string Name { get; set; } = "New Pipeline";
+        public LogMode LogMode { get; set; } = LogMode.OnError;
         public List<StepSerializationModel> Steps { get; set; } = new();
         public List<ConnectionSerializationModel> Connections { get; set; } = new();
     }

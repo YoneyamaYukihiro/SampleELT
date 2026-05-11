@@ -70,6 +70,7 @@ namespace SampleELT
         {
             int exitCode = 0;
             var logs = new List<string>();
+            var logMode = LogMode.OnError;
 
             void Log(string msg)
             {
@@ -94,6 +95,7 @@ namespace SampleELT
                     throw new FileNotFoundException($"パイプラインファイルが見つかりません: {pipelineFile}");
 
                 var pipeline = PipelineLoader.LoadFromFile(pipelineFile);
+                logMode = pipeline.LogMode;
                 var progress = new Progress<string>(Log);
                 var engine = new ExecutionEngine();
 
@@ -107,7 +109,7 @@ namespace SampleELT
             }
             finally
             {
-                if (logFile != null)
+                if (ShouldWriteLog(logMode, exitCode != 0) && logFile != null)
                 {
                     try { File.WriteAllLines(logFile, logs); }
                     catch { }
@@ -116,6 +118,15 @@ namespace SampleELT
 
             Shutdown(exitCode);
         }
+
+        /// <summary>LogMode と実行結果からログファイルを書くべきかを判定する。</summary>
+        private static bool ShouldWriteLog(LogMode mode, bool errored) => mode switch
+        {
+            LogMode.Always  => true,
+            LogMode.OnError => errored,
+            LogMode.Never   => false,
+            _               => errored
+        };
 
         /// <summary>
         /// CLI からジョブを実行する (タスクスケジューラから呼び出される想定)。
@@ -126,6 +137,7 @@ namespace SampleELT
         {
             int exitCode = 0;
             var logs = new List<string>();
+            var logMode = LogMode.OnError;
 
             void Log(string msg)
             {
@@ -150,6 +162,7 @@ namespace SampleELT
                     throw new FileNotFoundException($"ジョブファイルが見つかりません: {jobFile}");
 
                 var job = JobLoader.LoadFromFile(jobFile);
+                logMode = job.LogMode;
                 var progress = new Progress<string>(Log);
                 var executor = new JobExecutor();
 
@@ -163,7 +176,7 @@ namespace SampleELT
             }
             finally
             {
-                if (logFile != null)
+                if (ShouldWriteLog(logMode, exitCode != 0) && logFile != null)
                 {
                     try { File.WriteAllLines(logFile, logs); }
                     catch { }

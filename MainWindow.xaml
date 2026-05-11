@@ -4,6 +4,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:SampleELT.Controls"
         xmlns:vm="clr-namespace:SampleELT.ViewModels"
+        xmlns:models="clr-namespace:SampleELT.Models"
         Title="{Binding WindowTitle}"
         Width="1200" Height="800"
         MinWidth="900" MinHeight="600">
@@ -140,6 +141,15 @@
                 </Button.Style>
                 <TextBlock Text="🔗 ジョブ"/>
             </Button>
+            <Separator/>
+            <TextBlock Text="ログ:" VerticalAlignment="Center" Margin="4,0,4,0" Foreground="#424242"/>
+            <ComboBox ToolTip="CLI(--run / --run-job)実行時のログファイル出力モード。UI 実行のログ表示には影響しません"
+                      SelectedValue="{Binding LogMode}" SelectedValuePath="Tag"
+                      Width="120" Height="24" VerticalAlignment="Center" Margin="0,0,2,0">
+                <ComboBoxItem Content="エラー時のみ" Tag="{x:Static models:LogMode.OnError}"/>
+                <ComboBoxItem Content="常に出力"     Tag="{x:Static models:LogMode.Always}"/>
+                <ComboBoxItem Content="出力しない"   Tag="{x:Static models:LogMode.Never}"/>
+            </ComboBox>
         </ToolBar>
 
         <!-- Status Bar (bottom) -->

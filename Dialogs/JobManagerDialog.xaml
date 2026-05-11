@@ -1,6 +1,7 @@
 <Window x:Class="SampleELT.Dialogs.JobManagerDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:SampleELT.Models"
         Title="ジョブ管理"
         Width="780" Height="560"
         MinWidth="640" MinHeight="460"
@@ -85,6 +86,19 @@
                     <CheckBox x:Name="EnabledCheckBox" Content="有効にする"
                               FontSize="12" Margin="0,0,0,12"
                               Checked="JobForm_Changed" Unchecked="JobForm_Changed"/>
+
+                    <!-- ログ出力モード -->
+                    <TextBlock Text="ログ出力モード (CLI 実行時)" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="LogModeComboBox" Height="26" Width="160"
+                              HorizontalAlignment="Left" Margin="0,0,0,12"
+                              SelectedValuePath="Tag"
+                              SelectionChanged="JobForm_Changed"
+                              ToolTip="--run-job 実行時のログファイル出力制御。UI 実行のログ表示には影響しません">
+                        <ComboBoxItem Content="エラー時のみ" Tag="{x:Static models:LogMode.OnError}"/>
+                        <ComboBoxItem Content="常に出力"     Tag="{x:Static models:LogMode.Always}"/>
+                        <ComboBoxItem Content="出力しない"   Tag="{x:Static models:LogMode.Never}"/>
+                    </ComboBox>
 
                     <!-- 最終実行情報 -->
                     <Border Background="#F5F5F5" CornerRadius="4"

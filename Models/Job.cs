@@ -9,6 +9,7 @@ namespace SampleELT.Models
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "";
         public bool IsEnabled { get; set; } = true;
+        public LogMode LogMode { get; set; } = LogMode.OnError;
         public List<JobStep> Steps { get; set; } = new();
 
         /// <summary>現在開いているファイルパス。JSON には含めない。</summary>

@@ -170,6 +170,7 @@ namespace SampleELT.Dialogs
             // フォームの内容を反映してから書き出し
             _currentJob.Name = NameTextBox.Text.Trim();
             _currentJob.IsEnabled = EnabledCheckBox.IsChecked == true;
+            _currentJob.LogMode = LogModeComboBox.SelectedValue is LogMode mode ? mode : LogMode.OnError;
 
             try
             {
@@ -191,6 +192,7 @@ namespace SampleELT.Dialogs
         {
             NameTextBox.Text = job.Name;
             EnabledCheckBox.IsChecked = job.IsEnabled;
+            LogModeComboBox.SelectedValue = job.LogMode;
 
             if (job.LastRunTime.HasValue)
             {

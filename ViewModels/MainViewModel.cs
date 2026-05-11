@@ -51,6 +51,19 @@ namespace SampleELT.ViewModels
 
         public Pipeline CurrentPipeline { get; private set; } = new Pipeline();
 
+        /// <summary>パイプラインのログ出力モード（CLI ヘッドレス実行時のログファイル出力制御）。UI からバインドするためのプロキシ。</summary>
+        public LogMode LogMode
+        {
+            get => CurrentPipeline.LogMode;
+            set
+            {
+                if (CurrentPipeline.LogMode == value) return;
+                CurrentPipeline.LogMode = value;
+                OnPropertyChanged();
+                MarkModified();
+            }
+        }
+
         private CancellationTokenSource? _cts;
 
         // Event fired when a step's settings dialog should open
@@ -268,6 +281,7 @@ namespace SampleELT.ViewModels
                 var pipelineData = new PipelineSerializationModel
                 {
                     Name = CurrentPipeline.Name,
+                    LogMode = CurrentPipeline.LogMode,
                     Steps = CurrentPipeline.Steps.Select(s => new StepSerializationModel
                     {
                         Id = s.Id,
@@ -390,7 +404,11 @@ namespace SampleELT.ViewModels
                 // Clear current state
                 Steps.Clear();
                 Connections.Clear();
-                CurrentPipeline = new Pipeline { Name = pipelineData.Name };
+                CurrentPipeline = new Pipeline
+                {
+                    Name = pipelineData.Name,
+                    LogMode = pipelineData.LogMode
+                };
 
                 // Rebuild steps
                 foreach (var stepData in pipelineData.Steps)
@@ -460,6 +478,7 @@ namespace SampleELT.ViewModels
                 SelectedStep = null;
                 CurrentFilePath = filePath;
                 IsModified = false;
+                OnPropertyChanged(nameof(LogMode));
                 StatusMessage = $"読み込み完了: {filePath}";
                 AddLog($"パイプライン読み込み: {filePath}");
             }
@@ -520,6 +539,7 @@ namespace SampleELT.ViewModels
             SelectedStep = null;
             CurrentFilePath = null;
             IsModified = false;
+            OnPropertyChanged(nameof(LogMode));
             StatusMessage = "新しいパイプライン";
             AddLog("新しいパイプラインを作成しました");
         }

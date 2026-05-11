@@ -20,7 +20,11 @@ namespace SampleELT.Engine
             var pipelineData = JsonSerializer.Deserialize<PipelineSerializationModel>(json)
                 ?? throw new InvalidOperationException("パイプラインの読み込みに失敗しました");
 
-            var pipeline = new Pipeline { Name = pipelineData.Name };
+            var pipeline = new Pipeline
+            {
+                Name = pipelineData.Name,
+                LogMode = pipelineData.LogMode
+            };
 
             foreach (var stepData in pipelineData.Steps)
             {
