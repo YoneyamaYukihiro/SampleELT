@@ -58,6 +58,28 @@
                         </Style>
                     </Button.Style>
                 </Button>
+                <Button x:Name="RunJobButton" Content="▶ 実行"
+                        Height="26" Padding="8,0" Margin="0,0,4,0"
+                        Click="RunJobButton_Click"
+                        ToolTip="現在開いているジョブを実行します。ログはメインウィンドウのログパネルに出力されます">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Background" Value="#4CAF50"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="StopJobButton" Content="■ 停止"
+                        Height="26" Padding="8,0" Margin="0,0,12,0"
+                        IsEnabled="False"
+                        Click="StopJobButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Background" Value="#F44336"/>
+                        </Style>
+                    </Button.Style>
+                </Button>
                 <TextBlock x:Name="FilePathLabel"
                            VerticalAlignment="Center" FontSize="11"
                            Foreground="#616161" Text="（ファイル未保存）"/>
@@ -82,11 +104,6 @@
                              BorderBrush="#CCCCCC" Margin="0,0,0,12"
                              TextChanged="JobForm_Changed"/>
 
-                    <!-- 有効/無効 -->
-                    <CheckBox x:Name="EnabledCheckBox" Content="有効にする"
-                              FontSize="12" Margin="0,0,0,12"
-                              Checked="JobForm_Changed" Unchecked="JobForm_Changed"/>
-
                     <!-- ログ出力モード -->
                     <TextBlock Text="ログ出力モード (CLI 実行時)" FontSize="12" FontWeight="Bold"
                                Foreground="#424242" Margin="0,0,0,4"/>
@@ -100,17 +117,6 @@
                         <ComboBoxItem Content="出力しない"   Tag="{x:Static models:LogMode.Never}"/>
                     </ComboBox>
 
-                    <!-- 最終実行情報 -->
-                    <Border Background="#F5F5F5" CornerRadius="4"
-                            Padding="10,8" Margin="0,0,0,12">
-                        <StackPanel>
-                            <TextBlock Text="最終実行情報" FontSize="11" FontWeight="Bold"
-                                       Foreground="#616161" Margin="0,0,0,4"/>
-                            <TextBlock x:Name="LastRunTextBlock"
-                                       Text="（未実行）" FontSize="11"
-                                       Foreground="#757575" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
                 </StackPanel>
             </ScrollViewer>
 

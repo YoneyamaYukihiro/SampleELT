@@ -45,20 +45,29 @@ namespace SampleELT.Services
         {
             var now = DateTime.Now;
             var store = IScheduleStore.Default;
-            bool anyRan = false;
+            bool anyChanged = false;
 
             foreach (var entry in store.Schedules.Where(s => s.IsEnabled && s.Mode == ScheduleMode.InApp))
             {
                 var lastDue = store.CalcLastDueTime(entry, now);
                 if (lastDue == null) continue;
 
-                if (entry.LastRunTime.HasValue && entry.LastRunTime.Value >= lastDue.Value) continue;
+                // 初回観測 (一度も実行していない) は過去の予定時刻を catch-up しない:
+                // LastRunTime=now を記録して、次の予定時刻まで待たせる。
+                if (!entry.LastRunTime.HasValue)
+                {
+                    entry.LastRunTime = now;
+                    anyChanged = true;
+                    continue;
+                }
+
+                if (entry.LastRunTime.Value >= lastDue.Value) continue;
 
                 await RunEntryAsync(entry);
-                anyRan = true;
+                anyChanged = true;
             }
 
-            if (anyRan) store.Save();
+            if (anyChanged) store.Save();
         }
 
         private async Task RunEntryAsync(ScheduleEntry entry)

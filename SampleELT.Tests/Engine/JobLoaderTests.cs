@@ -86,18 +86,6 @@ namespace SampleELT.Tests.Engine
         }
 
         [Fact]
-        public void SaveAndLoad_IsEnabled_RoundTrips()
-        {
-            var job = new Job { Name = "Disabled Job", IsEnabled = false };
-            var path = TempFile("job_disabled.json");
-
-            JobLoader.SaveToFile(job, path);
-            var loaded = JobLoader.LoadFromFile(path);
-
-            Assert.False(loaded.IsEnabled);
-        }
-
-        [Fact]
         public void FilePathNotSerialized_NotInJson()
         {
             var job = new Job { Name = "FilePath Test" };

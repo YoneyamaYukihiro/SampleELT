@@ -625,7 +625,8 @@ namespace SampleELT
 
         private void OpenJobManagerDialog()
         {
-            var dialog = new JobManagerDialog { Owner = this };
+            var logger = new Progress<string>(msg => _vm.AddLog(msg));
+            var dialog = new JobManagerDialog(logger) { Owner = this };
             dialog.ShowDialog();
         }
 

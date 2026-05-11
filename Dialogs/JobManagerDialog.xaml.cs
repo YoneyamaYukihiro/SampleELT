@@ -2,6 +2,8 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -32,8 +34,15 @@ namespace SampleELT.Dialogs
         private JobStep? _currentStep;
         private bool _isJobDirty;
 
-        public JobManagerDialog()
+        private readonly IProgress<string>? _externalLogger;
+        private CancellationTokenSource? _runCts;
+        private bool _isRunning;
+
+        public JobManagerDialog() : this(null) { }
+
+        public JobManagerDialog(IProgress<string>? externalLogger)
         {
+            _externalLogger = externalLogger;
             InitializeComponent();
             // 起動直後は空: ユーザーが「新規」または「開く」を押すまで編集領域は無効
             DisableEditPanels();
@@ -41,6 +50,13 @@ namespace SampleELT.Dialogs
 
         protected override void OnClosing(CancelEventArgs e)
         {
+            if (_isRunning)
+            {
+                MessageBox.Show("ジョブ実行中はダイアログを閉じられません。停止してから閉じてください。",
+                    "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
+                e.Cancel = true;
+                return;
+            }
             if (!ConfirmDiscardJobChanges())
                 e.Cancel = true;
             base.OnClosing(e);
@@ -169,7 +185,6 @@ namespace SampleELT.Dialogs
 
             // フォームの内容を反映してから書き出し
             _currentJob.Name = NameTextBox.Text.Trim();
-            _currentJob.IsEnabled = EnabledCheckBox.IsChecked == true;
             _currentJob.LogMode = LogModeComboBox.SelectedValue is LogMode mode ? mode : LogMode.OnError;
 
             try
@@ -191,19 +206,7 @@ namespace SampleELT.Dialogs
         private void LoadJobToForm(Job job)
         {
             NameTextBox.Text = job.Name;
-            EnabledCheckBox.IsChecked = job.IsEnabled;
             LogModeComboBox.SelectedValue = job.LogMode;
-
-            if (job.LastRunTime.HasValue)
-            {
-                var status = job.LastRunSuccess == true ? "成功" : "失敗";
-                LastRunTextBlock.Text =
-                    $"{job.LastRunTime.Value:yyyy/MM/dd HH:mm:ss}  [{status}]\n{job.LastRunMessage}";
-            }
-            else
-            {
-                LastRunTextBlock.Text = "（未実行）";
-            }
 
             RefreshStepsList(job);
             _currentStep = null;
@@ -363,6 +366,90 @@ namespace SampleELT.Dialogs
             var sorted = job.Steps.OrderBy(s => s.Order).ToList();
             for (int i = 0; i < sorted.Count; i++)
                 sorted[i].Order = i;
+        }
+
+        // ==================== 手動実行 ====================
+
+        private async void RunJobButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isRunning || _currentJob == null) return;
+
+            // フォームをジョブに反映してから保存（dirty なら確認、未保存ならファイル保存ダイアログ）
+            _currentJob.Name = NameTextBox.Text.Trim();
+            _currentJob.LogMode = LogModeComboBox.SelectedValue is LogMode mode ? mode : LogMode.OnError;
+
+            if (_isJobDirty || string.IsNullOrEmpty(_currentJob.FilePath))
+            {
+                var ans = MessageBox.Show(
+                    "ジョブに未保存の変更があります。保存してから実行しますか？\n（はい=保存して実行 / いいえ=保存せず実行 / キャンセル=中止）",
+                    "未保存の変更",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (ans == MessageBoxResult.Cancel) return;
+                if (ans == MessageBoxResult.Yes)
+                {
+                    SaveJobFileButton_Click(sender, e);
+                    if (_isJobDirty) return; // 保存ダイアログがキャンセルされた場合
+                }
+            }
+
+            _runCts = new CancellationTokenSource();
+            SetRunningState(true);
+            _externalLogger?.Report($"===== ジョブ実行開始: {_currentJob.Name} =====");
+
+            try
+            {
+                var progress = new Progress<string>(msg =>
+                {
+                    _externalLogger?.Report(msg);
+                    StatusTextBlock.Text = msg;
+                    StatusTextBlock.Visibility = Visibility.Visible;
+                });
+
+                var executor = new JobExecutor();
+                await executor.ExecuteAsync(_currentJob, progress, _runCts.Token);
+
+                _externalLogger?.Report($"===== ジョブ実行完了: {_currentJob.Name} =====");
+                ShowStatus("実行完了");
+            }
+            catch (OperationCanceledException)
+            {
+                _externalLogger?.Report($"===== ジョブ実行キャンセル: {_currentJob.Name} =====");
+                ShowStatus("キャンセルされました");
+            }
+            catch (Exception ex)
+            {
+                _externalLogger?.Report($"===== ジョブ実行エラー [{_currentJob.Name}]: {ex.Message} =====");
+                ShowStatus($"エラー: {ex.Message}");
+            }
+            finally
+            {
+                _runCts?.Dispose();
+                _runCts = null;
+                SetRunningState(false);
+            }
+        }
+
+        private void StopJobButton_Click(object sender, RoutedEventArgs e)
+        {
+            _runCts?.Cancel();
+            StatusTextBlock.Text = "停止中...";
+            StatusTextBlock.Visibility = Visibility.Visible;
+        }
+
+        private void SetRunningState(bool running)
+        {
+            _isRunning = running;
+            RunJobButton.IsEnabled  = !running;
+            StopJobButton.IsEnabled = running;
+            NewJobFileButton.IsEnabled    = !running;
+            OpenJobFileButton.IsEnabled   = !running;
+            SaveJobFileButton.IsEnabled   = !running;
+            SaveAsJobFileButton.IsEnabled = !running;
+            EditPanel.IsEnabled  = !running && _currentJob != null;
+            StepsPanel.IsEnabled = !running && _currentJob != null;
+            StepEditPanel.IsEnabled = !running && _currentStep != null;
         }
 
         // ==================== 補助 ====================

@@ -8,18 +8,12 @@ namespace SampleELT.Models
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "";
-        public bool IsEnabled { get; set; } = true;
         public LogMode LogMode { get; set; } = LogMode.OnError;
         public List<JobStep> Steps { get; set; } = new();
 
         /// <summary>現在開いているファイルパス。JSON には含めない。</summary>
         [JsonIgnore]
         public string? FilePath { get; set; }
-
-        // 実行履歴
-        public DateTime? LastRunTime { get; set; }
-        public bool? LastRunSuccess { get; set; }
-        public string LastRunMessage { get; set; } = "";
     }
 
     public class JobStep

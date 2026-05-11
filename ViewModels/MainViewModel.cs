@@ -610,7 +610,7 @@ namespace SampleELT.ViewModels
             };
         }
 
-        private void AddLog(string message)
+        public void AddLog(string message)
         {
             var timestamp = DateTime.Now.ToString("HH:mm:ss");
             LogMessages.Add($"[{timestamp}] {message}");
