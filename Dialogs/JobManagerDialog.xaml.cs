@@ -176,7 +176,11 @@ namespace SampleELT.Dialogs
             };
             if (dialog.ShowDialog() != true) return;
 
-            SaveCurrentJobToFile(EnsureJobJsonExtension(dialog.FileName));
+            // 名前を付けて保存ではジョブ名をファイル名に合わせる (Pipeline と同じ挙動)。
+            // タイトルや FilePathLabel が新ファイルの内容を反映するように NameTextBox を先に更新する。
+            var newPath = EnsureJobJsonExtension(dialog.FileName);
+            NameTextBox.Text = StripJobJsonExtension(Path.GetFileName(newPath));
+            SaveCurrentJobToFile(newPath);
         }
 
         /// <summary>"foo.job.json" → "foo"。Windows の SaveFileDialog の FileName は単一拡張子しか扱えないため自前で剥がす。</summary>
