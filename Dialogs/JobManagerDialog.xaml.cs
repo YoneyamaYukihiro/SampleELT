@@ -172,11 +172,31 @@ namespace SampleELT.Dialogs
                 Filter = "Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json",
                 FileName = string.IsNullOrEmpty(_currentJob.FilePath)
                     ? _currentJob.Name
-                    : Path.GetFileNameWithoutExtension(_currentJob.FilePath)
+                    : StripJobJsonExtension(Path.GetFileName(_currentJob.FilePath))
             };
             if (dialog.ShowDialog() != true) return;
 
-            SaveCurrentJobToFile(dialog.FileName);
+            SaveCurrentJobToFile(EnsureJobJsonExtension(dialog.FileName));
+        }
+
+        /// <summary>"foo.job.json" → "foo"。Windows の SaveFileDialog の FileName は単一拡張子しか扱えないため自前で剥がす。</summary>
+        private static string StripJobJsonExtension(string fileName)
+        {
+            if (fileName.EndsWith(".job.json", StringComparison.OrdinalIgnoreCase))
+                return fileName.Substring(0, fileName.Length - ".job.json".Length);
+            if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                return fileName.Substring(0, fileName.Length - ".json".Length);
+            return Path.GetFileNameWithoutExtension(fileName);
+        }
+
+        /// <summary>SaveFileDialog の返却値を必ず ".job.json" 終端に正規化する。</summary>
+        private static string EnsureJobJsonExtension(string filePath)
+        {
+            if (filePath.EndsWith(".job.json", StringComparison.OrdinalIgnoreCase))
+                return filePath;
+            if (filePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                return filePath.Substring(0, filePath.Length - ".json".Length) + ".job.json";
+            return filePath + ".job.json";
         }
 
         private void SaveCurrentJobToFile(string filePath)
