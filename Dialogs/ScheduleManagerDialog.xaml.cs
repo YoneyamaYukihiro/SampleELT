@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -98,14 +100,11 @@ namespace SampleELT.Dialogs
             NameTextBox.Text = entry.Name;
             EnabledCheckBox.IsChecked = entry.IsEnabled;
 
-            // 実行対象
-            var isPipeline = entry.Target != ScheduleTarget.Job;
-            TargetPipelineRadio.IsChecked = isPipeline;
-            TargetJobRadio.IsChecked = !isPipeline;
-            UpdateTargetPanelVisibility(entry.Target);
-
-            PipelineFileTextBox.Text = entry.PipelineFilePath;
-            JobFileTextBox.Text = entry.JobFilePath;
+            // 実行ファイル: Target に応じてどちらのパスフィールドを使うか決定
+            TargetFileTextBox.Text = entry.Target == ScheduleTarget.Job
+                ? entry.JobFilePath
+                : entry.PipelineFilePath;
+            UpdateTargetKindLabel(TargetFileTextBox.Text);
 
             // スケジュール種類
             TypeComboBox.SelectedIndex = entry.Type switch
@@ -141,18 +140,21 @@ namespace SampleELT.Dialogs
             UpdatePanelVisibility(entry.Type);
         }
 
-        private void TargetRadio_Checked(object sender, RoutedEventArgs e)
+        private void TargetFileTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (PipelinePanel == null) return;
-            var target = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
-            UpdateTargetPanelVisibility(target);
+            if (TargetKindLabel == null) return;
+            UpdateTargetKindLabel(TargetFileTextBox.Text);
         }
 
-        private void UpdateTargetPanelVisibility(ScheduleTarget target)
+        private void UpdateTargetKindLabel(string filePath)
         {
-            if (PipelinePanel == null) return;
-            PipelinePanel.Visibility = target == ScheduleTarget.Pipeline ? Visibility.Visible : Visibility.Collapsed;
-            JobPanel.Visibility      = target == ScheduleTarget.Job      ? Visibility.Visible : Visibility.Collapsed;
+            if (TargetKindLabel == null) return;
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                TargetKindLabel.Text = "種類: -";
+                return;
+            }
+            TargetKindLabel.Text = LooksLikeJobFile(filePath) ? "種類: ジョブ" : "種類: パイプライン";
         }
 
         private void ModeRadio_Checked(object sender, RoutedEventArgs e)
@@ -192,22 +194,41 @@ namespace SampleELT.Dialogs
         {
             var dialog = new OpenFileDialog
             {
-                Title  = "パイプラインファイルを選択",
-                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
+                Title  = "実行ファイルを選択 (パイプライン .json / ジョブ .job.json)",
+                Filter = "Pipeline / Job (*.json;*.job.json)|*.json;*.job.json|Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json|All files (*.*)|*.*"
             };
-            if (dialog.ShowDialog() == true)
-                PipelineFileTextBox.Text = dialog.FileName;
+            if (dialog.ShowDialog() != true) return;
+            TargetFileTextBox.Text = dialog.FileName; // TextChanged 経由で種類ラベルが更新される
         }
 
-        private void BrowseJobButton_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// 選択ファイルがジョブファイルらしいかを判定する。
+        /// 拡張子 (.job.json) と、内容 (Steps[0] に PipelineFilePath があるか) で判定。
+        /// </summary>
+        private static bool LooksLikeJobFile(string filePath)
         {
-            var dialog = new OpenFileDialog
+            if (filePath.EndsWith(".job.json", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            try
             {
-                Title  = "ジョブファイルを選択",
-                Filter = "Job files (*.job.json)|*.job.json|JSON files (*.json)|*.json|All files (*.*)|*.*"
-            };
-            if (dialog.ShowDialog() == true)
-                JobFileTextBox.Text = dialog.FileName;
+                using var doc = JsonDocument.Parse(File.ReadAllText(filePath));
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.Object
+                    && root.TryGetProperty("Steps", out var steps)
+                    && steps.ValueKind == JsonValueKind.Array
+                    && steps.GetArrayLength() > 0
+                    && steps[0].ValueKind == JsonValueKind.Object
+                    && steps[0].TryGetProperty("PipelineFilePath", out _))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+                // 読めなければパイプライン扱い (Save 時にバリデーションで検出される)
+            }
+            return false;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -226,18 +247,14 @@ namespace SampleELT.Dialogs
             if (NameTextBox.Text.Trim() != desiredName)
                 NameTextBox.Text = desiredName;
 
-            // 実行対象ファイルのバリデーション
-            var newTarget = TargetJobRadio.IsChecked == true ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
-            var newPath = newTarget == ScheduleTarget.Pipeline
-                ? PipelineFileTextBox.Text.Trim()
-                : JobFileTextBox.Text.Trim();
-            var fileLabel = newTarget == ScheduleTarget.Pipeline ? "パイプラインファイル" : "ジョブファイル";
+            // 実行ファイルのバリデーション + 種類自動判定
+            var newPath = TargetFileTextBox.Text.Trim();
 
             // 1) 未指定チェック
             if (string.IsNullOrWhiteSpace(newPath))
             {
                 MessageBox.Show(
-                    $"{fileLabel}が指定されていません。\n「参照...」ボタンから選択してください。",
+                    "実行ファイルが指定されていません。\n「参照...」ボタンから選択してください。",
                     "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -246,11 +263,14 @@ namespace SampleELT.Dialogs
             if (!System.IO.File.Exists(newPath))
             {
                 var resp = MessageBox.Show(
-                    $"指定された{fileLabel}が見つかりません:\n{newPath}\n\n" +
+                    $"指定された実行ファイルが見つかりません:\n{newPath}\n\n" +
                     "このまま保存しますか？（実行時にエラーになります）",
                     "ファイル未確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
                 if (resp != MessageBoxResult.Yes) return;
             }
+
+            // ファイルから Target を自動判定
+            var newTarget = LooksLikeJobFile(newPath) ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
 
             entry.Name      = desiredName;
             entry.IsEnabled = EnabledCheckBox.IsChecked == true;

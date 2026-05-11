@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="スケジュール管理"
-        Width="700" Height="720"
-        MinWidth="620" MinHeight="620"
+        Width="700" Height="640"
+        MinWidth="620" MinHeight="540"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
 
@@ -74,72 +74,34 @@
                 <TextBox x:Name="NameTextBox" Height="28" Padding="6,4"
                          BorderBrush="#CCCCCC" Margin="0,0,0,12"/>
 
-                <!-- 実行対象 -->
-                <TextBlock Text="実行対象" FontSize="12" FontWeight="Bold"
-                           Foreground="#424242" Margin="0,0,0,6"/>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                    <RadioButton x:Name="TargetPipelineRadio"
-                                 Content="パイプライン"
-                                 GroupName="ScheduleTarget"
-                                 FontSize="12" IsChecked="True"
-                                 Margin="0,0,16,0"
-                                 Checked="TargetRadio_Checked"/>
-                    <RadioButton x:Name="TargetJobRadio"
-                                 Content="ジョブ"
-                                 GroupName="ScheduleTarget"
-                                 FontSize="12"
-                                 Checked="TargetRadio_Checked"/>
-                </StackPanel>
+                <!-- 実行ファイル (パイプライン .json / ジョブ .job.json を自動判別) -->
+                <TextBlock Text="実行ファイル" FontSize="12" FontWeight="Bold"
+                           Foreground="#424242" Margin="0,0,0,4"/>
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TargetFileTextBox" Height="28" Padding="6,4"
+                             BorderBrush="#CCCCCC" Grid.Column="0"
+                             TextChanged="TargetFileTextBox_TextChanged"/>
+                    <Button Content="参照..." Grid.Column="1"
+                            Height="28" Padding="8,0" Margin="6,0,0,0"
+                            Click="BrowseButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                                <Setter Property="FontSize" Value="12"/>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
+                <TextBlock x:Name="TargetKindLabel" Text="種類: -"
+                           FontSize="11" Foreground="#757575" Margin="0,0,0,12"/>
 
-                <!-- パイプラインファイル -->
-                <StackPanel x:Name="PipelinePanel">
-                    <TextBlock Text="パイプラインファイル" FontSize="12" FontWeight="Bold"
-                               Foreground="#424242" Margin="0,0,0,4"/>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="PipelineFileTextBox" Height="28" Padding="6,4"
-                                 BorderBrush="#CCCCCC" Grid.Column="0"/>
-                        <Button Content="参照..." Grid.Column="1"
-                                Height="28" Padding="8,0" Margin="6,0,0,0"
-                                Click="BrowseButton_Click">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                                    <Setter Property="FontSize" Value="12"/>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </Grid>
-                </StackPanel>
-
-                <!-- ジョブファイル -->
-                <StackPanel x:Name="JobPanel" Visibility="Collapsed">
-                    <TextBlock Text="ジョブファイル" FontSize="12" FontWeight="Bold"
-                               Foreground="#424242" Margin="0,0,0,4"/>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="JobFileTextBox" Height="28" Padding="6,4"
-                                 BorderBrush="#CCCCCC" Grid.Column="0"/>
-                        <Button Content="参照..." Grid.Column="1"
-                                Height="28" Padding="8,0" Margin="6,0,0,0"
-                                Click="BrowseJobButton_Click">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
-                                    <Setter Property="FontSize" Value="12"/>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </Grid>
-                </StackPanel>
-
-                <!-- 有効/無効 -->
-                <CheckBox x:Name="EnabledCheckBox" Content="有効にする"
-                          FontSize="12" Margin="0,0,0,14"/>
+                <!-- 有効/無効 (アプリ内スケジューラ向け。TaskScheduler モードでは Windows 側の有効/無効が優先される) -->
+                <CheckBox x:Name="EnabledCheckBox" Content="アプリ起動中のみ監視する"
+                          FontSize="12" Margin="0,0,0,14"
+                          ToolTip="アプリ内スケジューラで対象を監視するかどうか。Windows タスクスケジューラ モードでは、登録された Windows タスク側の有効/無効が実際の実行を制御します"/>
 
                 <!-- 実行モード -->
                 <TextBlock Text="実行モード" FontSize="12" FontWeight="Bold"

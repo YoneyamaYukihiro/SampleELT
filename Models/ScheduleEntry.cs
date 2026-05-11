@@ -29,7 +29,7 @@ namespace SampleELT.Models
         public ScheduleTarget Target { get; set; } = ScheduleTarget.Pipeline;
         public string PipelineFilePath { get; set; } = "";
         public string JobFilePath { get; set; } = "";
-        public bool IsEnabled { get; set; } = true;
+        public bool IsEnabled { get; set; } = false;
         public ScheduleMode Mode { get; set; } = ScheduleMode.InApp;
         public ScheduleType Type { get; set; } = ScheduleType.Daily;
 
