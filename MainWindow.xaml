@@ -7,8 +7,8 @@
         xmlns:models="clr-namespace:SampleELT.Models"
         Title="{Binding WindowTitle}"
         Icon="pack://application:,,,/Assets/app.ico"
-        Width="1200" Height="800"
-        MinWidth="900" MinHeight="600">
+        Width="1280" Height="800"
+        MinWidth="980" MinHeight="600">
 
     <Window.InputBindings>
         <KeyBinding Key="F5" Command="{Binding RunPipelineCommand}"/>
@@ -186,7 +186,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="4"/>
                 <!-- Right properties panel -->
-                <ColumnDefinition Width="200" MinWidth="150"/>
+                <ColumnDefinition Width="280" MinWidth="200"/>
             </Grid.ColumnDefinitions>
 
             <!-- ==================== LEFT PALETTE PANEL ==================== -->
@@ -525,8 +525,9 @@
                     <!-- Header -->
                     <Border DockPanel.Dock="Top" Background="#ECEFF1" Padding="8,5"
                             BorderBrush="#DDDDDD" BorderThickness="0,0,0,1">
-                        <DockPanel>
-                            <TextBlock Text="📅 スケジュール" FontWeight="Bold" FontSize="13"
+                        <DockPanel LastChildFill="False">
+                            <TextBlock DockPanel.Dock="Left"
+                                       Text="📅 スケジュール" FontWeight="Bold" FontSize="13"
                                        Foreground="#424242" VerticalAlignment="Center"/>
                             <Button DockPanel.Dock="Right" Content="🔄"
                                     HorizontalAlignment="Right"
@@ -547,6 +548,17 @@
                                     </Style>
                                 </Button.Style>
                             </Button>
+                            <CheckBox x:Name="ShowEnabledOnlyCheckBox"
+                                      DockPanel.Dock="Right"
+                                      Content="有効のみ"
+                                      IsChecked="True"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,8,0"
+                                      FontSize="11"
+                                      Foreground="#424242"
+                                      ToolTip="チェック時: 有効なスケジュールのみ表示。外すと無効のスケジュールも含めて全件表示"
+                                      Checked="ShowEnabledOnlyCheckBox_Changed"
+                                      Unchecked="ShowEnabledOnlyCheckBox_Changed"/>
                         </DockPanel>
                     </Border>
                     <!-- Schedule cards list -->

@@ -26,6 +26,7 @@ namespace SampleELT.Models
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "";
+        public string Comment { get; set; } = "";
         public ScheduleTarget Target { get; set; } = ScheduleTarget.Pipeline;
         public string PipelineFilePath { get; set; } = "";
         public string JobFilePath { get; set; } = "";

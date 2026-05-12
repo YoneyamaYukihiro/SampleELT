@@ -368,14 +368,23 @@ namespace SampleELT
 
         private void RefreshSchedulePanel()
         {
+            // XAML の IsChecked="True" 初期化で Checked イベントが
+            // InitializeComponent 途中に発火する場合、ScheduleStatusPanel がまだ未構築
+            if (ScheduleStatusPanel == null) return;
+
             ScheduleStatusPanel.Children.Clear();
-            var schedules = ScheduleRegistry.Instance.Schedules;
+            var showEnabledOnly = ShowEnabledOnlyCheckBox?.IsChecked == true;
+            var schedules = ScheduleRegistry.Instance.Schedules
+                .Where(s => !showEnabledOnly || s.IsEnabled)
+                .ToList();
 
             if (schedules.Count == 0)
             {
                 ScheduleStatusPanel.Children.Add(new TextBlock
                 {
-                    Text = "スケジュールがありません\n「スケジュール管理」から追加してください",
+                    Text = showEnabledOnly
+                        ? "有効なスケジュールがありません\n「有効のみ」を外すと全件表示します"
+                        : "スケジュールがありません\n「スケジュール管理」から追加してください",
                     FontSize = 11,
                     Foreground = Brushes.Gray,
                     TextWrapping = TextWrapping.Wrap,
@@ -390,17 +399,6 @@ namespace SampleELT
 
         private UIElement BuildScheduleCard(ScheduleEntry entry)
         {
-            // ステータス色の決定
-            Color dotColor;
-            if (!entry.IsEnabled)
-                dotColor = Color.FromRgb(0x9E, 0x9E, 0x9E);      // gray
-            else if (entry.LastRunSuccess == false)
-                dotColor = Color.FromRgb(0xF4, 0x43, 0x36);      // red
-            else if (entry.LastRunSuccess == true)
-                dotColor = Color.FromRgb(0x4C, 0xAF, 0x50);      // green
-            else
-                dotColor = Color.FromRgb(0x21, 0x96, 0xF3);      // blue (未実行)
-
             // スケジュール種別の説明
             var typeDesc = entry.Type switch
             {
@@ -461,12 +459,13 @@ namespace SampleELT
                 Orientation = Orientation.Horizontal,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            leftStack.Children.Add(new Ellipse
+            leftStack.Children.Add(new TextBlock
             {
-                Width = 8, Height = 8,
-                Fill = new SolidColorBrush(dotColor),
+                Text = entry.Target == ScheduleTarget.Job ? "📦" : "📄",
+                FontSize = 12,
                 Margin = new Thickness(0, 0, 6, 0),
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = entry.Target == ScheduleTarget.Job ? "ジョブ" : "パイプライン"
             });
             leftStack.Children.Add(new TextBlock
             {
@@ -724,6 +723,11 @@ namespace SampleELT
         }
 
         private void RefreshSchedule_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshSchedulePanel();
+        }
+
+        private void ShowEnabledOnlyCheckBox_Changed(object sender, RoutedEventArgs e)
         {
             RefreshSchedulePanel();
         }

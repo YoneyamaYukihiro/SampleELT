@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:models="clr-namespace:SampleELT.Models"
         Title="ジョブ管理"
-        Width="780" Height="560"
-        MinWidth="640" MinHeight="460"
+        Width="780" Height="680"
+        MinWidth="640" MinHeight="580"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize">
 
@@ -117,6 +117,17 @@
                         <ComboBoxItem Content="出力しない"   Tag="{x:Static models:LogMode.Never}"/>
                     </ComboBox>
 
+                    <!-- コメント -->
+                    <TextBlock Text="コメント" FontSize="12" FontWeight="Bold"
+                               Foreground="#424242" Margin="0,0,0,4"/>
+                    <TextBox x:Name="JobCommentTextBox"
+                             MinHeight="40" MaxHeight="120"
+                             Padding="6,4" BorderBrush="#CCCCCC" Margin="0,0,0,12"
+                             AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"
+                             TextChanged="JobForm_Changed"
+                             ToolTip="ジョブ全体に対する補足メモ。.job.json に Comment として保存されます"/>
+
                 </StackPanel>
             </ScrollViewer>
 
@@ -179,7 +190,8 @@
                                    Foreground="#424242" Width="72"/>
                         <TextBox x:Name="StepFileTextBox" Grid.Column="1"
                                  Height="24" Padding="4,2" FontSize="11"
-                                 BorderBrush="#CCCCCC"/>
+                                 BorderBrush="#CCCCCC"
+                                 TextChanged="StepField_Changed"/>
                         <Button Content="参照..." Grid.Column="2"
                                 Height="24" Padding="6,0" Margin="4,0,0,0" FontSize="11"
                                 Click="StepBrowseButton_Click">
@@ -190,9 +202,22 @@
                             </Button.Style>
                         </Button>
                     </Grid>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="コメント：" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="#424242" Width="72"/>
+                        <TextBox x:Name="StepNameTextBox" Grid.Column="1"
+                                 Height="24" Padding="4,2" FontSize="11"
+                                 BorderBrush="#CCCCCC"
+                                 TextChanged="StepField_Changed"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal">
                         <CheckBox x:Name="ContinueOnErrorCheckBox"
-                                  Content="エラー時も続行する" FontSize="11" Margin="72,0,0,0"/>
+                                  Content="エラー時も続行する" FontSize="11" Margin="72,0,0,0"
+                                  Checked="StepField_Changed" Unchecked="StepField_Changed"/>
                         <Button x:Name="ApplyStepButton" Content="適用"
                                 Height="24" Padding="10,0" Margin="16,0,4,0" FontSize="11"
                                 Click="ApplyStepButton_Click">
@@ -234,17 +259,6 @@
                             </Button.Style>
                         </Button>
                     </StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="コメント：" FontSize="11" VerticalAlignment="Center"
-                                   Foreground="#424242" Width="72"/>
-                        <TextBox x:Name="StepNameTextBox" Grid.Column="1"
-                                 Height="24" Padding="4,2" FontSize="11"
-                                 BorderBrush="#CCCCCC"/>
-                    </Grid>
                 </StackPanel>
             </Border>
         </Grid>

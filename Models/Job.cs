@@ -8,6 +8,7 @@ namespace SampleELT.Models
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "";
+        public string Comment { get; set; } = "";
         public LogMode LogMode { get; set; } = LogMode.OnError;
         public List<JobStep> Steps { get; set; } = new();
 

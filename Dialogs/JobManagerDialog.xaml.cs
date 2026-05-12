@@ -33,6 +33,7 @@ namespace SampleELT.Dialogs
         private Job? _currentJob;
         private JobStep? _currentStep;
         private bool _isJobDirty;
+        private bool _suppressStepEvents;
 
         private readonly IProgress<string>? _externalLogger;
         private CancellationTokenSource? _runCts;
@@ -209,6 +210,7 @@ namespace SampleELT.Dialogs
 
             // フォームの内容を反映してから書き出し
             _currentJob.Name = NameTextBox.Text.Trim();
+            _currentJob.Comment = JobCommentTextBox.Text;
             _currentJob.LogMode = LogModeComboBox.SelectedValue is LogMode mode ? mode : LogMode.OnError;
 
             try
@@ -230,6 +232,7 @@ namespace SampleELT.Dialogs
         private void LoadJobToForm(Job job)
         {
             NameTextBox.Text = job.Name;
+            JobCommentTextBox.Text = job.Comment;
             LogModeComboBox.SelectedValue = job.LogMode;
 
             RefreshStepsList(job);
@@ -259,9 +262,17 @@ namespace SampleELT.Dialogs
             if (StepsListView.SelectedItem is JobStepViewModel vm)
             {
                 _currentStep = vm.Source;
-                StepNameTextBox.Text = vm.Source.Name;
-                StepFileTextBox.Text = vm.Source.PipelineFilePath;
-                ContinueOnErrorCheckBox.IsChecked = vm.Source.ContinueOnError;
+                _suppressStepEvents = true;
+                try
+                {
+                    StepNameTextBox.Text = vm.Source.Name;
+                    StepFileTextBox.Text = vm.Source.PipelineFilePath;
+                    ContinueOnErrorCheckBox.IsChecked = vm.Source.ContinueOnError;
+                }
+                finally
+                {
+                    _suppressStepEvents = false;
+                }
                 StepEditPanel.IsEnabled = true;
             }
             else
@@ -269,6 +280,16 @@ namespace SampleELT.Dialogs
                 _currentStep = null;
                 StepEditPanel.IsEnabled = false;
             }
+        }
+
+        /// <summary>
+        /// ステップ編集パネル下段（コメント／ファイル／エラー時続行）が編集された時のハンドラ。
+        /// 「適用」未押下でも dirty 扱いにし、未保存のままダイアログを閉じようとした際に警告する。
+        /// </summary>
+        private void StepField_Changed(object sender, EventArgs e)
+        {
+            if (_suppressStepEvents) return;
+            if (_currentJob != null) MarkJobDirty();
         }
 
         private void AddStepButton_Click(object sender, RoutedEventArgs e)
@@ -400,6 +421,7 @@ namespace SampleELT.Dialogs
 
             // フォームをジョブに反映してから保存（dirty なら確認、未保存ならファイル保存ダイアログ）
             _currentJob.Name = NameTextBox.Text.Trim();
+            _currentJob.Comment = JobCommentTextBox.Text;
             _currentJob.LogMode = LogModeComboBox.SelectedValue is LogMode mode ? mode : LogMode.OnError;
 
             if (_isJobDirty || string.IsNullOrEmpty(_currentJob.FilePath))

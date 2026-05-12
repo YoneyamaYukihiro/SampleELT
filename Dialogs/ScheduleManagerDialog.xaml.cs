@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Win32;
 using SampleELT.Models;
 using SampleELT.Services;
@@ -28,11 +29,27 @@ namespace SampleELT.Dialogs
             ScheduleListBox.Items.Clear();
             foreach (var entry in ScheduleRegistry.Instance.Schedules)
             {
+                var targetIcon = entry.Target == ScheduleTarget.Job ? "📦" : "📄";
                 var item = new ListBoxItem
                 {
-                    Content = $"{(entry.IsEnabled ? "●" : "○")} {entry.Name}",
-                    Tag = entry
+                    Content = $"{targetIcon} {entry.Name}",
+                    Tag = entry,
+                    ToolTip = (entry.Target == ScheduleTarget.Job ? "ジョブ" : "パイプライン")
+                              + (entry.IsEnabled ? " (有効)" : " (無効)"),
+                    Padding = new Thickness(6, 3, 6, 3)
                 };
+
+                if (entry.IsEnabled)
+                {
+                    item.Foreground = new SolidColorBrush(Color.FromRgb(0x21, 0x21, 0x21));
+                    item.Background = Brushes.Transparent;
+                }
+                else
+                {
+                    item.Foreground = new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
+                    item.Background = new SolidColorBrush(Color.FromRgb(0xEE, 0xEE, 0xEE));
+                }
+
                 ScheduleListBox.Items.Add(item);
             }
         }
@@ -120,6 +137,7 @@ namespace SampleELT.Dialogs
             _suppressEvents = true;
 
             NameTextBox.Text = entry.Name;
+            CommentTextBox.Text = entry.Comment;
             EnabledCheckBox.IsChecked = entry.IsEnabled;
 
             // 実行ファイル: Target に応じてどちらのパスフィールドを使うか決定
@@ -295,6 +313,7 @@ namespace SampleELT.Dialogs
             var newTarget = LooksLikeJobFile(newPath) ? ScheduleTarget.Job : ScheduleTarget.Pipeline;
 
             entry.Name      = desiredName;
+            entry.Comment   = CommentTextBox.Text;
             entry.IsEnabled = EnabledCheckBox.IsChecked == true;
             entry.Target    = newTarget;
 
