@@ -22,9 +22,10 @@ namespace SampleELT.Engine
                 ct.ThrowIfCancellationRequested();
 
                 var jobStep = steps[i];
+                var fileName = System.IO.Path.GetFileNameWithoutExtension(jobStep.PipelineFilePath);
                 var stepLabel = string.IsNullOrWhiteSpace(jobStep.Name)
-                    ? System.IO.Path.GetFileNameWithoutExtension(jobStep.PipelineFilePath)
-                    : jobStep.Name;
+                    ? fileName
+                    : $"{fileName} « {jobStep.Name} »";
 
                 progress.Report($"[{i + 1}/{steps.Count}] パイプライン実行: {stepLabel}");
 

@@ -743,9 +743,7 @@ namespace SampleELT
         private void About_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(
-                "SampleELT - ETL Designer\nVersion 1.0\n\n" +
-                "Pentaho Spoon スタイルの ETL ツール\n" +
-                ".NET 8 / WPF",
+                $"SampleELT\nVersion {App.AppVersion}",
                 "バージョン情報",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);

@@ -69,6 +69,28 @@ namespace SampleELT.Dialogs
             }
         }
 
+        private void MoveUp_Click(object sender, RoutedEventArgs e)
+        {
+            var idx = ScheduleListBox.SelectedIndex;
+            if (idx <= 0) return;
+            var list = ScheduleRegistry.Instance.Schedules;
+            (list[idx - 1], list[idx]) = (list[idx], list[idx - 1]);
+            ScheduleRegistry.Instance.Save();
+            RefreshList();
+            ScheduleListBox.SelectedIndex = idx - 1;
+        }
+
+        private void MoveDown_Click(object sender, RoutedEventArgs e)
+        {
+            var idx = ScheduleListBox.SelectedIndex;
+            var list = ScheduleRegistry.Instance.Schedules;
+            if (idx < 0 || idx >= list.Count - 1) return;
+            (list[idx + 1], list[idx]) = (list[idx], list[idx + 1]);
+            ScheduleRegistry.Instance.Save();
+            RefreshList();
+            ScheduleListBox.SelectedIndex = idx + 1;
+        }
+
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
             if (_current == null) return;

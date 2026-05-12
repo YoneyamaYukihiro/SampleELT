@@ -14,6 +14,11 @@ namespace SampleELT
 {
     public partial class App : Application
     {
+        /// <summary>csproj の &lt;Version&gt; から取得したアプリのバージョン (Major.Minor.Build 形式)。</summary>
+        public static string AppVersion { get; } =
+            System.Reflection.Assembly.GetExecutingAssembly()
+                .GetName().Version?.ToString(3) ?? "?";
+
         // 親プロセスのコンソールにアタッチ（コマンドプロンプトから起動時に出力できるようにする）
         [DllImport("kernel32.dll")]
         private static extern bool AttachConsole(int dwProcessId);

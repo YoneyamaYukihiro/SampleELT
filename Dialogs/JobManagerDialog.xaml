@@ -152,12 +152,12 @@
                             <GridView>
                                 <GridViewColumn Header="順序" Width="46"
                                                 DisplayMemberBinding="{Binding DisplayOrder}"/>
-                                <GridViewColumn Header="名前" Width="120"
-                                                DisplayMemberBinding="{Binding Name}"/>
                                 <GridViewColumn Header="パイプラインファイル" Width="260"
                                                 DisplayMemberBinding="{Binding PipelineFilePath}"/>
                                 <GridViewColumn Header="エラー時" Width="70"
                                                 DisplayMemberBinding="{Binding ContinueOnErrorLabel}"/>
+                                <GridViewColumn Header="コメント" Width="160"
+                                                DisplayMemberBinding="{Binding Name}"/>
                             </GridView>
                         </ListView.View>
                     </ListView>
@@ -169,17 +169,6 @@
                     Background="#F9FBE7" BorderBrush="#C5E1A5" BorderThickness="1" CornerRadius="4"
                     Padding="10,8">
                 <StackPanel x:Name="StepEditPanel" IsEnabled="False">
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="ステップ名：" FontSize="11" VerticalAlignment="Center"
-                                   Foreground="#424242" Width="72"/>
-                        <TextBox x:Name="StepNameTextBox" Grid.Column="1"
-                                 Height="24" Padding="4,2" FontSize="11"
-                                 BorderBrush="#CCCCCC"/>
-                    </Grid>
                     <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -201,7 +190,7 @@
                             </Button.Style>
                         </Button>
                     </Grid>
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <CheckBox x:Name="ContinueOnErrorCheckBox"
                                   Content="エラー時も続行する" FontSize="11" Margin="72,0,0,0"/>
                         <Button x:Name="ApplyStepButton" Content="適用"
@@ -245,6 +234,17 @@
                             </Button.Style>
                         </Button>
                     </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="コメント：" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="#424242" Width="72"/>
+                        <TextBox x:Name="StepNameTextBox" Grid.Column="1"
+                                 Height="24" Padding="4,2" FontSize="11"
+                                 BorderBrush="#CCCCCC"/>
+                    </Grid>
                 </StackPanel>
             </Border>
         </Grid>
