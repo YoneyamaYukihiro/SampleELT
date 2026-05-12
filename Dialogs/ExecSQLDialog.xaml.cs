@@ -52,7 +52,7 @@ namespace SampleELT.Dialogs
         private void ManageConnections_Click(object sender, RoutedEventArgs e)
         {
             var currentId = (ConnectionCombo.SelectedItem as DbConnectionInfo)?.Id;
-            var dialog = new ConnectionManagerDialog { Owner = this };
+            var dialog = new ConnectionManagerDialog(currentId) { Owner = this };
             dialog.ShowDialog();
             RefreshConnectionList(currentId);
         }

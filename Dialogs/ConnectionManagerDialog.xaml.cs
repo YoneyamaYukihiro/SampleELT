@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Data.SqlClient;
@@ -16,10 +17,17 @@ namespace SampleELT.Dialogs
         private DbConnectionInfo? _currentConnection;
         private bool _suppressChangeEvents;
 
-        public ConnectionManagerDialog()
+        public ConnectionManagerDialog(Guid? initialSelectionId = null)
         {
             InitializeComponent();
             ConnectionListBox.ItemsSource = ConnectionRegistry.Instance.Connections;
+
+            if (initialSelectionId.HasValue)
+            {
+                var target = ConnectionRegistry.Instance.Connections
+                    .FirstOrDefault(c => c.Id == initialSelectionId.Value);
+                if (target != null) ConnectionListBox.SelectedItem = target;
+            }
         }
 
         private void ConnectionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -225,6 +233,23 @@ namespace SampleELT.Dialogs
             ConnectionListBox.SelectedItem = conn;
             ConnNameBox.Focus();
             ConnNameBox.SelectAll();
+        }
+
+        private void MoveUp_Click(object sender, RoutedEventArgs e)
+        {
+            var idx = ConnectionListBox.SelectedIndex;
+            if (idx <= 0) return;
+            ConnectionRegistry.Instance.Connections.Move(idx, idx - 1);
+            ConnectionRegistry.Instance.Save();
+        }
+
+        private void MoveDown_Click(object sender, RoutedEventArgs e)
+        {
+            var idx = ConnectionListBox.SelectedIndex;
+            var coll = ConnectionRegistry.Instance.Connections;
+            if (idx < 0 || idx >= coll.Count - 1) return;
+            coll.Move(idx, idx + 1);
+            ConnectionRegistry.Instance.Save();
         }
 
         private void DeleteConnection_Click(object sender, RoutedEventArgs e)
