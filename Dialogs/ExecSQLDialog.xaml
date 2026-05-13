@@ -29,16 +29,22 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="8"/>
-                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ComboBox x:Name="ConnectionCombo"
                           Grid.Column="0" Height="28"
                           DisplayMemberPath="DisplayName"/>
                 <Button Grid.Column="2"
                         Content="⚙ 接続設定管理"
-                        Height="28"
-                        FontSize="11"
+                        Height="28" FontSize="11"
                         Click="ManageConnections_Click"
+                        Style="{StaticResource PrimaryButtonStyle}"/>
+                <Button Grid.Column="4"
+                        Content="🔗 接続テスト"
+                        Height="28" FontSize="11"
+                        Click="TestConnection_Click"
                         Style="{StaticResource PrimaryButtonStyle}"/>
             </Grid>
             <TextBlock x:Name="NoConnectionHint"
@@ -73,26 +79,15 @@
         </StackPanel>
 
         <!-- ボタン -->
-        <Grid Grid.Row="5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Button Grid.Column="0"
-                    Content="🔗 接続テスト"
-                    Width="110" Height="30"
-                    Click="TestConnection_Click"
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK"
+                    Width="80" Height="30"
+                    Margin="0,0,8,0"
+                    Click="OK_Click"
                     Style="{StaticResource PrimaryButtonStyle}"/>
-            <StackPanel Grid.Column="2" Orientation="Horizontal">
-                <Button Content="OK"
-                        Width="80" Height="30"
-                        Margin="0,0,8,0"
-                        Click="OK_Click"
-                        Style="{StaticResource PrimaryButtonStyle}"/>
-                <Button Content="キャンセル"
-                        Width="80" Height="30"
-                        Click="Cancel_Click">
+            <Button Content="キャンセル"
+                    Width="80" Height="30"
+                    Click="Cancel_Click">
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="Background" Value="#EEEEEE"/>
@@ -120,7 +115,6 @@
                         </Style>
                     </Button.Style>
                 </Button>
-            </StackPanel>
-        </Grid>
+        </StackPanel>
     </Grid>
 </Window>
