@@ -608,6 +608,8 @@ namespace SampleELT
         {
             var dialog = new ConnectionManagerDialog { Owner = this };
             dialog.ShowDialog();
+            // 接続名の変更を全ノードの「接続設定名」ラベルへ即時反映
+            _vm.RefreshAllConnectionLabels();
         }
 
         private void ScheduleManager_Click(object sender, RoutedEventArgs e)

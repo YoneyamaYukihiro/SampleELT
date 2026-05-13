@@ -632,5 +632,16 @@ namespace SampleELT.ViewModels
             connVm.Source.NotifyConnectionChanged();
             connVm.Target.NotifyConnectionChanged();
         }
+
+        /// <summary>
+        /// 全ノードの接続設定名ラベル (StepNodeViewModel.ConnectionLabel) を再評価させる。
+        /// ConnectionManagerDialog で接続名を変更した直後など、ConnectionRegistry の
+        /// 状態が変わったときに呼ぶ。
+        /// </summary>
+        public void RefreshAllConnectionLabels()
+        {
+            foreach (var stepVm in Steps)
+                stepVm.NotifyConnectionChanged();
+        }
     }
 }
