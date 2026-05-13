@@ -277,7 +277,7 @@ namespace SampleELT
                 kv => kv.Key,
                 kv => kv.Value?.ToString());
 
-            _dialogService.ShowSettingsDialog(this, stepVm);
+            _dialogService.ShowSettingsDialog(this, stepVm, _vm.CurrentPipeline);
 
             // 実際に値が変わった時だけ dirty にする
             bool changed = step.Name != snapshotName
@@ -725,6 +725,14 @@ namespace SampleELT
         private void RefreshSchedule_Click(object sender, RoutedEventArgs e)
         {
             RefreshSchedulePanel();
+        }
+
+        private void DeleteConnection_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem mi && mi.Tag is ConnectionViewModel connVm)
+            {
+                _vm.DeleteConnection(connVm);
+            }
         }
 
         private void ShowEnabledOnlyCheckBox_Changed(object sender, RoutedEventArgs e)

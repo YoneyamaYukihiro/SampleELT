@@ -332,8 +332,7 @@
 
                                 <!-- Connection lines layer -->
                                 <ItemsControl x:Name="ConnectionsControl"
-                                              ItemsSource="{Binding Connections}"
-                                              IsHitTestVisible="False">
+                                              ItemsSource="{Binding Connections}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <Canvas Width="2000" Height="1500"/>
@@ -342,13 +341,29 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Canvas>
-                                                <!-- Connection line -->
+                                                <!-- Hit-test 用透明太線 (右クリック削除のため幅広く取る) -->
                                                 <Line X1="{Binding X1}" Y1="{Binding Y1}"
                                                       X2="{Binding X2}" Y2="{Binding Y2}"
-                                                      Stroke="#2196F3" StrokeThickness="2"/>
+                                                      Stroke="Transparent" StrokeThickness="12"
+                                                      Cursor="Hand"
+                                                      ToolTip="右クリックで削除">
+                                                    <Line.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="この接続を削除"
+                                                                      Click="DeleteConnection_Click"
+                                                                      Tag="{Binding}"/>
+                                                        </ContextMenu>
+                                                    </Line.ContextMenu>
+                                                </Line>
+                                                <!-- 表示用の接続線 (細い実線) -->
+                                                <Line X1="{Binding X1}" Y1="{Binding Y1}"
+                                                      X2="{Binding X2}" Y2="{Binding Y2}"
+                                                      Stroke="#2196F3" StrokeThickness="2"
+                                                      IsHitTestVisible="False"/>
                                                 <!-- Arrowhead: tip at X2,Y2, pointing in ArrowAngle direction -->
                                                 <Polygon Points="0,0 -12,-5 -12,5"
                                                          Fill="#2196F3"
+                                                         IsHitTestVisible="False"
                                                          RenderTransformOrigin="0,0">
                                                     <Polygon.RenderTransform>
                                                         <TransformGroup>

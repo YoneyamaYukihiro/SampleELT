@@ -621,5 +621,16 @@ namespace SampleELT.ViewModels
             SelectedStep = stepVm;
             DeleteSelectedStep();
         }
+
+        public void DeleteConnection(ConnectionViewModel connVm)
+        {
+            if (!Connections.Contains(connVm)) return;
+            Connections.Remove(connVm);
+            CurrentPipeline.Connections.Remove(connVm.Connection);
+            AddLog($"接続削除: {connVm.Source.DisplayName} → {connVm.Target.DisplayName}");
+            IsModified = true;
+            connVm.Source.NotifyConnectionChanged();
+            connVm.Target.NotifyConnectionChanged();
+        }
     }
 }
