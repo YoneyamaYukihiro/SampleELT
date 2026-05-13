@@ -34,14 +34,20 @@
             <TextBlock Text="演算タイプ" FontWeight="Bold" Margin="0,0,0,4"/>
             <ComboBox x:Name="ExpressionTypeCombo" Height="28"
                       SelectionChanged="ExpressionTypeCombo_SelectionChanged">
-                <ComboBoxItem Content="add" IsSelected="True"/>
-                <ComboBoxItem Content="subtract"/>
-                <ComboBoxItem Content="multiply"/>
-                <ComboBoxItem Content="divide"/>
-                <ComboBoxItem Content="concat"/>
-                <ComboBoxItem Content="constant"/>
-                <ComboBoxItem Content="dateDiffMinutes"/>
+                <ComboBoxItem Content="add"             ToolTip="フィールド1 + フィールド2 を出力フィールドに格納" IsSelected="True"/>
+                <ComboBoxItem Content="subtract"        ToolTip="フィールド1 − フィールド2"/>
+                <ComboBoxItem Content="multiply"        ToolTip="フィールド1 × フィールド2"/>
+                <ComboBoxItem Content="divide"          ToolTip="フィールド1 ÷ フィールド2 (0 除算は null)"/>
+                <ComboBoxItem Content="concat"          ToolTip="フィールド1 と フィールド2 を文字列として連結"/>
+                <ComboBoxItem Content="constant"        ToolTip="定数値を出力フィールドに設定。フィールド入力は不要"/>
+                <ComboBoxItem Content="dateDiffMinutes" ToolTip="(フィールド1 - フィールド2) の日時差を分単位で算出"/>
             </ComboBox>
+            <Border Background="#F5F5F5" CornerRadius="4" Padding="8,4" Margin="0,4,0,0">
+                <TextBlock x:Name="ExpressionDescription"
+                           FontSize="11" Foreground="#424242"
+                           TextWrapping="Wrap"
+                           Text="フィールド1 + フィールド2 を出力フィールドに格納"/>
+            </Border>
         </StackPanel>
 
         <!-- Field1 -->

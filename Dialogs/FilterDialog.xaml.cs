@@ -33,12 +33,14 @@ namespace SampleELT.Dialogs
             }
 
             UpdateValueFieldState(op);
+            UpdateOperatorDescription(op);
         }
 
         private void OperatorCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selectedOp = (OperatorCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "equals";
             UpdateValueFieldState(selectedOp);
+            UpdateOperatorDescription(selectedOp);
         }
 
         private void UpdateValueFieldState(string op)
@@ -55,6 +57,24 @@ namespace SampleELT.Dialogs
             {
                 ValueBox.Background = System.Windows.Media.Brushes.White;
             }
+        }
+
+        private void UpdateOperatorDescription(string op)
+        {
+            if (OperatorDescription == null) return;
+            OperatorDescription.Text = op switch
+            {
+                "equals"         => "フィールド値が「値」と等しい行を通過 (= 値)",
+                "notEquals"      => "フィールド値が「値」と等しくない行を通過 (≠ 値)",
+                "contains"       => "フィールド値に「値」を部分文字列として含む行を通過 (LIKE %値%)",
+                "greaterThan"    => "フィールド値が「値」より大きい行を通過 (> 値)",
+                "greaterOrEqual" => "フィールド値が「値」以上の行を通過 (≥ 値)",
+                "lessThan"       => "フィールド値が「値」より小さい行を通過 (< 値)",
+                "lessOrEqual"    => "フィールド値が「値」以下の行を通過 (≤ 値)",
+                "isNull"         => "フィールド値が NULL (空) の行のみ通過。「値」は使用しない",
+                "isNotNull"      => "フィールド値が NULL でない行のみ通過。「値」は使用しない",
+                _                => ""
+            };
         }
 
         private void OK_Click(object sender, RoutedEventArgs e)

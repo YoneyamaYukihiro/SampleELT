@@ -24,6 +24,26 @@ namespace SampleELT.Dialogs
                     break;
                 }
             }
+            UpdateJoinTypeDescription(joinType);
+        }
+
+        private void JoinTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selected = (JoinTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "INNER";
+            UpdateJoinTypeDescription(selected);
+        }
+
+        private void UpdateJoinTypeDescription(string joinType)
+        {
+            if (JoinTypeDescription == null) return;
+            JoinTypeDescription.Text = joinType switch
+            {
+                "INNER"       => "左右両方でキーが一致する行のみ出力 (SQL INNER JOIN 相当)",
+                "LEFT OUTER"  => "左の全行を出力。右に対応行が無ければ右側カラムは null",
+                "RIGHT OUTER" => "右の全行を出力。左に対応行が無ければ左側カラムは null",
+                "FULL OUTER"  => "左右両方の全行を出力。対応行が無い側のカラムは null",
+                _             => ""
+            };
         }
 
         private void OK_Click(object sender, RoutedEventArgs e)

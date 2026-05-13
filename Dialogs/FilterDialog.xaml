@@ -33,16 +33,22 @@
             <TextBlock Text="演算子" FontWeight="Bold" Margin="0,0,0,4"/>
             <ComboBox x:Name="OperatorCombo" Height="28"
                       SelectionChanged="OperatorCombo_SelectionChanged">
-                <ComboBoxItem Content="equals" IsSelected="True"/>
-                <ComboBoxItem Content="notEquals"/>
-                <ComboBoxItem Content="contains"/>
-                <ComboBoxItem Content="greaterThan"/>
-                <ComboBoxItem Content="greaterOrEqual"/>
-                <ComboBoxItem Content="lessThan"/>
-                <ComboBoxItem Content="lessOrEqual"/>
-                <ComboBoxItem Content="isNull"/>
-                <ComboBoxItem Content="isNotNull"/>
+                <ComboBoxItem Content="equals"         ToolTip="フィールド値が「値」と等しい行を通過 (= 値)" IsSelected="True"/>
+                <ComboBoxItem Content="notEquals"      ToolTip="フィールド値が「値」と等しくない行を通過 (≠ 値)"/>
+                <ComboBoxItem Content="contains"       ToolTip="フィールド値に「値」を部分文字列として含む行を通過 (LIKE %値%)"/>
+                <ComboBoxItem Content="greaterThan"    ToolTip="フィールド値が「値」より大きい行を通過 (&gt; 値)"/>
+                <ComboBoxItem Content="greaterOrEqual" ToolTip="フィールド値が「値」以上の行を通過 (≥ 値)"/>
+                <ComboBoxItem Content="lessThan"       ToolTip="フィールド値が「値」より小さい行を通過 (&lt; 値)"/>
+                <ComboBoxItem Content="lessOrEqual"    ToolTip="フィールド値が「値」以下の行を通過 (≤ 値)"/>
+                <ComboBoxItem Content="isNull"         ToolTip="フィールド値が NULL (空) の行のみ通過。「値」は使用しない"/>
+                <ComboBoxItem Content="isNotNull"      ToolTip="フィールド値が NULL でない行のみ通過。「値」は使用しない"/>
             </ComboBox>
+            <Border Background="#F5F5F5" CornerRadius="4" Padding="8,4" Margin="0,4,0,0">
+                <TextBlock x:Name="OperatorDescription"
+                           FontSize="11" Foreground="#424242"
+                           TextWrapping="Wrap"
+                           Text="フィールド値が「値」と等しい行を通過 (= 値)"/>
+            </Border>
         </StackPanel>
 
         <!-- Value -->

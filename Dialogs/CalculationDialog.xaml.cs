@@ -36,12 +36,14 @@ namespace SampleELT.Dialogs
             }
 
             UpdatePanelVisibility(expressionType);
+            UpdateExpressionDescription(expressionType);
         }
 
         private void ExpressionTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var selected = (ExpressionTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "add";
             UpdatePanelVisibility(selected);
+            UpdateExpressionDescription(selected);
         }
 
         private void UpdatePanelVisibility(string expressionType)
@@ -58,6 +60,22 @@ namespace SampleELT.Dialogs
                 Field2Panel.Visibility = Visibility.Visible;
                 ConstantPanel.Visibility = Visibility.Collapsed;
             }
+        }
+
+        private void UpdateExpressionDescription(string expressionType)
+        {
+            if (ExpressionDescription == null) return;
+            ExpressionDescription.Text = expressionType switch
+            {
+                "add"             => "フィールド1 + フィールド2 を出力フィールドに格納",
+                "subtract"        => "フィールド1 − フィールド2",
+                "multiply"        => "フィールド1 × フィールド2",
+                "divide"          => "フィールド1 ÷ フィールド2 (0 除算は null)",
+                "concat"          => "フィールド1 と フィールド2 を文字列として連結",
+                "constant"        => "定数値を出力フィールドに設定。フィールド入力は不要",
+                "dateDiffMinutes" => "(フィールド1 - フィールド2) の日時差を分単位で算出",
+                _                 => ""
+            };
         }
 
         private void OK_Click(object sender, RoutedEventArgs e)

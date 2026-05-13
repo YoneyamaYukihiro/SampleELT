@@ -24,12 +24,19 @@
         <!-- 結合タイプ -->
         <StackPanel Grid.Row="1" Margin="0,0,0,10">
             <TextBlock Text="結合タイプ" FontWeight="Bold" Margin="0,0,0,4"/>
-            <ComboBox x:Name="JoinTypeCombo" Height="28">
-                <ComboBoxItem Content="INNER" IsSelected="True"/>
-                <ComboBoxItem Content="LEFT OUTER"/>
-                <ComboBoxItem Content="RIGHT OUTER"/>
-                <ComboBoxItem Content="FULL OUTER"/>
+            <ComboBox x:Name="JoinTypeCombo" Height="28"
+                      SelectionChanged="JoinTypeCombo_SelectionChanged">
+                <ComboBoxItem Content="INNER"       ToolTip="左右両方でキーが一致する行のみ出力 (SQL INNER JOIN 相当)" IsSelected="True"/>
+                <ComboBoxItem Content="LEFT OUTER"  ToolTip="左の全行を出力。右に対応行が無ければ右側カラムは null"/>
+                <ComboBoxItem Content="RIGHT OUTER" ToolTip="右の全行を出力。左に対応行が無ければ左側カラムは null"/>
+                <ComboBoxItem Content="FULL OUTER"  ToolTip="左右両方の全行を出力。対応行が無い側のカラムは null"/>
             </ComboBox>
+            <Border Background="#F5F5F5" CornerRadius="4" Padding="8,4" Margin="0,4,0,0">
+                <TextBlock x:Name="JoinTypeDescription"
+                           FontSize="11" Foreground="#424242"
+                           TextWrapping="Wrap"
+                           Text="左右両方でキーが一致する行のみ出力 (SQL INNER JOIN 相当)"/>
+            </Border>
         </StackPanel>
 
         <!-- キーフィールド -->
