@@ -14,7 +14,8 @@ namespace SampleELT.Tools.Ktr
             string sql,
             List<string> warnings,
             string stepName,
-            IReadOnlyList<string>? defaultPlaceholderNames)
+            IReadOnlyList<string>? defaultPlaceholderNames,
+            string? lookupStepName = null)
         {
             int count = 0;
             int unmatched = 0;
@@ -50,9 +51,13 @@ namespace SampleELT.Tools.Ktr
 
             if (count > 0 && unmatched > 0)
             {
+                var hint = !string.IsNullOrEmpty(lookupStepName)
+                    ? $"前段ステップ '{lookupStepName}' の出力フィールドを :{{p1}}, :{{p2}} に当てはめてください"
+                    : "前段の SetVariable / DBInput が出力するフィールド名で :{p<n>} を置き換えてください";
+
                 warnings.Add(
-                    $"DBInput '{stepName}': SQL 内の `?` のうち {unmatched} 件は前段 SetVariable のフィールド名で解決できず " +
-                    ":{p<n>} 形式にフォールバックしました。手動で書き換えてください。");
+                    $"DBInput '{stepName}': SQL 内の `?` のうち {unmatched} 件を :{{p<n>}} 形式にフォールバックしました。" +
+                    $"{hint}。");
             }
             return sb.ToString();
         }

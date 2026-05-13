@@ -55,11 +55,21 @@ namespace SampleELT.Tools.Ktr
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
             var connName = src.Element.Element("connection")?.Value?.Trim() ?? "";
-            if (ctx.ConnectionMap.TryGetValue(connName, out var connId))
+            if (string.IsNullOrEmpty(connName))
+            {
+                ctx.Warnings.Add(
+                    $"DBInput '{src.Name}': KTR の <connection> が空です。" +
+                    "ConnectionId が未設定のため実行できません。手動で接続を割り当ててください。");
+            }
+            else if (ctx.ConnectionMap.TryGetValue(connName, out var connId))
+            {
                 dst.Settings["ConnectionId"] = connId.ToString();
+            }
 
             var sql = src.Element.Element("sql")?.Value ?? "";
-            sql = KtrSqlPlaceholderNormalizer.Normalize(sql, ctx.Warnings, src.Name, ctx.SetVariableFieldOrder);
+            var lookup = src.Element.Element("lookup")?.Value?.Trim() ?? "";
+            sql = KtrSqlPlaceholderNormalizer.Normalize(
+                sql, ctx.Warnings, src.Name, ctx.SetVariableFieldOrder, lookup);
             dst.Settings["SQL"] = sql;
 
             var eachRow = (string?)src.Element.Element("execute_each_row") ?? "N";
@@ -184,8 +194,16 @@ namespace SampleELT.Tools.Ktr
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
             var connName = src.Element.Element("connection")?.Value?.Trim() ?? "";
-            if (ctx.ConnectionMap.TryGetValue(connName, out var connId))
+            if (string.IsNullOrEmpty(connName))
+            {
+                ctx.Warnings.Add(
+                    $"ExecSQL '{src.Name}': KTR の <connection> が空です。" +
+                    "ConnectionId が未設定のため実行できません。手動で接続を割り当ててください。");
+            }
+            else if (ctx.ConnectionMap.TryGetValue(connName, out var connId))
+            {
                 dst.Settings["ConnectionId"] = connId.ToString();
+            }
             dst.Settings["SQL"] = src.Element.Element("sql")?.Value ?? "";
             var eachRow = (string?)src.Element.Element("execute_each_row") ?? "N";
             dst.Settings["ExecuteEachRow"] = string.Equals(eachRow, "Y", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
