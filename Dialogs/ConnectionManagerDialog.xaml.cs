@@ -428,34 +428,9 @@ namespace SampleELT.Dialogs
             return builder.ConnectionString;
         }
 
-        /// <summary>
-        /// "host:port/service" 形式の DataSource を分解する。
-        /// </summary>
         private static void ParseOracleDataSource(
             string dataSource, out string host, out string port, out string service)
-        {
-            host = "localhost"; port = "1521"; service = "ORCL";
-            if (string.IsNullOrWhiteSpace(dataSource)) return;
-
-            var colonIdx = dataSource.IndexOf(':');
-            var slashIdx = dataSource.IndexOf('/');
-
-            if (colonIdx > 0 && slashIdx > colonIdx)
-            {
-                host    = dataSource[..colonIdx];
-                port    = dataSource[(colonIdx + 1)..slashIdx];
-                service = dataSource[(slashIdx + 1)..];
-            }
-            else if (slashIdx > 0)
-            {
-                host    = dataSource[..slashIdx];
-                service = dataSource[(slashIdx + 1)..];
-            }
-            else
-            {
-                host = dataSource; // TNS 名などそのまま使用
-            }
-        }
+            => SampleELT.Tools.OracleDataSourceParser.Parse(dataSource, out host, out port, out service);
 
         private async void TestConnection_Click(object sender, RoutedEventArgs e)
         {
