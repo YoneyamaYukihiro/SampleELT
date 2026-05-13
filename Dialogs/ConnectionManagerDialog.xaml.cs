@@ -34,6 +34,17 @@ namespace SampleELT.Dialogs
         {
             if (EditPanel == null) return;
 
+            // 1) 古い選択のフォーム入力を自動保存
+            if (!_suppressChangeEvents
+                && e.RemovedItems.Count > 0
+                && e.RemovedItems[0] is DbConnectionInfo prev
+                && ConnectionRegistry.Instance.Connections.Contains(prev))
+            {
+                SaveEditsToModel(prev);
+                ConnectionRegistry.Instance.Save();
+            }
+
+            // 2) 新しい選択をフォームへロード
             if (ConnectionListBox.SelectedItem is not DbConnectionInfo conn)
             {
                 EditPanel.IsEnabled = false;
@@ -192,9 +203,61 @@ namespace SampleELT.Dialogs
             var dbType = ParseSelectedDbType();
             UpdateSectionVisibility(dbType);
 
-            // DbType をリアルタイム更新 → DisplayName (🔶/🐬/🐘/🟦/🦭/🪶) も即座に反映
+            // DbType を更新 → DisplayName (🔶/🐬/🐘/🟦/🦭/🪶) も即座に反映 → 自動保存
             if (_currentConnection != null)
+            {
                 _currentConnection.DbType = dbType;
+                _currentConnection.ConnectionString = BuildConnectionStringFor(dbType);
+                ConnectionRegistry.Instance.Save();
+            }
+        }
+
+        /// <summary>
+        /// 現在表示中の入力フィールドから ConnectionString を組み立てる。
+        /// </summary>
+        private string BuildConnectionStringFor(DbType dbType) => dbType switch
+        {
+            DbType.Oracle     => BuildOracleConnectionString(),
+            DbType.PostgreSQL => BuildPostgreSQLConnectionString(),
+            DbType.SqlServer  => BuildSqlServerConnectionString(),
+            DbType.Sqlite     => BuildSqliteConnectionString(),
+            _                 => BuildMySQLConnectionString()  // MySQL / MariaDB
+        };
+
+        /// <summary>
+        /// 編集中フォームの値を <paramref name="conn"/> に反映する (ファイル保存はしない)。
+        /// 接続名が空のときはモデル更新を行わない。
+        /// </summary>
+        private void SaveEditsToModel(DbConnectionInfo conn)
+        {
+            if (string.IsNullOrWhiteSpace(ConnNameBox.Text)) return;
+
+            conn.Name = ConnNameBox.Text.Trim();
+            conn.DbType = ParseSelectedDbType();
+            conn.ConnectionString = BuildConnectionStringFor(conn.DbType);
+        }
+
+        /// <summary>
+        /// 現在編集中の接続が「＋ 追加」直後の未編集デフォルト状態か判定する。
+        /// 接続名が「新しい接続」のまま、かつ現セクションのサーバー / ファイルパスが
+        /// 空または XAML 既定値 (localhost) のままなら true。
+        /// </summary>
+        private bool IsCurrentEntryUnedited()
+        {
+            if (_currentConnection == null) return false;
+            if (ConnNameBox.Text?.Trim() != "新しい接続") return false;
+
+            var dbType = ParseSelectedDbType();
+            string serverLike = dbType switch
+            {
+                DbType.Oracle     => OracleServerBox.Text?.Trim() ?? "",
+                DbType.MySQL or DbType.MariaDB => MySQLServerBox.Text?.Trim() ?? "",
+                DbType.PostgreSQL => PgServerBox.Text?.Trim() ?? "",
+                DbType.SqlServer  => MssServerBox.Text?.Trim() ?? "",
+                DbType.Sqlite     => SqlitePathBox.Text?.Trim() ?? "",
+                _                 => ""
+            };
+            return string.IsNullOrEmpty(serverLike) || serverLike == "localhost";
         }
 
         private DbType ParseSelectedDbType()
@@ -223,6 +286,19 @@ namespace SampleELT.Dialogs
 
         private void AddConnection_Click(object sender, RoutedEventArgs e)
         {
+            // 現在のエントリが未編集デフォルトのままなら連打をブロック
+            if (IsCurrentEntryUnedited())
+            {
+                MessageBox.Show(
+                    "現在編集中の「新しい接続」に接続名とサーバー（または SQLite のファイルパス）を入力してから、次の接続を追加してください。",
+                    "情報",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                ConnNameBox.Focus();
+                ConnNameBox.SelectAll();
+                return;
+            }
+
             var conn = new DbConnectionInfo
             {
                 Name = "新しい接続",
@@ -230,7 +306,9 @@ namespace SampleELT.Dialogs
                 ConnectionString = ""
             };
             ConnectionRegistry.Instance.Connections.Add(conn);
+            // この時点で旧選択は SelectionChanged → SaveEditsToModel + Save で永続化される
             ConnectionListBox.SelectedItem = conn;
+            ConnectionRegistry.Instance.Save();
             ConnNameBox.Focus();
             ConnNameBox.SelectAll();
         }
@@ -270,70 +348,16 @@ namespace SampleELT.Dialogs
             EditPanel.IsEnabled = false;
         }
 
-        private void SaveConnection_Click(object sender, RoutedEventArgs e)
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            if (_currentConnection == null) return;
-
-            if (string.IsNullOrWhiteSpace(ConnNameBox.Text))
+            // ダイアログ閉じる時に編集中の内容を自動保存
+            if (_currentConnection != null
+                && ConnectionRegistry.Instance.Connections.Contains(_currentConnection))
             {
-                MessageBox.Show("接続名を入力してください。", "入力エラー",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                SaveEditsToModel(_currentConnection);
+                ConnectionRegistry.Instance.Save();
             }
-
-            _currentConnection.Name = ConnNameBox.Text.Trim();
-
-            var dbType = ParseSelectedDbType();
-            _currentConnection.DbType = dbType;
-
-            switch (dbType)
-            {
-                case DbType.Oracle:
-                    if (string.IsNullOrWhiteSpace(OracleServerBox.Text))
-                    {
-                        MessageBox.Show("サーバーを入力してください。", "入力エラー",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    _currentConnection.ConnectionString = BuildOracleConnectionString();
-                    break;
-                case DbType.PostgreSQL:
-                    if (string.IsNullOrWhiteSpace(PgServerBox.Text))
-                    {
-                        MessageBox.Show("サーバーを入力してください。", "入力エラー",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    _currentConnection.ConnectionString = BuildPostgreSQLConnectionString();
-                    break;
-                case DbType.SqlServer:
-                    if (string.IsNullOrWhiteSpace(MssServerBox.Text))
-                    {
-                        MessageBox.Show("サーバーを入力してください。", "入力エラー",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    _currentConnection.ConnectionString = BuildSqlServerConnectionString();
-                    break;
-                case DbType.Sqlite:
-                    if (string.IsNullOrWhiteSpace(SqlitePathBox.Text))
-                    {
-                        MessageBox.Show("データベースファイルのパスを指定してください。", "入力エラー",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
-                    _currentConnection.ConnectionString = BuildSqliteConnectionString();
-                    break;
-                default:
-                    // MySQL / MariaDB は同じ MySqlConnector ドライバを使用
-                    _currentConnection.ConnectionString = BuildMySQLConnectionString();
-                    break;
-            }
-
-            ConnectionRegistry.Instance.Save();
-
-            MessageBox.Show("保存しました。", "完了",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            base.OnClosing(e);
         }
 
         private string BuildMySQLConnectionString()

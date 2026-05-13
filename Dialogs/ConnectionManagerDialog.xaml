@@ -105,7 +105,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- 接続名 -->
@@ -299,23 +298,19 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- 接続テストボタン -->
-                <Button Grid.Row="7"
-                        Content="🔗 接続テスト"
-                        HorizontalAlignment="Left"
-                        Width="120" Height="28"
-                        Margin="0,0,0,12"
-                        Click="TestConnection_Click"
-                        Style="{StaticResource PrimaryButtonStyle}"/>
-
-                <!-- 保存ボタン -->
-                <Button Grid.Row="8"
-                        x:Name="SaveConnButton"
-                        Content="💾 この接続を保存"
-                        HorizontalAlignment="Left"
-                        Width="140" Height="28"
-                        Click="SaveConnection_Click"
-                        Style="{StaticResource PrimaryButtonStyle}"/>
+                <!-- 接続テスト + 自動保存ヒント -->
+                <StackPanel Grid.Row="7" Orientation="Horizontal" Margin="0,0,0,12">
+                    <Button Content="🔗 接続テスト"
+                            Width="120" Height="28"
+                            Click="TestConnection_Click"
+                            Style="{StaticResource PrimaryButtonStyle}"/>
+                    <TextBlock Text="💡 入力内容は自動で保存されます (別接続選択 / DB 種別変更 / ＋追加 / ダイアログ閉じる時)"
+                               VerticalAlignment="Center"
+                               Margin="12,0,0,0"
+                               FontSize="11"
+                               Foreground="#616161"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
             </Grid>
         </Grid>
 
