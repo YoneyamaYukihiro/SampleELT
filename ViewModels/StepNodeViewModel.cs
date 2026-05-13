@@ -45,6 +45,7 @@ namespace SampleELT.ViewModels
             StepType.MergeJoin    => "Merge Join",
             StepType.DBUpdate     => "DB Update",
             StepType.SetVariable  => "Set Variable",
+            StepType.TableCompare => "Table Compare",
             _ => Step.StepType.ToString()
         };
 

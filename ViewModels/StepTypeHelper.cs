@@ -25,5 +25,6 @@ namespace SampleELT.ViewModels
         public static StepType SetVariable => StepType.SetVariable;
         public static StepType DBInput => StepType.DBInput;
         public static StepType DBOutput => StepType.DBOutput;
+        public static StepType TableCompare => StepType.TableCompare;
     }
 }

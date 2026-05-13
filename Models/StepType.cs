@@ -19,6 +19,7 @@ namespace SampleELT.Models
         DBUpdate,
         SetVariable,
         DBInput,      // Oracle/MySQL 統合入力
-        DBOutput      // Oracle/MySQL 統合出力
+        DBOutput,     // Oracle/MySQL 統合出力
+        TableCompare  // 2 ストリームをキー + 列値で突き合わせ、差分を抽出
     }
 }

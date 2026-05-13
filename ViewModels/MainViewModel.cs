@@ -132,6 +132,7 @@ namespace SampleELT.ViewModels
                 StepType.SetVariable => new SetVariableStep { Name = "Set Variable", CanvasX = offsetX, CanvasY = offsetY },
                 StepType.DBInput    => new DBInputStep  { Name = "DB Input",   CanvasX = offsetX, CanvasY = offsetY },
                 StepType.DBOutput   => new DBOutputStep { Name = "DB Output",  CanvasX = offsetX, CanvasY = offsetY },
+                StepType.TableCompare => new TableCompareStep { Name = "Table Compare", CanvasX = offsetX, CanvasY = offsetY },
                 _ => throw new ArgumentOutOfRangeException(nameof(stepType))
             };
 
@@ -464,6 +465,7 @@ namespace SampleELT.ViewModels
                         "SetVariable" => new SetVariableStep(),
                         "DBInput"     => new DBInputStep(),
                         "DBOutput"    => new DBOutputStep(),
+                        "TableCompare" => new TableCompareStep(),
                         _ => null
                     };
 

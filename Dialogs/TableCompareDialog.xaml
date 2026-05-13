@@ -1,0 +1,120 @@
+<Window x:Class="SampleELT.Dialogs.TableCompareDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Table Compare 設定"
+        Width="580" Height="500"
+        MinWidth="480" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ステップ名 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="ステップ名" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
+        </StackPanel>
+
+        <!-- キーフィールド -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="キーフィールド (カンマ区切り)" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBlock Text="例: emp_id  または  dept_id,emp_id"
+                       Foreground="#555555" FontSize="11" Margin="0,0,0,4"/>
+            <TextBox x:Name="KeyFieldsBox" Height="28" Padding="6,4"/>
+        </StackPanel>
+
+        <!-- 比較フィールド -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="比較フィールド (カンマ区切り / 空欄で両側の全列 - キー)" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBlock Text="例: name,salary,status  /  空欄なら自動推定"
+                       Foreground="#555555" FontSize="11" Margin="0,0,0,4"/>
+            <TextBox x:Name="CompareFieldsBox" Height="28" Padding="6,4"/>
+        </StackPanel>
+
+        <!-- 比較オプション -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,10">
+            <TextBlock Text="比較オプション" FontWeight="Bold" Margin="0,0,0,4"/>
+            <CheckBox x:Name="NullsEqualCheck"
+                      Content="両側 NULL を等しいとみなす (既定 ON)"
+                      IsChecked="True"
+                      Margin="0,2,0,2"/>
+            <CheckBox x:Name="IgnoreCaseCheck"
+                      Content="文字列の大文字小文字を無視"
+                      Margin="0,2,0,2"/>
+            <CheckBox x:Name="TrimStringsCheck"
+                      Content="文字列の前後空白を除去してから比較"
+                      Margin="0,2,0,2"/>
+            <CheckBox x:Name="IncludeMatchedCheck"
+                      Content="MATCH 行も出力する (既定: 差分行のみ)"
+                      Margin="0,2,0,2"/>
+        </StackPanel>
+
+        <!-- 出力スキーマの説明 -->
+        <Border Grid.Row="4" Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1"
+                CornerRadius="4" Padding="10,6" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock FontWeight="Bold" Foreground="#1B5E20" Text="出力スキーマ"/>
+                <TextBlock FontSize="11" Foreground="#1B5E20" TextWrapping="Wrap" Margin="0,4,0,0">
+                    キー列 + 各比較列の <Run FontFamily="Consolas">col_L</Run> / <Run FontFamily="Consolas">col_R</Run> +
+                    <Run FontFamily="Consolas">_status</Run> (MATCH / DIFF / ONLY_LEFT / ONLY_RIGHT) +
+                    <Run FontFamily="Consolas">_diff_columns</Run> (DIFF 行のみ、差分列名のカンマ区切り)
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- 注意書き -->
+        <Border Grid.Row="5" Background="#FFF8E1" BorderBrush="#FFE082" BorderThickness="1"
+                CornerRadius="4" Padding="10,6" Margin="0,0,0,10">
+            <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#5D4037">
+                ⚠ 最初に接続したストリームが <Run FontWeight="Bold">Left (移行元)</Run>、
+                2番目が <Run FontWeight="Bold">Right (移行先)</Run> になります。
+                接続の順序はキャンバスで接続した順番で決まります。
+                <LineBreak/>
+                値の比較は数値同士は decimal で、それ以外は文字列化して行います。
+                日時は <Run FontFamily="Consolas">DateTime</Run> 型同士でのみ比較されます。
+            </TextBlock>
+        </Border>
+
+        <!-- ボタン -->
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="OK" Width="80" Height="30" Margin="0,0,8,0"
+                    Click="OK_Click" Style="{StaticResource PrimaryButtonStyle}"/>
+            <Button Content="キャンセル" Width="80" Height="30" Click="Cancel_Click">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#EEEEEE"/>
+                        <Setter Property="Foreground" Value="#333333"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4" Padding="12,6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#E0E0E0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

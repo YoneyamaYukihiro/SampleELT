@@ -40,6 +40,7 @@ namespace SampleELT.Services
                 case StepType.MergeJoin:     OpenMergeJoinDialog(owner, stepVm); break;
                 case StepType.DBUpdate:      OpenDBUpdateDialog(owner, stepVm); break;
                 case StepType.SetVariable:   OpenSetVariableDialog(owner, stepVm); break;
+                case StepType.TableCompare:  OpenTableCompareDialog(owner, stepVm); break;
             }
         }
 
@@ -367,6 +368,34 @@ namespace SampleELT.Services
             }
         }
 
+        private static void OpenTableCompareDialog(Window owner, StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new TableCompareDialog { Owner = owner };
+
+            dialog.Initialize(
+                step.Name,
+                GetString(step.Settings, "KeyFields"),
+                GetString(step.Settings, "CompareFields"),
+                nullsEqual:     GetBool(step.Settings, "NullsEqual",     true),
+                ignoreCase:     GetBool(step.Settings, "IgnoreCase",     false),
+                trimStrings:    GetBool(step.Settings, "TrimStrings",    false),
+                includeMatched: GetBool(step.Settings, "IncludeMatched", false));
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["KeyFields"]      = dialog.KeyFields;
+                step.Settings["CompareFields"]  = dialog.CompareFields;
+                step.Settings["NullsEqual"]     = dialog.NullsEqual     ? "true" : "false";
+                step.Settings["IgnoreCase"]     = dialog.IgnoreCase     ? "true" : "false";
+                step.Settings["TrimStrings"]    = dialog.TrimStrings    ? "true" : "false";
+                step.Settings["IncludeMatched"] = dialog.IncludeMatched ? "true" : "false";
+                stepVm.NotifyNameChanged();
+                stepVm.NotifyConnectionChanged();
+            }
+        }
+
         private static void OpenSetVariableDialog(Window owner, StepNodeViewModel stepVm)
         {
             var step = stepVm.Step;
@@ -406,6 +435,18 @@ namespace SampleELT.Services
             string key)
             => settings.TryGetValue(key, out var v)
                && v?.ToString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+        /// <summary>キー欠落時に既定値を返す bool 取得。</summary>
+        private static bool GetBool(
+            System.Collections.Generic.Dictionary<string, object?> settings,
+            string key,
+            bool defaultValue)
+        {
+            if (!settings.TryGetValue(key, out var v) || v == null) return defaultValue;
+            var s = v.ToString();
+            if (string.IsNullOrEmpty(s)) return defaultValue;
+            return bool.TryParse(s, out var b) ? b : defaultValue;
+        }
 
         private static int GetInt(
             System.Collections.Generic.Dictionary<string, object?> settings,

@@ -290,6 +290,11 @@
                                 MouseDoubleClick="PaletteButton_DoubleClick"
                                 ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="🔍 Table Compare"
+                                Tag="{x:Static vm:StepTypeHelper.TableCompare}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="2 ストリームをキー + 列値で突き合わせ、差分を抽出 (データ移行検証用)"
+                                Style="{StaticResource PaletteButtonStyle}"/>
                         <Button Content="📅 Set Variable"
                                 Tag="{x:Static vm:StepTypeHelper.SetVariable}"
                                 MouseDoubleClick="PaletteButton_DoubleClick"
