@@ -141,5 +141,16 @@ namespace SampleELT.Dialogs
 
         private void SQLBox_PreviewKeyDown(object sender, KeyEventArgs e)
             => Controls.SqlEditorBehavior.HandlePreviewKeyDown(sender, e);
+
+        private void SQLBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var dialog = new SQLEditorDialog { Owner = this };
+            dialog.Initialize(SQLBox.Text);
+            if (dialog.ShowDialog() == true)
+            {
+                SQLBox.Text = dialog.SQL;
+            }
+            e.Handled = true;
+        }
     }
 }

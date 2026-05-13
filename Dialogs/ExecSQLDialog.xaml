@@ -2,16 +2,18 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Exec SQL 設定"
-        Width="500"
-        SizeToContent="Height"
+        Width="760" Height="520"
+        MinWidth="620" MinHeight="380"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
-    <Grid Margin="16">
+        ResizeMode="CanResize">
+    <Grid Margin="12">
         <Grid.RowDefinitions>
+            <!-- ステップ名 / 接続 (固定) -->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <!-- SQL (可変) -->
+            <RowDefinition Height="*" MinHeight="120"/>
+            <!-- 行ごとに実行 / ボタン (固定) -->
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -53,33 +55,49 @@
                        Visibility="Collapsed"/>
         </StackPanel>
 
-        <!-- SQL -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,4">
-            <TextBlock Text="SQL" FontWeight="Bold" Margin="0,0,0,4"/>
-        </StackPanel>
-        <TextBox Grid.Row="3"
-                 x:Name="SQLBox"
-                 Height="120"
-                 Padding="6,4"
-                 AcceptsReturn="True"
-                 AcceptsTab="True"
-                 TextWrapping="Wrap"
-                 VerticalScrollBarVisibility="Auto"
-                 FontFamily="Consolas"
-                 FontSize="12"
-                 Margin="0,0,0,8"
-                 ToolTip="Tab でスペース 4 個挿入、Ctrl+Tab で次のコントロールへフォーカス移動"
-                 PreviewKeyDown="SQLBox_PreviewKeyDown"/>
+        <!-- SQL (可変領域) -->
+        <Grid Grid.Row="2" Margin="0,0,0,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0" Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="SQL クエリ" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="※ SQL 欄をダブルクリックすると大きな画面で編集できます"
+                           FontSize="11" Foreground="#777777"
+                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </Grid>
+            <TextBox Grid.Row="1"
+                     x:Name="SQLBox"
+                     Padding="6,4"
+                     AcceptsReturn="True"
+                     AcceptsTab="True"
+                     TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"
+                     FontFamily="Consolas"
+                     FontSize="12"
+                     Background="#FAFAFA"
+                     BorderBrush="#CCCCCC"
+                     ToolTip="Tab でスペース 4 個挿入、Ctrl+Tab で次のコントロールへフォーカス移動、ダブルクリックで大きな画面で編集"
+                     PreviewKeyDown="SQLBox_PreviewKeyDown"
+                     MouseDoubleClick="SQLBox_MouseDoubleClick"/>
+        </Grid>
 
         <!-- 行ごとに実行 -->
-        <StackPanel Grid.Row="4" Margin="0,0,0,12">
+        <StackPanel Grid.Row="3" Margin="0,0,0,12">
             <CheckBox x:Name="ExecuteEachRowCheck"
                       Content="行ごとに実行（前ステップの各行の値を ? パラメータとして渡す）"
                       FontSize="11"/>
         </StackPanel>
 
         <!-- ボタン -->
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="OK"
                     Width="80" Height="30"
                     Margin="0,0,8,0"
