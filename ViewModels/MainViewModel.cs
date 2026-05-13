@@ -178,6 +178,37 @@ namespace SampleELT.ViewModels
         {
             if (IsRunning) return;
 
+            // 実行前安全検査: 未解決接続 / Read-only / Production 書き込みをチェック
+            var issues = SampleELT.Engine.PipelineSafetyChecker.Check(CurrentPipeline);
+            var blockers = issues.Where(i => i.Severity == SampleELT.Engine.PipelineSafetyChecker.IssueSeverity.Block).ToList();
+            var confirms = issues.Where(i => i.Severity == SampleELT.Engine.PipelineSafetyChecker.IssueSeverity.Confirm).ToList();
+
+            if (blockers.Count > 0)
+            {
+                var msg = "以下の理由で実行できません:\n\n"
+                    + SampleELT.Engine.PipelineSafetyChecker.Format(blockers);
+                System.Windows.MessageBox.Show(msg, "実行ブロック",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                AddLog("===== 実行ブロック (事前検査エラー) =====");
+                foreach (var b in blockers) AddLog($"  - [{b.StepName}] {b.Message}");
+                return;
+            }
+
+            if (confirms.Count > 0)
+            {
+                var msg = "Production 接続に対する書き込み操作が含まれます。実行してよろしいですか？\n\n"
+                    + SampleELT.Engine.PipelineSafetyChecker.Format(confirms);
+                var result = System.Windows.MessageBox.Show(msg, "Production 書き込みの最終確認",
+                    System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+                if (result != System.Windows.MessageBoxResult.Yes)
+                {
+                    AddLog("===== 実行キャンセル (Production 書き込み確認で No) =====");
+                    return;
+                }
+                AddLog("Production 書き込みを承認:");
+                foreach (var c in confirms) AddLog($"  ✓ [{c.StepName}] {c.Message}");
+            }
+
             // 手動実行前に上書き保存（ファイルが既存の場合のみ）
             if (!string.IsNullOrEmpty(CurrentFilePath))
             {

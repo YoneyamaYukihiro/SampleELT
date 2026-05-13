@@ -7,9 +7,27 @@
         <Border x:Name="RootBorder"
                 Margin="0,0,18,0"
                 Background="White"
-                BorderBrush="#DDDDDD"
-                BorderThickness="1.5"
                 CornerRadius="8">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <!-- 既定: 灰色細枠 -->
+                    <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                    <Setter Property="BorderThickness" Value="1.5"/>
+                    <Style.Triggers>
+                        <!-- Production 接続を使うステップは赤枠で警告 -->
+                        <DataTrigger Binding="{Binding IsProductionConnection}" Value="True">
+                            <Setter Property="BorderBrush" Value="#D32F2F"/>
+                            <Setter Property="BorderThickness" Value="2.5"/>
+                        </DataTrigger>
+                        <!-- 接続未解決 (削除済み等) は赤色枠 + 警告色背景 -->
+                        <DataTrigger Binding="{Binding HasUnresolvedConnection}" Value="True">
+                            <Setter Property="BorderBrush" Value="#D32F2F"/>
+                            <Setter Property="BorderThickness" Value="2.5"/>
+                            <Setter Property="Background" Value="#FFEBEE"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Border.Effect>
                 <DropShadowEffect BlurRadius="6" ShadowDepth="2" Opacity="0.15" Color="Black"/>
             </Border.Effect>
@@ -44,15 +62,36 @@
                     <TextBlock x:Name="ConnText"
                                Text="{Binding ConnectionLabel}"
                                FontSize="9"
-                               Foreground="#1565C0"
                                TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding ConnectionLabel}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Visible"/>
+                                <Setter Property="Foreground" Value="#1565C0"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding ConnectionLabel}" Value="">
                                         <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsProductionConnection}" Value="True">
+                                        <Setter Property="Foreground" Value="#D32F2F"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <!-- 接続未解決の警告バッジ -->
+                    <TextBlock Text="⚠ 接続未解決"
+                               FontSize="9"
+                               FontWeight="Bold"
+                               Foreground="#D32F2F"
+                               ToolTip="ConnectionId が指す接続設定が存在しません。接続マネージャで設定し直してください。">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasUnresolvedConnection}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>

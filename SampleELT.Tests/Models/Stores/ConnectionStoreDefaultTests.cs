@@ -9,6 +9,7 @@ namespace SampleELT.Tests.Models.Stores
     /// <summary>
     /// IConnectionStore.Default にモックを差し替えてテストできることを確認する。
     /// </summary>
+    [Collection("ConnectionStore")]
     public class ConnectionStoreDefaultTests : IDisposable
     {
         private readonly IConnectionStore _original;

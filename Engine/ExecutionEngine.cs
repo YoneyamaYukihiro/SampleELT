@@ -22,6 +22,19 @@ namespace SampleELT.Engine
                 return;
             }
 
+            // 事前安全検査: 未解決接続 / Read-only 接続への書き込みは即時ブロック
+            // (Production 書き込みの確認は対話可能な UI 側で処理済み)
+            var issues = PipelineSafetyChecker.Check(pipeline)
+                .Where(i => i.Severity == PipelineSafetyChecker.IssueSeverity.Block)
+                .ToList();
+            if (issues.Count > 0)
+            {
+                var msg = "実行前検査で以下の問題が検出されました:\n"
+                    + PipelineSafetyChecker.Format(issues);
+                progress.Report(msg);
+                throw new ConnectionResolutionException(msg);
+            }
+
             // Build adjacency maps
             var outgoing = new Dictionary<Guid, List<Guid>>();
             var incoming = new Dictionary<Guid, List<Guid>>();
@@ -116,6 +129,15 @@ namespace SampleELT.Engine
                     .Select(pid => stepOutputs.TryGetValue(pid, out var po) ? po : new List<Dictionary<string, object?>>())
                     .ToList();
 
+                // 接続ステップは「どの DB に書くか」をログに明示し、誤実行を後から追跡可能にする
+                if (step.Settings.TryGetValue("ConnectionId", out var cidObj)
+                    && cidObj != null
+                    && Guid.TryParse(cidObj.ToString(), out var cidGuid))
+                {
+                    var conn = Models.Stores.IConnectionStore.Default.GetById(cidGuid);
+                    progress.Report($"[{step.Name}] 接続: {ConnectionSafety.DescribeConnection(conn)}");
+                }
+
                 progress.Report($"[{step.Name}] 実行中...");
 
                 try
@@ -127,6 +149,12 @@ namespace SampleELT.Engine
                 catch (OperationCanceledException)
                 {
                     progress.Report($"[{step.Name}] キャンセルされました");
+                    throw;
+                }
+                catch (ConnectionResolutionException)
+                {
+                    // 接続未解決は安全上即時中断 (続行すると別 DB を叩く危険)
+                    progress.Report($"[{step.Name}] 接続解決失敗のためパイプラインを中断します");
                     throw;
                 }
                 catch (Exception ex)

@@ -48,18 +48,52 @@ namespace SampleELT.ViewModels
             _ => Step.StepType.ToString()
         };
 
-        /// <summary>接続設定名 (ConnectionId が紐づくステップのみ表示)</summary>
+        /// <summary>
+        /// 接続設定名 + 環境バッジ + 読み取り専用アイコンの表示用文字列。
+        /// 例: <c>[PRD] Spirytus TRN01D 🔒</c> / <c>新しい接続</c>。
+        /// ConnectionId が紐づかないステップは空文字。
+        /// </summary>
         public string ConnectionLabel
         {
             get
             {
-                if (!Step.Settings.TryGetValue("ConnectionId", out var idObj) || idObj == null)
-                    return "";
-                if (!System.Guid.TryParse(idObj.ToString(), out var id))
-                    return "";
-                var conn = ConnectionRegistry.Instance.GetById(id);
-                return conn?.Name ?? "";
+                var conn = ResolvedConnection();
+                if (conn == null) return "";
+                var env = conn.Environment != DbEnvironment.Development
+                    ? $"[{conn.EnvironmentBadge}] "
+                    : "";
+                var ro = conn.IsReadOnly ? " 🔒" : "";
+                return $"{env}{conn.Name}{ro}";
             }
+        }
+
+        /// <summary>
+        /// ConnectionId が指す接続が解決できないとき true。
+        /// ステップノードに警告バッジを出す用途。
+        /// </summary>
+        public bool HasUnresolvedConnection
+        {
+            get
+            {
+                if (!Step.Settings.TryGetValue("ConnectionId", out var idObj) || idObj == null)
+                    return false; // そもそも ConnectionId を持たないステップ (Filter 等) は対象外
+                if (!System.Guid.TryParse(idObj.ToString(), out var id))
+                    return true;
+                return ConnectionRegistry.Instance.GetById(id) == null;
+            }
+        }
+
+        /// <summary>Production 接続を使うステップ。ノード枠を強調するため。</summary>
+        public bool IsProductionConnection
+            => ResolvedConnection()?.Environment == DbEnvironment.Production;
+
+        private DbConnectionInfo? ResolvedConnection()
+        {
+            if (!Step.Settings.TryGetValue("ConnectionId", out var idObj) || idObj == null)
+                return null;
+            if (!System.Guid.TryParse(idObj.ToString(), out var id))
+                return null;
+            return ConnectionRegistry.Instance.GetById(id);
         }
 
         [ObservableProperty]
@@ -105,6 +139,8 @@ namespace SampleELT.ViewModels
         public void NotifyConnectionChanged()
         {
             OnPropertyChanged(nameof(ConnectionLabel));
+            OnPropertyChanged(nameof(HasUnresolvedConnection));
+            OnPropertyChanged(nameof(IsProductionConnection));
         }
     }
 }

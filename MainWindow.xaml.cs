@@ -606,7 +606,10 @@ namespace SampleELT
 
         private void ConnectionManager_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new ConnectionManagerDialog { Owner = this };
+            var dialog = new ConnectionManagerDialog(initialSelectionId: null, referencePipeline: _vm.CurrentPipeline)
+            {
+                Owner = this
+            };
             dialog.ShowDialog();
             // 接続名の変更を全ノードの「接続設定名」ラベルへ即時反映
             _vm.RefreshAllConnectionLabels();

@@ -16,10 +16,12 @@ namespace SampleELT.Dialogs
     {
         private DbConnectionInfo? _currentConnection;
         private bool _suppressChangeEvents;
+        private readonly Pipeline? _referencePipeline;
 
-        public ConnectionManagerDialog(Guid? initialSelectionId = null)
+        public ConnectionManagerDialog(Guid? initialSelectionId = null, Pipeline? referencePipeline = null)
         {
             InitializeComponent();
+            _referencePipeline = referencePipeline;
             ConnectionListBox.ItemsSource = ConnectionRegistry.Instance.Connections;
 
             if (initialSelectionId.HasValue)
@@ -27,6 +29,47 @@ namespace SampleELT.Dialogs
                 var target = ConnectionRegistry.Instance.Connections
                     .FirstOrDefault(c => c.Id == initialSelectionId.Value);
                 if (target != null) ConnectionListBox.SelectedItem = target;
+            }
+        }
+
+        /// <summary>
+        /// 現在のパイプラインで <paramref name="conn"/> を参照しているステップ名一覧を返す。
+        /// パイプラインが渡されていなければ空リスト。
+        /// </summary>
+        private System.Collections.Generic.List<string> FindReferencingSteps(DbConnectionInfo conn)
+        {
+            var result = new System.Collections.Generic.List<string>();
+            if (_referencePipeline == null) return result;
+
+            foreach (var step in _referencePipeline.Steps)
+            {
+                if (!step.Settings.TryGetValue("ConnectionId", out var idObj) || idObj == null)
+                    continue;
+                if (Guid.TryParse(idObj.ToString(), out var id) && id == conn.Id)
+                    result.Add(step.Name);
+            }
+            return result;
+        }
+
+        private void UpdateReferenceLabel(DbConnectionInfo conn)
+        {
+            if (ReferenceCountText == null) return;
+            var refs = FindReferencingSteps(conn);
+            if (refs.Count == 0)
+            {
+                ReferenceCountText.Text = _referencePipeline == null
+                    ? ""
+                    : "現在のパイプラインからの参照: 0 ステップ";
+                ReferenceCountText.Foreground =
+                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x61, 0x61, 0x61));
+            }
+            else
+            {
+                ReferenceCountText.Text =
+                    $"⚠ 現在のパイプラインで {refs.Count} 個のステップから参照中: "
+                    + string.Join(", ", refs);
+                ReferenceCountText.Foreground =
+                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD3, 0x2F, 0x2F));
             }
         }
 
@@ -64,6 +107,9 @@ namespace SampleELT.Dialogs
             ConnNameBox.Text = conn.Name;
             UpdateSectionVisibility(conn.DbType);
             DbTypeCombo.SelectedIndex = DbTypeToComboIndex(conn.DbType);
+            EnvironmentCombo.SelectedIndex = EnvironmentToComboIndex(conn.Environment);
+            ReadOnlyCheck.IsChecked = conn.IsReadOnly;
+            UpdateReferenceLabel(conn);
 
             switch (conn.DbType)
             {
@@ -174,6 +220,64 @@ namespace SampleELT.Dialogs
             _                 => 0
         };
 
+        private static int EnvironmentToComboIndex(DbEnvironment env) => env switch
+        {
+            DbEnvironment.Development => 0,
+            DbEnvironment.Staging     => 1,
+            DbEnvironment.Production  => 2,
+            _                         => 0
+        };
+
+        private DbEnvironment ParseSelectedEnvironment()
+        {
+            var tag = (EnvironmentCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+            return tag switch
+            {
+                "Staging"    => DbEnvironment.Staging,
+                "Production" => DbEnvironment.Production,
+                _            => DbEnvironment.Development
+            };
+        }
+
+        private void EnvironmentCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_suppressChangeEvents || _currentConnection == null) return;
+
+            var prevEnv = _currentConnection.Environment;
+            var newEnv = ParseSelectedEnvironment();
+            if (prevEnv == newEnv) return;
+
+            // Production への昇格は明示確認 (誤操作で本番扱いになるのを防ぐ)
+            if (newEnv == DbEnvironment.Production && prevEnv != DbEnvironment.Production)
+            {
+                var result = MessageBox.Show(
+                    $"接続「{_currentConnection.Name}」を Production としてマークしますか？\n\n" +
+                    "この接続を使う書き込み系ステップ (DB Output / Delete / Update / Insert/Update / Exec SQL) は、" +
+                    "実行前に確認ダイアログが表示されるようになります。",
+                    "Production マークの確認",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (result != MessageBoxResult.Yes)
+                {
+                    // ロールバック
+                    _suppressChangeEvents = true;
+                    EnvironmentCombo.SelectedIndex = EnvironmentToComboIndex(prevEnv);
+                    _suppressChangeEvents = false;
+                    return;
+                }
+            }
+
+            _currentConnection.Environment = newEnv;
+            ConnectionRegistry.Instance.Save();
+        }
+
+        private void ReadOnlyCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_suppressChangeEvents || _currentConnection == null) return;
+            _currentConnection.IsReadOnly = ReadOnlyCheck.IsChecked == true;
+            ConnectionRegistry.Instance.Save();
+        }
+
         /// <summary>"host,port" or "host\instance" 形式の DataSource を分解する。</summary>
         private static void ParseSqlServerDataSource(
             string dataSource, out string host, out string port)
@@ -232,10 +336,41 @@ namespace SampleELT.Dialogs
         {
             if (string.IsNullOrWhiteSpace(ConnNameBox.Text)) return;
 
-            conn.Name = ConnNameBox.Text.Trim();
+            var newName = ConnNameBox.Text.Trim();
+            WarnIfDuplicateName(conn, newName);
+
+            conn.Name = newName;
             conn.DbType = ParseSelectedDbType();
             conn.ConnectionString = BuildConnectionStringFor(conn.DbType);
+            conn.Environment = ParseSelectedEnvironment();
+            conn.IsReadOnly = ReadOnlyCheck.IsChecked == true;
         }
+
+        /// <summary>
+        /// 接続名が他のエントリと重複しそうなら 1 度だけ警告する (ブロックはしない)。
+        /// </summary>
+        private void WarnIfDuplicateName(DbConnectionInfo conn, string newName)
+        {
+            if (string.Equals(conn.Name, newName, StringComparison.Ordinal)) return;
+            if (_dupNameWarned.Contains(newName)) return;
+
+            var clash = ConnectionRegistry.Instance.Connections
+                .Any(c => c.Id != conn.Id
+                    && string.Equals(c.Name, newName, StringComparison.OrdinalIgnoreCase));
+            if (!clash) return;
+
+            _dupNameWarned.Add(newName);
+            MessageBox.Show(
+                $"接続名「{newName}」は別の接続と重複しています。\n" +
+                "ステップ設定ダイアログで紛らわしくなるため、名前を変えることをお勧めします。\n" +
+                "(この警告は同じ名前については一度だけ表示されます)",
+                "重複した接続名",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+
+        private readonly System.Collections.Generic.HashSet<string> _dupNameWarned =
+            new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// 現在編集中の接続が「＋ 追加」直後の未編集デフォルト状態か判定する。
