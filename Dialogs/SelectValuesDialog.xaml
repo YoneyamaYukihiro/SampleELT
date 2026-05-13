@@ -2,15 +2,16 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Select Values 設定"
-        Width="500"
-        SizeToContent="Height"
+        Width="960" Height="640"
+        MinWidth="760" MinHeight="520"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
+        ResizeMode="CanResize">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -20,41 +21,87 @@
             <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
         </StackPanel>
 
-        <!-- フィールドマッピング -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,4">
-            <TextBlock Text="フィールドマッピング" FontWeight="Bold" Margin="0,0,0,4"/>
-            <TextBlock TextWrapping="Wrap" Foreground="#555555" FontSize="11" Margin="0,0,0,6">
-                1行1フィールド。リネームする場合は「元フィールド名=新フィールド名」。
-                記述したフィールドのみ出力されます（未記述は除去）。
-            </TextBlock>
-        </StackPanel>
-        <TextBox Grid.Row="2"
-                 x:Name="MappingsBox"
-                 Height="160"
-                 Padding="6,4"
-                 AcceptsReturn="True"
-                 TextWrapping="NoWrap"
-                 VerticalScrollBarVisibility="Auto"
-                 HorizontalScrollBarVisibility="Auto"
-                 FontFamily="Consolas"
-                 FontSize="12"
-                 Margin="0,0,0,12"/>
-
-        <!-- ボタン -->
-        <Grid Grid.Row="3">
+        <!-- ヘッダー + 操作ボタン -->
+        <Grid Grid.Row="1" Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="フィールドマッピング"
+                       FontWeight="Bold" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="FetchFromUpstreamButton"
+                        Content="↓ 前段から取得" Height="26" Padding="10,0" Margin="0,0,6,0"
+                        Click="FetchFromUpstream_Click"
+                        ToolTip="接続元ステップを実行プレビューしてフィールド名を取得 (前段に DBInput / FileInput / SetVariable が必要)"/>
+                <Button x:Name="AddRowButton"
+                        Content="＋ 追加" Height="26" Padding="10,0" Margin="0,0,4,0"
+                        Click="AddRow_Click"
+                        ToolTip="入力フィールドのマッピング行を追加"/>
+                <Button x:Name="AddConstRowButton"
+                        Content="＋ 定数追加" Height="26" Padding="10,0" Margin="0,0,4,0"
+                        Click="AddConstRow_Click"
+                        ToolTip="前段に無い新規カラムを固定値で追加"/>
+                <Button x:Name="DeleteRowButton"
+                        Content="🗑 削除" Height="26" Padding="10,0" Margin="0,0,4,0"
+                        Click="DeleteRow_Click"/>
+                <Button x:Name="MoveUpButton"
+                        Content="↑" Width="32" Height="26" Padding="0" Margin="0,0,2,0"
+                        Click="MoveUp_Click"/>
+                <Button x:Name="MoveDownButton"
+                        Content="↓" Width="32" Height="26" Padding="0"
+                        Click="MoveDown_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- 説明文 -->
+        <Border Grid.Row="2" Background="#F5F5F5" CornerRadius="4" Padding="8,4" Margin="0,0,0,6">
+            <TextBlock Foreground="#424242" FontSize="11" TextWrapping="Wrap"
+                       Text="「残す」がチェック ON の行のみ出力されます。新名が空欄なら元名のままです。定数値を入力すると入力カラムを無視して固定値が出力されます。"/>
+        </Border>
+
+        <!-- マッピング DataGrid -->
+        <DataGrid Grid.Row="3"
+                  x:Name="MappingGrid"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  AlternatingRowBackground="#FAFAFA"
+                  RowHeight="26"
+                  FontSize="12"
+                  SelectionMode="Single"
+                  SelectionUnit="FullRow">
+            <DataGrid.Columns>
+                <DataGridCheckBoxColumn Header="残す" Width="50"
+                                        Binding="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridTextColumn Header="元フィールド名 (入力)" Width="*"
+                                    Binding="{Binding SourceName, UpdateSourceTrigger=LostFocus}"/>
+                <DataGridTextColumn Header="新フィールド名 (出力)" Width="*"
+                                    Binding="{Binding DestName, UpdateSourceTrigger=LostFocus}"/>
+                <DataGridComboBoxColumn x:Name="DataTypeColumn" Header="型変換" Width="100"
+                                        SelectedValueBinding="{Binding DataType, UpdateSourceTrigger=PropertyChanged}"
+                                        SelectedValuePath="."
+                                        DisplayMemberPath="."/>
+                <DataGridTextColumn Header="定数値 (入力すると入力カラム無視)" Width="200"
+                                    Binding="{Binding ConstantValue, UpdateSourceTrigger=LostFocus}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- ステータス + OK/キャンセル -->
+        <Grid Grid.Row="4" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="StatusText" Grid.Column="0"
+                       VerticalAlignment="Center" FontSize="11" Foreground="#616161"
+                       TextWrapping="Wrap"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="OK"
-                        Width="80" Height="30"
-                        Margin="0,0,8,0"
-                        Click="OK_Click"
-                        Style="{StaticResource PrimaryButtonStyle}"/>
-                <Button Content="キャンセル"
-                        Width="80" Height="30"
-                        Click="Cancel_Click">
+                <Button Content="OK" Width="80" Height="30" Margin="0,0,8,0"
+                        Click="OK_Click" Style="{StaticResource PrimaryButtonStyle}"/>
+                <Button Content="キャンセル" Width="80" Height="30" Click="Cancel_Click">
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="Background" Value="#EEEEEE"/>

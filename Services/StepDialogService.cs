@@ -17,7 +17,7 @@ namespace SampleELT.Services
         /// ステップ種別に応じた設定ダイアログをモーダル表示する。
         /// ユーザーが OK で確定した場合、Step.Settings と Step.Name を更新し ViewModel に通知する。
         /// </summary>
-        public void ShowSettingsDialog(Window owner, StepNodeViewModel stepVm)
+        public void ShowSettingsDialog(Window owner, StepNodeViewModel stepVm, Pipeline? pipeline = null)
         {
             switch (stepVm.Step.StepType)
             {
@@ -32,7 +32,7 @@ namespace SampleELT.Services
                 case StepType.ExcelOutput:   OpenExcelOutputDialog(owner, stepVm); break;
                 case StepType.Filter:        OpenFilterDialog(owner, stepVm); break;
                 case StepType.Calculation:   OpenCalculationDialog(owner, stepVm); break;
-                case StepType.SelectValues:  OpenSelectValuesDialog(owner, stepVm); break;
+                case StepType.SelectValues:  OpenSelectValuesDialog(owner, stepVm, pipeline); break;
                 case StepType.DBDelete:      OpenDBDeleteDialog(owner, stepVm); break;
                 case StepType.InsertUpdate:  OpenInsertUpdateDialog(owner, stepVm); break;
                 case StepType.ExecSQL:       OpenExecSQLDialog(owner, stepVm); break;
@@ -217,12 +217,12 @@ namespace SampleELT.Services
             }
         }
 
-        private static void OpenSelectValuesDialog(Window owner, StepNodeViewModel stepVm)
+        private static void OpenSelectValuesDialog(Window owner, StepNodeViewModel stepVm, Pipeline? pipeline)
         {
             var step = stepVm.Step;
             var dialog = new SelectValuesDialog { Owner = owner };
 
-            dialog.Initialize(step.Name, GetString(step.Settings, "FieldMappings"));
+            dialog.Initialize(step.Name, GetString(step.Settings, "FieldMappings"), pipeline, step.Id);
 
             if (dialog.ShowDialog() == true)
             {
