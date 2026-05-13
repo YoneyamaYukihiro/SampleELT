@@ -1,9 +1,14 @@
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using OfficeOpenXml;
+using SampleELT.Steps;
 
 namespace SampleELT.Dialogs
 {
@@ -170,5 +175,86 @@ namespace SampleELT.Dialogs
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+
+        private async void Preview_Click(object sender, RoutedEventArgs e)
+        {
+            var filePath = FilePathBox.Text.Trim();
+            if (string.IsNullOrEmpty(filePath))
+            {
+                PreviewStatusText.Text = "ファイルパスを指定してください";
+                PreviewGrid.ItemsSource = null;
+                return;
+            }
+            if (!File.Exists(filePath))
+            {
+                PreviewStatusText.Text = "ファイルが見つかりません";
+                PreviewGrid.ItemsSource = null;
+                return;
+            }
+
+            var fmt = (FormatCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "Excel";
+            var delimTag = (DelimiterCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? ",";
+            var delimiter = delimTag == "custom" ? CustomDelimiterBox.Text : delimTag;
+            if (string.IsNullOrEmpty(delimiter)) delimiter = ",";
+            var encoding = (EncodingCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? "UTF-8";
+
+            var step = new ExcelInputStep
+            {
+                Settings = new Dictionary<string, object?>
+                {
+                    ["FilePath"]  = filePath,
+                    ["Format"]    = fmt,
+                    ["SheetName"] = SheetNameCombo.Text?.Trim() ?? "",
+                    ["HasHeader"] = HasHeaderCheck.IsChecked == true ? "true" : "false",
+                    ["Delimiter"] = delimiter,
+                    ["Encoding"]  = encoding,
+                    ["MaxRows"]   = "50"
+                }
+            };
+
+            try
+            {
+                PreviewStatusText.Text = "読み込み中...";
+                var progress = new Progress<string>();
+                var rows = await step.ExecuteAsync(
+                    new List<Dictionary<string, object?>>(), progress, CancellationToken.None);
+
+                PreviewGrid.ItemsSource = ToDataView(rows);
+                PreviewStatusText.Text = $"{rows.Count} 行表示";
+            }
+            catch (Exception ex)
+            {
+                PreviewStatusText.Text = $"エラー: {ex.Message}";
+                PreviewGrid.ItemsSource = null;
+            }
+        }
+
+        /// <summary>
+        /// DataGrid のヘッダーは `_` をアクセスキー prefix として消費するため `__` にエスケープする。
+        /// (sb_id → sb__id を経由して表示は sb_id)
+        /// </summary>
+        private void PreviewGrid_AutoGeneratingColumn(object sender, System.Windows.Controls.DataGridAutoGeneratingColumnEventArgs e)
+        {
+            if (e.Column.Header is string h)
+                e.Column.Header = h.Replace("_", "__");
+        }
+
+        private static DataView ToDataView(List<Dictionary<string, object?>> rows)
+        {
+            var table = new DataTable();
+            if (rows.Count == 0) return table.DefaultView;
+
+            foreach (var key in rows[0].Keys)
+                table.Columns.Add(key, typeof(string));
+
+            foreach (var row in rows)
+            {
+                var dr = table.NewRow();
+                foreach (var kv in row)
+                    dr[kv.Key] = kv.Value?.ToString() ?? "";
+                table.Rows.Add(dr);
+            }
+            return table.DefaultView;
+        }
     }
 }

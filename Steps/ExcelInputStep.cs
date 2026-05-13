@@ -17,6 +17,7 @@ namespace SampleELT.Steps
     /// Settings["HasHeader"] : "true" / "false" (デフォルト: true)
     /// Settings["Delimiter"] : 区切り文字 (CSV/TSV/TXT のみ)
     /// Settings["Encoding"]  : "UTF-8" / "UTF-8 BOM" / "Shift-JIS" (デフォルト: UTF-8)
+    /// Settings["MaxRows"]   : 読み込む最大行数 (省略時=無制限、プレビュー用途)
     /// </summary>
     public class ExcelInputStep : StepBase
     {
@@ -30,6 +31,8 @@ namespace SampleELT.Steps
             var filePath  = Settings.TryGetValue("FilePath",  out var fp)  ? fp?.ToString()  ?? "" : "";
             var format    = Settings.TryGetValue("Format",    out var fmt) ? fmt?.ToString()  ?? "Excel" : "Excel";
             var hasHeader = ParseBool(Settings.TryGetValue("HasHeader", out var hh) ? hh?.ToString() : null, true);
+            var maxRows   = Settings.TryGetValue("MaxRows", out var mr)
+                && int.TryParse(mr?.ToString(), out var mrVal) && mrVal > 0 ? mrVal : int.MaxValue;
 
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new InvalidOperationException("入力ファイルパスが設定されていません。");
@@ -40,7 +43,7 @@ namespace SampleELT.Steps
             if (format == "Excel")
             {
                 var sheetName = Settings.TryGetValue("SheetName", out var sn) ? sn?.ToString() ?? "" : "";
-                return await ReadExcelAsync(filePath, sheetName, hasHeader, progress, ct);
+                return await ReadExcelAsync(filePath, sheetName, hasHeader, maxRows, progress, ct);
             }
             else
             {
@@ -48,12 +51,12 @@ namespace SampleELT.Steps
                 var encodingName     = Settings.TryGetValue("Encoding",  out var enc) ? enc?.ToString() ?? "UTF-8" : "UTF-8";
                 var delimiter = GetDelimiter(format, delimiterSetting);
                 var encoding  = GetEncoding(encodingName);
-                return await ReadTextAsync(filePath, delimiter, hasHeader, encoding, progress, ct);
+                return await ReadTextAsync(filePath, delimiter, hasHeader, encoding, maxRows, progress, ct);
             }
         }
 
         private static async Task<List<Dictionary<string, object?>>> ReadExcelAsync(
-            string filePath, string sheetName, bool hasHeader,
+            string filePath, string sheetName, bool hasHeader, int maxRows,
             IProgress<string> progress, CancellationToken ct)
         {
             ExcelPackage.License.SetNonCommercialPersonal("SampleELT");
@@ -93,6 +96,7 @@ namespace SampleELT.Steps
 
                 for (int r = dataStartRow; r <= rowCount; r++)
                 {
+                    if (result.Count >= maxRows) break;
                     ct.ThrowIfCancellationRequested();
                     var row = new Dictionary<string, object?>();
                     for (int c = 1; c <= colCount; c++)
@@ -108,7 +112,7 @@ namespace SampleELT.Steps
 
         private static async Task<List<Dictionary<string, object?>>> ReadTextAsync(
             string filePath, string delimiter, bool hasHeader,
-            Encoding encoding, IProgress<string> progress, CancellationToken ct)
+            Encoding encoding, int maxRows, IProgress<string> progress, CancellationToken ct)
         {
             var result = new List<Dictionary<string, object?>>();
 
@@ -144,6 +148,7 @@ namespace SampleELT.Steps
                     for (int i = 0; i < headers.Count; i++)
                         row[headers[i]] = i < fields.Count ? (object?)fields[i] : null;
                     result.Add(row);
+                    if (result.Count >= maxRows) break;
                 }
 
                 progress.Report($"File Input: {result.Count}行 読み込み完了");
