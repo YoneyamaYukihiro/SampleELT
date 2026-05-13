@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Windows;
+using System.Windows.Input;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using MySqlConnector;
@@ -137,5 +138,8 @@ namespace SampleELT.Dialogs
         {
             DialogResult = false;
         }
+
+        private void SQLBox_PreviewKeyDown(object sender, KeyEventArgs e)
+            => Controls.SqlEditorBehavior.HandlePreviewKeyDown(sender, e);
     }
 }

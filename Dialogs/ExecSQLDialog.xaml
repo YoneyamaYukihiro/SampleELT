@@ -56,11 +56,14 @@
                  Height="120"
                  Padding="6,4"
                  AcceptsReturn="True"
+                 AcceptsTab="True"
                  TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"
                  FontFamily="Consolas"
                  FontSize="12"
-                 Margin="0,0,0,8"/>
+                 Margin="0,0,0,8"
+                 ToolTip="Tab でスペース 4 個挿入、Ctrl+Tab で次のコントロールへフォーカス移動"
+                 PreviewKeyDown="SQLBox_PreviewKeyDown"/>
 
         <!-- 行ごとに実行 -->
         <StackPanel Grid.Row="4" Margin="0,0,0,12">

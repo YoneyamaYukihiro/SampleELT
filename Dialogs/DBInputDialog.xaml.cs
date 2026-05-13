@@ -433,6 +433,16 @@ namespace SampleELT.Dialogs
             DialogResult = false;
         }
 
+        private void SQLBox_PreviewKeyDown(object sender, KeyEventArgs e)
+            => Controls.SqlEditorBehavior.HandlePreviewKeyDown(sender, e);
+
+        /// <summary>DataGrid ヘッダーの `_` をアクセスキー消費から守るためにエスケープする。</summary>
+        private void PreviewGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+        {
+            if (e.Column.Header is string h)
+                e.Column.Header = h.Replace("_", "__");
+        }
+
         private void SQLBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             var dialog = new SQLEditorDialog { Owner = this };

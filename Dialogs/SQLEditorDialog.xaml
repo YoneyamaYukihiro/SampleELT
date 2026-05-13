@@ -42,6 +42,7 @@ AND   user_id  =  :{user_id}</TextBlock>
                  x:Name="SQLBox"
                  Padding="8,6"
                  AcceptsReturn="True"
+                 AcceptsTab="True"
                  TextWrapping="NoWrap"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto"
@@ -49,7 +50,9 @@ AND   user_id  =  :{user_id}</TextBlock>
                  FontSize="13"
                  Background="#FAFAFA"
                  BorderBrush="#CCCCCC"
-                 VerticalContentAlignment="Top"/>
+                 VerticalContentAlignment="Top"
+                 ToolTip="Tab でスペース 4 個挿入、Ctrl+Tab で次のコントロールへフォーカス移動"
+                 PreviewKeyDown="SQLBox_PreviewKeyDown"/>
 
         <!-- 下ボタン -->
         <StackPanel Grid.Row="3" Orientation="Horizontal"

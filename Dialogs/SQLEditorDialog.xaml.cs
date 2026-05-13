@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 
 namespace SampleELT.Dialogs
 {
@@ -28,5 +29,8 @@ namespace SampleELT.Dialogs
         {
             DialogResult = false;
         }
+
+        private void SQLBox_PreviewKeyDown(object sender, KeyEventArgs e)
+            => Controls.SqlEditorBehavior.HandlePreviewKeyDown(sender, e);
     }
 }

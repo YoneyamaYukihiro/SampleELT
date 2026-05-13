@@ -118,6 +118,7 @@
                 <TextBox Grid.Row="1" x:Name="SQLBox"
                          Padding="6,4"
                          AcceptsReturn="True"
+                         AcceptsTab="True"
                          TextWrapping="NoWrap"
                          VerticalScrollBarVisibility="Auto"
                          HorizontalScrollBarVisibility="Auto"
@@ -125,6 +126,8 @@
                          FontSize="12"
                          Background="#FAFAFA"
                          BorderBrush="#CCCCCC"
+                         ToolTip="Tab でスペース 4 個挿入、Ctrl+Tab で次のコントロールへフォーカス移動"
+                         PreviewKeyDown="SQLBox_PreviewKeyDown"
                          MouseDoubleClick="SQLBox_MouseDoubleClick"/>
             </Grid>
 
@@ -172,6 +175,7 @@
             <!-- プレビュー DataGrid -->
             <DataGrid Grid.Row="4" x:Name="PreviewGrid"
                       AutoGenerateColumns="True"
+                      AutoGeneratingColumn="PreviewGrid_AutoGeneratingColumn"
                       IsReadOnly="True"
                       CanUserAddRows="False"
                       CanUserDeleteRows="False"
