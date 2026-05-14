@@ -37,7 +37,7 @@
                 </Grid.ColumnDefinitions>
                 <ComboBox x:Name="ConnectionCombo"
                           Grid.Column="0" Height="28"
-                          DisplayMemberPath="DisplayName"/>
+                          ItemTemplate="{StaticResource ConnectionItemTemplate}"/>
                 <Button Grid.Column="2"
                         Content="⚙ 接続設定管理"
                         Height="28" FontSize="11"

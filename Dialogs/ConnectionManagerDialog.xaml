@@ -43,7 +43,15 @@
                              BorderBrush="#CCCCCC" BorderThickness="1">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding DisplayName}" Padding="4,2"/>
+                                <StackPanel Orientation="Horizontal" Margin="4,2">
+                                    <Ellipse Width="10" Height="10"
+                                             Fill="{Binding EnvironmentBrush}"
+                                             Stroke="#555555" StrokeThickness="1"
+                                             VerticalAlignment="Center"
+                                             Margin="0,0,6,0"
+                                             ToolTip="{Binding EnvironmentBadge}"/>
+                                    <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -129,7 +137,7 @@
                     </ComboBox>
                 </StackPanel>
 
-                <!-- 環境タグ + 読み取り専用 (安全機構) + 参照ステップ数 -->
+                <!-- 環境タグ + Select 専用 (安全機構) + 参照ステップ数 -->
                 <StackPanel Grid.Row="2" Margin="0,0,0,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -141,17 +149,35 @@
                             <TextBlock Text="環境タグ" FontWeight="Bold" Margin="0,0,0,4"/>
                             <ComboBox x:Name="EnvironmentCombo" Height="28"
                                       SelectionChanged="EnvironmentCombo_SelectionChanged">
-                                <ComboBoxItem Content="🟢 DEV (Development)" Tag="Development" IsSelected="True"
-                                              ToolTip="開発環境。書き込み系ステップでも追加確認なし"/>
-                                <ComboBoxItem Content="🟠 STG (Staging)" Tag="Staging"
-                                              ToolTip="ステージング環境。書き込み系ステップでも追加確認なし"/>
-                                <ComboBoxItem Content="🔴 PRD (Production)" Tag="Production"
-                                              ToolTip="本番環境。書き込み系ステップを含むパイプライン実行前に確認ダイアログを表示"/>
+                                <ComboBoxItem Tag="Development" IsSelected="True"
+                                              ToolTip="開発環境。書き込み系ステップでも追加確認なし">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="12" Height="12" Fill="#1565C0" Stroke="#0D47A1" StrokeThickness="1"
+                                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="DEV (Development)" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="Staging"
+                                              ToolTip="ステージング環境。書き込み系ステップでも追加確認なし">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="12" Height="12" Fill="#F57C00" Stroke="#E65100" StrokeThickness="1"
+                                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="STG (Staging)" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="Production"
+                                              ToolTip="本番環境。書き込み系ステップを含むパイプライン実行前に確認ダイアログを表示">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="12" Height="12" Fill="#D32F2F" Stroke="#B71C1C" StrokeThickness="1"
+                                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <TextBlock Text="PRD (Production)" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
                             </ComboBox>
                         </StackPanel>
                         <StackPanel Grid.Column="2" VerticalAlignment="Bottom" Margin="0,0,0,4">
                             <CheckBox x:Name="ReadOnlyCheck"
-                                      Content="🔒 読み取り専用 (書き込み禁止)"
+                                      Content="🔒 Select 専用 (書き込み禁止)"
                                       Checked="ReadOnlyCheck_Changed"
                                       Unchecked="ReadOnlyCheck_Changed"
                                       ToolTip="チェック時、この接続を使う DB Output / Delete / Update / Insert/Update / Exec SQL は実行時に拒否される (SELECT 系は許容)"/>

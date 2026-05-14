@@ -50,7 +50,7 @@ namespace SampleELT.ViewModels
         };
 
         /// <summary>
-        /// 接続設定名 + 環境バッジ + 読み取り専用アイコンの表示用文字列。
+        /// 接続設定名 + 環境バッジ + Select 専用アイコンの表示用文字列。
         /// 例: <c>[PRD] Spirytus TRN01D 🔒</c> / <c>新しい接続</c>。
         /// ConnectionId が紐づかないステップは空文字。
         /// </summary>
@@ -87,6 +87,10 @@ namespace SampleELT.ViewModels
         /// <summary>Production 接続を使うステップ。ノード枠を強調するため。</summary>
         public bool IsProductionConnection
             => ResolvedConnection()?.Environment == DbEnvironment.Production;
+
+        /// <summary>Staging 接続を使うステップ。接続ラベルをオレンジ表示するため。</summary>
+        public bool IsStagingConnection
+            => ResolvedConnection()?.Environment == DbEnvironment.Staging;
 
         private DbConnectionInfo? ResolvedConnection()
         {
@@ -142,6 +146,7 @@ namespace SampleELT.ViewModels
             OnPropertyChanged(nameof(ConnectionLabel));
             OnPropertyChanged(nameof(HasUnresolvedConnection));
             OnPropertyChanged(nameof(IsProductionConnection));
+            OnPropertyChanged(nameof(IsStagingConnection));
         }
     }
 }

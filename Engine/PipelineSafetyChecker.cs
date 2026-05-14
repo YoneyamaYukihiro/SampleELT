@@ -88,7 +88,7 @@ namespace SampleELT.Engine
                 issues.Add(new Issue(
                     IssueSeverity.Block,
                     step.Name,
-                    $"接続「{conn.Name}」は読み取り専用に設定されているため、{step.StepType} は実行できません。",
+                    $"接続「{conn.Name}」は Select 専用に設定されているため、{step.StepType} は実行できません。",
                     conn));
                 return;
             }

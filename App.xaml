@@ -108,6 +108,19 @@
 
             <!-- Default Button Style override -->
             <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}"/>
+
+            <!-- DB Connection ComboBox Item Template (環境タグ色付き〇 + DisplayName) -->
+            <DataTemplate x:Key="ConnectionItemTemplate">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="10" Height="10"
+                             Fill="{Binding EnvironmentBrush}"
+                             Stroke="#555555" StrokeThickness="1"
+                             VerticalAlignment="Center"
+                             Margin="0,0,6,0"
+                             ToolTip="{Binding EnvironmentBadge}"/>
+                    <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

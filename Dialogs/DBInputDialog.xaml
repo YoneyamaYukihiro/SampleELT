@@ -27,7 +27,7 @@
 
         <!-- ==================== DB 接続 ==================== -->
         <StackPanel Grid.Row="1" Margin="0,0,0,8">
-            <TextBlock Text="DB 接続（Oracle / MySQL）" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBlock Text="DB 接続" FontWeight="Bold" Margin="0,0,0,4"/>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -37,7 +37,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ComboBox x:Name="ConnectionCombo" Grid.Column="0" Height="28"
-                          DisplayMemberPath="DisplayName"
+                          ItemTemplate="{StaticResource ConnectionItemTemplate}"
                           SelectionChanged="ConnectionCombo_SelectionChanged"/>
                 <Button Grid.Column="2" Content="⚙ 接続設定管理" Height="28" FontSize="11"
                         Click="ManageConnections_Click"

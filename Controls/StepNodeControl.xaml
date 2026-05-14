@@ -72,6 +72,9 @@
                                     <DataTrigger Binding="{Binding ConnectionLabel}" Value="">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsStagingConnection}" Value="True">
+                                        <Setter Property="Foreground" Value="#F57C00"/>
+                                    </DataTrigger>
                                     <DataTrigger Binding="{Binding IsProductionConnection}" Value="True">
                                         <Setter Property="Foreground" Value="#D32F2F"/>
                                         <Setter Property="FontWeight" Value="Bold"/>
