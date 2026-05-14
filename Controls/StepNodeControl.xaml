@@ -14,7 +14,12 @@
                     <Setter Property="BorderBrush" Value="#DDDDDD"/>
                     <Setter Property="BorderThickness" Value="1.5"/>
                     <Style.Triggers>
-                        <!-- Production 接続を使うステップは赤枠で警告 -->
+                        <!-- 選択中: 青枠 -->
+                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="BorderBrush" Value="#2196F3"/>
+                            <Setter Property="BorderThickness" Value="2"/>
+                        </DataTrigger>
+                        <!-- Production 接続を使うステップは赤枠で警告 (選択中でも安全側を優先) -->
                         <DataTrigger Binding="{Binding IsProductionConnection}" Value="True">
                             <Setter Property="BorderBrush" Value="#D32F2F"/>
                             <Setter Property="BorderThickness" Value="2.5"/>

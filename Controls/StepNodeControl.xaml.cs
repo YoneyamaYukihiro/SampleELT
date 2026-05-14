@@ -7,31 +7,19 @@ namespace SampleELT.Controls
     public partial class StepNodeControl : UserControl
     {
         // ==================== IsSelected ====================
+        // 選択時の枠線色は XAML 側の DataTrigger ({Binding IsSelected}) で制御する。
+        // コードから RootBorder.BorderBrush を直接代入するとローカル値が固定され、
+        // Production 昇格などの Style トリガが効かなくなるため、ここでは値を保持するだけ。
 
         public static readonly DependencyProperty IsSelectedProperty =
             DependencyProperty.Register(
                 nameof(IsSelected), typeof(bool), typeof(StepNodeControl),
-                new PropertyMetadata(false, OnIsSelectedChanged));
+                new PropertyMetadata(false));
 
         public bool IsSelected
         {
             get => (bool)GetValue(IsSelectedProperty);
             set => SetValue(IsSelectedProperty, value);
-        }
-
-        private static void OnIsSelectedChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            if (d is StepNodeControl ctrl)
-                ctrl.UpdateSelectionVisual((bool)e.NewValue);
-        }
-
-        private void UpdateSelectionVisual(bool isSelected)
-        {
-            if (RootBorder == null) return;
-            RootBorder.BorderBrush = isSelected
-                ? new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3))
-                : new SolidColorBrush(Color.FromRgb(0xDD, 0xDD, 0xDD));
-            RootBorder.BorderThickness = isSelected ? new Thickness(2) : new Thickness(1.5);
         }
 
         // ==================== IsConnectionTarget ====================
