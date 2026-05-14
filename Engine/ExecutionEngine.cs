@@ -157,34 +157,30 @@ namespace SampleELT.Engine
                     var rawOutput = SafeExecuteStreaming(step, inputStream, progress, ct);
                     var wrapped = WrapWithProgress(step, rawOutput, progress, ct);
 
-                    try
+                    if (needsMaterialize)
                     {
-                        if (needsMaterialize)
+                        // ファンアウト → 一度 List 化して再利用可能に
+                        var list = new List<Dictionary<string, object?>>();
+                        await foreach (var row in wrapped.WithCancellation(ct).ConfigureAwait(false))
+                            list.Add(row);
+                        stepMaterialized[stepId] = list;
+                    }
+                    else if (outDeg == 0)
+                    {
+                        // 末端ステップ → 副作用 (DB 書き込み / ファイル出力) を発火させるためドレイン
+                        await foreach (var _ in wrapped.WithCancellation(ct).ConfigureAwait(false))
                         {
-                            // ファンアウト or 多入力の前段 → 一度 List 化して再利用可能に
-                            var list = new List<Dictionary<string, object?>>();
-                            await foreach (var row in wrapped.WithCancellation(ct).ConfigureAwait(false))
-                                list.Add(row);
-                            stepMaterialized[stepId] = list;
-                        }
-                        else if (outDeg == 0)
-                        {
-                            // 末端ステップ → 副作用 (DB 書き込み / ファイル出力) を発火させるためドレイン
-                            await foreach (var _ in wrapped.WithCancellation(ct).ConfigureAwait(false))
-                            {
-                                // no-op: ステップ内部で書き込みなどが実行される
-                            }
-                        }
-                        else
-                        {
-                            // 単下流 → ストリームのまま下流に渡す (実体化しない)
-                            stepStream[stepId] = wrapped;
+                            // no-op: ステップ内部で書き込みなどが実行される
                         }
                     }
-                    finally
+                    else
                     {
-                        // ステップ完了直後に AllInputStreams を切り離して GC 可能に
-                        step.AllInputStreams = new List<IAsyncEnumerable<Dictionary<string, object?>>>();
+                        // 単下流 → ストリームのまま下流に渡す (実体化しない)。
+                        // 注意: step.AllInputStreams はここで参照を切ってはいけない。
+                        // wrapped は遅延列挙され、下流ステップがプルしたタイミングで
+                        // step.ExecuteStreamingAsync の本体が走り AllInputStreams を読むため。
+                        // クリアは外側 try-finally でパイプライン終了時にまとめて行う。
+                        stepStream[stepId] = wrapped;
                     }
 
                     // 前段ノードのうち、もう全消費が終わったものは参照を切る
@@ -260,6 +256,8 @@ namespace SampleELT.Engine
         /// ステップ出力の列挙を進捗ログでラップする。
         /// - 行数をカウントし、列挙終了時に「[Step] 完了 (N行)」を出す
         /// - 列挙中の例外は捕捉してログ出力 (キャンセル / 接続解決失敗は再スローでパイプライン中断)
+        /// - 列挙完了 (正常 / 異常問わず) に <c>step.AllInputStreams</c> をクリアし、
+        ///   ListAsAsync が捕捉している巨大 List への参照を即時に解放する
         /// </summary>
         private static async IAsyncEnumerable<Dictionary<string, object?>> WrapWithProgress(
             StepBase step,
@@ -267,44 +265,54 @@ namespace SampleELT.Engine
             IProgress<string> progress,
             [EnumeratorCancellation] CancellationToken ct)
         {
-            await using var en = source.GetAsyncEnumerator(ct);
             int count = 0;
-            while (true)
+            try
             {
-                bool hasNext = false;
-                Dictionary<string, object?>? next = null;
-                Exception? iterError = null;
-                try
+                await using var en = source.GetAsyncEnumerator(ct);
+                while (true)
                 {
-                    hasNext = await en.MoveNextAsync().ConfigureAwait(false);
-                    if (hasNext) next = en.Current;
-                }
-                catch (OperationCanceledException)
-                {
-                    progress.Report($"[{step.Name}] キャンセルされました");
-                    throw;
-                }
-                catch (ConnectionResolutionException)
-                {
-                    progress.Report($"[{step.Name}] 接続解決失敗のためパイプラインを中断します");
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    iterError = ex;
-                }
+                    bool hasNext = false;
+                    Dictionary<string, object?>? next = null;
+                    Exception? iterError = null;
+                    try
+                    {
+                        hasNext = await en.MoveNextAsync().ConfigureAwait(false);
+                        if (hasNext) next = en.Current;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        progress.Report($"[{step.Name}] キャンセルされました");
+                        throw;
+                    }
+                    catch (ConnectionResolutionException)
+                    {
+                        progress.Report($"[{step.Name}] 接続解決失敗のためパイプラインを中断します");
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        iterError = ex;
+                    }
 
-                if (iterError != null)
-                {
-                    progress.Report($"[{step.Name}] エラー: {iterError.Message}");
-                    break;
-                }
-                if (!hasNext) break;
+                    if (iterError != null)
+                    {
+                        progress.Report($"[{step.Name}] エラー: {iterError.Message}");
+                        break;
+                    }
+                    if (!hasNext) break;
 
-                count++;
-                yield return next!;
+                    count++;
+                    yield return next!;
+                }
+                progress.Report($"[{step.Name}] 完了 ({count}行)");
             }
-            progress.Report($"[{step.Name}] 完了 ({count}行)");
+            finally
+            {
+                // この step の列挙が本当に終わった時点で AllInputStreams を空にする。
+                // ListAsAsync などが内部で捕捉しているマテリアライズ済み List への参照を切り、
+                // 残りのパイプライン中の GC を促す。
+                step.AllInputStreams = new List<IAsyncEnumerable<Dictionary<string, object?>>>();
+            }
         }
 
         private static async IAsyncEnumerable<Dictionary<string, object?>> EmptyAsync()
