@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SampleELT.Models;
@@ -10,32 +11,26 @@ namespace SampleELT.Steps
     {
         public override StepType StepType => StepType.Calculation;
 
-        public override async Task<List<Dictionary<string, object?>>> ExecuteAsync(
-            List<Dictionary<string, object?>> inputData,
+        public override async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
-            CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct)
         {
             var outputFieldName = Settings.TryGetValue("OutputFieldName", out var ofn) ? ofn?.ToString() ?? "Result" : "Result";
-            var expressionType = Settings.TryGetValue("ExpressionType", out var et) ? et?.ToString() ?? "add" : "add";
-            var field1 = Settings.TryGetValue("Field1", out var f1) ? f1?.ToString() ?? "" : "";
-            var field2 = Settings.TryGetValue("Field2", out var f2) ? f2?.ToString() ?? "" : "";
-            var constant = Settings.TryGetValue("Constant", out var c) ? c?.ToString() ?? "0" : "0";
+            var expressionType  = Settings.TryGetValue("ExpressionType",  out var et)  ? et?.ToString()  ?? "add"    : "add";
+            var field1          = Settings.TryGetValue("Field1",          out var f1)  ? f1?.ToString()  ?? ""       : "";
+            var field2          = Settings.TryGetValue("Field2",          out var f2)  ? f2?.ToString()  ?? ""       : "";
+            var constant        = Settings.TryGetValue("Constant",        out var c)   ? c?.ToString()   ?? "0"      : "0";
 
-            var result = new List<Dictionary<string, object?>>();
-
-            await Task.Run(() =>
+            int count = 0;
+            await foreach (var row in input.WithCancellation(ct).ConfigureAwait(false))
             {
-                foreach (var row in inputData)
-                {
-                    ct.ThrowIfCancellationRequested();
-                    var newRow = new Dictionary<string, object?>(row);
-                    newRow[outputFieldName] = ComputeExpression(row, expressionType, field1, field2, constant);
-                    result.Add(newRow);
-                }
-            }, ct);
-
-            progress.Report($"Calculation: {result.Count}行 計算完了 ({outputFieldName})");
-            return result;
+                var newRow = new Dictionary<string, object?>(row);
+                newRow[outputFieldName] = ComputeExpression(row, expressionType, field1, field2, constant);
+                count++;
+                yield return newRow;
+            }
+            progress.Report($"Calculation: {count}行 計算完了 ({outputFieldName})");
         }
 
         private static object? ComputeExpression(

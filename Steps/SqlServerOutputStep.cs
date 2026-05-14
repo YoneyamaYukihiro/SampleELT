@@ -11,11 +11,11 @@ namespace SampleELT.Steps
     {
         public override StepType StepType => StepType.DBOutput;
 
-        public override Task<List<Dictionary<string, object?>>> ExecuteAsync(
-            List<Dictionary<string, object?>> inputData,
+        public override IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
             CancellationToken ct)
-            => DbOutputExecutor.ExecuteAsync(SqlServerProvider.Instance, Settings, inputData, progress, ct);
+            => DbOutputExecutor.ExecuteStreamingAsync(SqlServerProvider.Instance, Settings, input, progress, ct);
 
         public override string GetDisplayIcon() => "🟦";
     }

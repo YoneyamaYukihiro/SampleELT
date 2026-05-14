@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SampleELT.Models;
@@ -13,13 +14,18 @@ namespace SampleELT.Steps
     {
         public override StepType StepType => StepType.Dummy;
 
-        public override Task<List<Dictionary<string, object?>>> ExecuteAsync(
-            List<Dictionary<string, object?>> inputData,
+        public override async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
-            CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct)
         {
-            progress.Report($"Dummy: {inputData.Count}行 通過");
-            return Task.FromResult(inputData);
+            int count = 0;
+            await foreach (var row in input.WithCancellation(ct).ConfigureAwait(false))
+            {
+                count++;
+                yield return row;
+            }
+            progress.Report($"Dummy: {count}行 通過");
         }
 
         public override string GetDisplayIcon() => "⬜";

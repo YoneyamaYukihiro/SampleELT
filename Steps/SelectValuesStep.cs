@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SampleELT.Models;
@@ -19,10 +20,10 @@ namespace SampleELT.Steps
     {
         public override StepType StepType => StepType.SelectValues;
 
-        public override Task<List<Dictionary<string, object?>>> ExecuteAsync(
-            List<Dictionary<string, object?>> inputData,
+        public override async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
-            CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct)
         {
             var raw   = Settings.TryGetValue("FieldMappings", out var m) ? m?.ToString() ?? "" : "";
             var items = FieldMappingItem.Parse(raw)
@@ -32,41 +33,46 @@ namespace SampleELT.Steps
 
             if (items.Count == 0)
             {
-                progress.Report($"Select Values: マッピング未定義 - {inputData.Count}行 そのまま通過");
-                return Task.FromResult(inputData);
+                // マッピング未定義 → そのまま通過
+                int passCount = 0;
+                await foreach (var row in input.WithCancellation(ct).ConfigureAwait(false))
+                {
+                    passCount++;
+                    yield return row;
+                }
+                progress.Report($"Select Values: マッピング未定義 - {passCount}行 そのまま通過");
+                yield break;
             }
 
-            // 入力が 0 行でも定数のみで 1 行出力する
-            if (inputData.Count == 0 && items.All(i => i.IsConstant))
+            int total = 0;
+            bool anyInput = false;
+            await foreach (var row in input.WithCancellation(ct).ConfigureAwait(false))
+            {
+                anyInput = true;
+                var newRow = new Dictionary<string, object?>();
+                foreach (var item in items)
+                {
+                    if (item.IsConstant)
+                        newRow[item.EffectiveDestName] = ConvertValue(item.ConstantValue, item.DataType);
+                    else if (row.TryGetValue(item.SourceName, out var val))
+                        newRow[item.EffectiveDestName] = ConvertValue(val, item.DataType);
+                }
+                total++;
+                yield return newRow;
+            }
+
+            // 入力が 0 行でも定数のみで 1 行出力する (旧仕様互換)
+            if (!anyInput && items.All(i => i.IsConstant))
             {
                 var constRow = new Dictionary<string, object?>();
                 foreach (var item in items)
                     constRow[item.EffectiveDestName] = ConvertValue(item.ConstantValue, item.DataType);
                 progress.Report("Select Values: 定数のみで 1 行出力");
-                return Task.FromResult(new List<Dictionary<string, object?>> { constRow });
+                yield return constRow;
+                yield break;
             }
 
-            var result = new List<Dictionary<string, object?>>(inputData.Count);
-            foreach (var row in inputData)
-            {
-                ct.ThrowIfCancellationRequested();
-                var newRow = new Dictionary<string, object?>();
-                foreach (var item in items)
-                {
-                    if (item.IsConstant)
-                    {
-                        newRow[item.EffectiveDestName] = ConvertValue(item.ConstantValue, item.DataType);
-                    }
-                    else if (row.TryGetValue(item.SourceName, out var val))
-                    {
-                        newRow[item.EffectiveDestName] = ConvertValue(val, item.DataType);
-                    }
-                }
-                result.Add(newRow);
-            }
-
-            progress.Report($"Select Values: {result.Count}行 変換完了");
-            return Task.FromResult(result);
+            progress.Report($"Select Values: {total}行 変換完了");
         }
 
         /// <summary>

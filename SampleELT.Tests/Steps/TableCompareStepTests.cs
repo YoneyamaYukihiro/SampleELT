@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using SampleELT.Steps;
 using Xunit;
 
@@ -19,6 +20,13 @@ namespace SampleELT.Tests.Steps
             return d;
         }
 
+        private static async IAsyncEnumerable<Dictionary<string, object?>> AsAsync(
+            List<Dictionary<string, object?>> source)
+        {
+            foreach (var r in source) yield return r;
+            await Task.CompletedTask;
+        }
+
         private static TableCompareStep Build(
             List<Dictionary<string, object?>> left,
             List<Dictionary<string, object?>> right,
@@ -32,7 +40,7 @@ namespace SampleELT.Tests.Steps
             var step = new TableCompareStep
             {
                 Name = "compare",
-                AllInputStreams = new List<List<Dictionary<string, object?>>> { left, right }
+                AllInputStreams = new List<IAsyncEnumerable<Dictionary<string, object?>>> { AsAsync(left), AsAsync(right) }
             };
             step.Settings["KeyFields"]      = keyFields;
             step.Settings["CompareFields"]  = compareFields;

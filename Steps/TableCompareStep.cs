@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SampleELT.Models;
@@ -35,6 +36,12 @@ namespace SampleELT.Steps
     /// <item><c>IncludeMatched</c>: MATCH 行も出力する (既定 false。差分の確認用途)</item>
     /// </list>
     /// </para>
+    ///
+    /// <para>
+    /// 実装メモ: Right を Dict&lt;key, row&gt; に索引化 (O(|Right|)) し、Left はストリームのまま
+    /// 1 行ずつ消費する。比較列が未指定で Left の最初の行と Right の最初の行から推測する場合の
+    /// 「最初の行」は、Left は最初の 1 行を覗き見、Right は索引化後の任意の 1 行を使う。
+    /// </para>
     /// </summary>
     public class TableCompareStep : StepBase
     {
@@ -45,10 +52,10 @@ namespace SampleELT.Steps
 
         public override StepType StepType => StepType.TableCompare;
 
-        public override Task<List<Dictionary<string, object?>>> ExecuteAsync(
-            List<Dictionary<string, object?>> inputData,
+        public override async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
-            CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct)
         {
             var keyFields = ParseCsv(GetSetting("KeyFields"));
             var compareFieldsRaw = ParseCsv(GetSetting("CompareFields"));
@@ -57,22 +64,17 @@ namespace SampleELT.Steps
             var nullsEqual  = GetBool("NullsEqual",  true);
             var includeMatched = GetBool("IncludeMatched", false);
 
-            var leftRows  = AllInputStreams.Count > 0 ? AllInputStreams[0] : new List<Dictionary<string, object?>>();
-            var rightRows = AllInputStreams.Count > 1 ? AllInputStreams[1] : new List<Dictionary<string, object?>>();
-
             if (keyFields.Count == 0)
                 throw new InvalidOperationException(
                     "TableCompare: KeyFields が空です。突き合わせに使うキー列名 (カンマ区切り) を指定してください。");
 
-            // 比較列を決める: 明示指定が無ければ「両側で観測された列名 - キー列」
-            var compareFields = compareFieldsRaw.Count > 0
-                ? compareFieldsRaw
-                : InferCompareFields(leftRows, rightRows, keyFields);
+            var leftStream  = AllInputStreams.Count > 0 ? AllInputStreams[0] : EmptyAsync();
+            var rightStream = AllInputStreams.Count > 1 ? AllInputStreams[1] : EmptyAsync();
 
-            // Right を キー → 行リスト で索引化 (重複キーは最初の 1 件のみ突き合わせ対象とする)
+            // Right をキーで索引化 (重複キーは最初の 1 件のみ)
             var rightLookup = new Dictionary<string, Dictionary<string, object?>>();
-            var dupRightKeys = 0;
-            foreach (var r in rightRows)
+            int dupRightKeys = 0;
+            await foreach (var r in rightStream.WithCancellation(ct).ConfigureAwait(false))
             {
                 var key = BuildKey(r, keyFields);
                 if (!rightLookup.TryAdd(key, r))
@@ -81,15 +83,22 @@ namespace SampleELT.Steps
             if (dupRightKeys > 0)
                 progress.Report($"TableCompare: Right 側にキー重複が {dupRightKeys} 件あります (初出のみを比較対象にしました)");
 
-            var result = new List<Dictionary<string, object?>>();
+            // 比較列の推測用に Right から代表行を 1 つ拾っておく (Left は後でストリームから取得)
+            var rightSample = rightLookup.Values.FirstOrDefault();
+
             var seenRightKeys = new HashSet<string>();
             int matched = 0, diff = 0, onlyL = 0, onlyR = 0;
 
-            foreach (var left in leftRows)
-            {
-                ct.ThrowIfCancellationRequested();
-                var key = BuildKey(left, keyFields);
+            // 比較列リスト (Left を読みながら最初の 1 行で確定するために遅延初期化する)
+            List<string>? compareFields = compareFieldsRaw.Count > 0 ? compareFieldsRaw : null;
 
+            // Left をストリーミング消費
+            await foreach (var left in leftStream.WithCancellation(ct).ConfigureAwait(false))
+            {
+                if (compareFields == null)
+                    compareFields = InferCompareFields(left, rightSample, keyFields);
+
+                var key = BuildKey(left, keyFields);
                 if (rightLookup.TryGetValue(key, out var right))
                 {
                     seenRightKeys.Add(key);
@@ -105,43 +114,47 @@ namespace SampleELT.Steps
 
                     if (diffCols.Count > 0)
                     {
-                        result.Add(BuildOutputRow(keyFields, compareFields, left, right, StatusDiff, string.Join(",", diffCols)));
                         diff++;
+                        yield return BuildOutputRow(keyFields, compareFields, left, right, StatusDiff, string.Join(",", diffCols));
                     }
                     else
                     {
                         matched++;
                         if (includeMatched)
-                            result.Add(BuildOutputRow(keyFields, compareFields, left, right, StatusMatch, ""));
+                            yield return BuildOutputRow(keyFields, compareFields, left, right, StatusMatch, "");
                     }
                 }
                 else
                 {
-                    result.Add(BuildOutputRow(keyFields, compareFields, left, null, StatusOnlyLeft, ""));
                     onlyL++;
+                    yield return BuildOutputRow(keyFields, compareFields, left, null, StatusOnlyLeft, "");
                 }
             }
 
-            // Right に残った (Left に対応行が無い) もの
-            foreach (var right in rightRows)
+            // Left が空でも compareFields を確定させる必要がある (ONLY_RIGHT 出力のため)
+            if (compareFields == null)
+                compareFields = compareFieldsRaw.Count > 0
+                    ? compareFieldsRaw
+                    : InferCompareFields(null, rightSample, keyFields);
+
+            // Right に残った (Left に対応行が無い) ものを出力
+            foreach (var kv in rightLookup)
             {
                 ct.ThrowIfCancellationRequested();
-                var key = BuildKey(right, keyFields);
-                if (seenRightKeys.Contains(key)) continue;
-                // 重複キーで rightLookup には入らなかった行も ONLY_RIGHT として扱う必要があるが、
-                // 初出を seenRightKeys に入れる場面が無いため、ここで除外する判定を追加:
-                if (!rightLookup.TryGetValue(key, out var first) || !ReferenceEquals(first, right))
-                    continue;
-
-                result.Add(BuildOutputRow(keyFields, compareFields, null, right, StatusOnlyRight, ""));
+                if (seenRightKeys.Contains(kv.Key)) continue;
                 onlyR++;
+                yield return BuildOutputRow(keyFields, compareFields, null, kv.Value, StatusOnlyRight, "");
             }
 
             progress.Report(
                 $"TableCompare: MATCH {matched} / DIFF {diff} / ONLY_LEFT {onlyL} / ONLY_RIGHT {onlyR}" +
                 (includeMatched ? "" : "  (MATCH 行は省略)"));
+        }
 
-            return Task.FromResult(result);
+        private static async IAsyncEnumerable<Dictionary<string, object?>> EmptyAsync()
+        {
+            await Task.CompletedTask;
+            yield break;
         }
 
         private static List<string> ParseCsv(string s)
@@ -158,24 +171,26 @@ namespace SampleELT.Steps
             return bool.TryParse(v.ToString(), out var b) ? b : defaultValue;
         }
 
+        /// <summary>Left/Right の最初の行から「両側で観測された列名 - キー列」を抽出。null 引数は無視。</summary>
         private static List<string> InferCompareFields(
-            List<Dictionary<string, object?>> left,
-            List<Dictionary<string, object?>> right,
+            Dictionary<string, object?>? leftSample,
+            Dictionary<string, object?>? rightSample,
             List<string> keyFields)
         {
             var keys = new HashSet<string>(keyFields, StringComparer.Ordinal);
             var ordered = new List<string>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
 
-            void Add(IEnumerable<string> names)
+            void Add(IEnumerable<string>? names)
             {
+                if (names == null) return;
                 foreach (var n in names)
                     if (!keys.Contains(n) && seen.Add(n))
                         ordered.Add(n);
             }
 
-            if (left.Count > 0) Add(left[0].Keys);
-            if (right.Count > 0) Add(right[0].Keys);
+            Add(leftSample?.Keys);
+            Add(rightSample?.Keys);
             return ordered;
         }
 

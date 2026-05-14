@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SampleELT.Models;
@@ -17,31 +18,28 @@ namespace SampleELT.Steps
     {
         public override StepType StepType => StepType.Filter;
 
-        public override async Task<List<Dictionary<string, object?>>> ExecuteAsync(
-            List<Dictionary<string, object?>> inputData,
+        public override async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
-            CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct)
         {
             var fieldName  = Settings.TryGetValue("FieldName",  out var fn) ? fn?.ToString()  ?? "" : "";
             var op         = Settings.TryGetValue("Operator",   out var oper) ? oper?.ToString() ?? "equals" : "equals";
             var value      = Settings.TryGetValue("Value",      out var v)  ? v?.ToString()   ?? "" : "";
             var rightField = Settings.TryGetValue("RightField", out var rf) ? rf?.ToString()  ?? "" : "";
 
-            var result = new List<Dictionary<string, object?>>();
-
-            await Task.Run(() =>
+            int matched = 0;
+            int total = 0;
+            await foreach (var row in input.WithCancellation(ct).ConfigureAwait(false))
             {
-                foreach (var row in inputData)
+                total++;
+                if (MatchesFilter(row, fieldName, op, value, rightField))
                 {
-                    ct.ThrowIfCancellationRequested();
-
-                    if (MatchesFilter(row, fieldName, op, value, rightField))
-                        result.Add(row);
+                    matched++;
+                    yield return row;
                 }
-            }, ct);
-
-            progress.Report($"Filter: {result.Count}/{inputData.Count}行 マッチ");
-            return result;
+            }
+            progress.Report($"Filter: {matched}/{total}行 マッチ");
         }
 
         private static bool MatchesFilter(

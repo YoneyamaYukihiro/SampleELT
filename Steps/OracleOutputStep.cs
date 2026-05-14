@@ -11,11 +11,11 @@ namespace SampleELT.Steps
     {
         public override StepType StepType => StepType.OracleOutput;
 
-        public override Task<List<Dictionary<string, object?>>> ExecuteAsync(
-            List<Dictionary<string, object?>> inputData,
+        public override IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
             CancellationToken ct)
-            => DbOutputExecutor.ExecuteAsync(OracleProvider.Instance, Settings, inputData, progress, ct);
+            => DbOutputExecutor.ExecuteStreamingAsync(OracleProvider.Instance, Settings, input, progress, ct);
 
         public override string GetDisplayIcon() => "🔶";
     }

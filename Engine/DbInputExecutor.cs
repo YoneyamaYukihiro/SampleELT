@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,18 +13,51 @@ namespace SampleELT.Engine
 {
     /// <summary>
     /// DB Input ステップの共通実装。プロバイダ越しに ADO.NET にアクセスする。
+    /// 行単位ストリーミング (DbDataReader を yield) を提供し、巨大な結果セットでもメモリを消費しない。
     /// </summary>
     public static class DbInputExecutor
     {
         private static readonly Regex NamedParamRegex = new(@":\{([a-zA-Z_]\w*)\}", RegexOptions.Compiled);
         private static readonly Regex PositionalRegex = new(@"\?", RegexOptions.Compiled);
 
+        /// <summary>
+        /// レガシー互換: <see cref="ExecuteStreamingAsync"/> をドレインして List にまとめて返す。
+        /// テストや非ストリーミング呼び出し元のために残す。新規コードは streaming 版を使うこと。
+        /// </summary>
         public static async Task<List<Dictionary<string, object?>>> ExecuteAsync(
             DbProvider provider,
             Dictionary<string, object?> settings,
             List<Dictionary<string, object?>> inputData,
             IProgress<string> progress,
             CancellationToken ct)
+        {
+            var result = new List<Dictionary<string, object?>>();
+            await foreach (var row in ExecuteStreamingAsync(provider, settings, ListAsAsync(inputData), progress, ct)
+                .WithCancellation(ct).ConfigureAwait(false))
+            {
+                result.Add(row);
+            }
+            return result;
+        }
+
+        private static async IAsyncEnumerable<Dictionary<string, object?>> ListAsAsync(
+            List<Dictionary<string, object?>> list)
+        {
+            foreach (var row in list) yield return row;
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 行単位ストリーミング版。
+        /// 入力 (`inputAsync`) を最大 1 回列挙する。`ExecuteEachRow=true` の場合のみ全行に対して
+        /// 個別にクエリを発行し、それ以外はパラメータ用の最初の行だけを読む。
+        /// </summary>
+        public static async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
+            DbProvider provider,
+            Dictionary<string, object?> settings,
+            IAsyncEnumerable<Dictionary<string, object?>> inputAsync,
+            IProgress<string> progress,
+            [EnumeratorCancellation] CancellationToken ct)
         {
             var connectionString = provider.PreprocessConnectionString(
                 IConnectionStore.Default.ResolveConnectionString(settings));
@@ -38,48 +72,79 @@ namespace SampleELT.Engine
                         : hasPositional  ? RewritePositionalParams(sql, provider)
                         : sql;
 
-            var result = new List<Dictionary<string, object?>>();
-
             using var conn = provider.CreateConnection(connectionString);
-            await conn.OpenAsync(ct);
+            await conn.OpenAsync(ct).ConfigureAwait(false);
 
-            if (executeEachRow && inputData.Count > 0)
+            long totalRows = 0;
+
+            if (executeEachRow)
             {
-                foreach (var row in inputData)
+                // 行ごとに SQL を実行。入力行を 1 行ずつ消費しながらクエリを発行 → 結果を yield。
+                bool anyInput = false;
+                await foreach (var row in inputAsync.WithCancellation(ct).ConfigureAwait(false))
                 {
+                    anyInput = true;
                     ct.ThrowIfCancellationRequested();
                     using var cmd = conn.CreateCommand();
                     cmd.CommandText = execSql;
-                    if (hasNamedParams)
-                        AddNamedParameters(cmd, row, provider);
-                    else
-                        AddPositionalParameters(cmd, row.Values.ToList(), provider);
+                    if (hasNamedParams) AddNamedParameters(cmd, row, provider);
+                    else                AddPositionalParameters(cmd, row.Values.ToList(), provider);
 
-                    await ReadIntoAsync(cmd, result, ct);
+                    await foreach (var outRow in ReadRowsAsync(cmd, ct).ConfigureAwait(false))
+                    {
+                        totalRows++;
+                        yield return outRow;
+                    }
                 }
-                progress.Report($"{provider.LogPrefix} Input (行ごと実行): {result.Count}行 読み込み完了");
+                if (!anyInput)
+                {
+                    // 入力が空ならフォールバックで通常実行
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = sql;
+                    await foreach (var outRow in ReadRowsAsync(cmd, ct).ConfigureAwait(false))
+                    {
+                        totalRows++;
+                        yield return outRow;
+                    }
+                }
+                progress.Report($"{provider.LogPrefix} Input (行ごと実行): {totalRows}行 読み込み完了");
             }
-            else if (!executeEachRow && inputData.Count > 0 && (hasNamedParams || hasPositional))
+            else if (hasNamedParams || hasPositional)
             {
+                // パラメータあり: 入力の最初の行をパラメータに使って 1 回だけ実行
+                Dictionary<string, object?>? firstRow = null;
+                await foreach (var row in inputAsync.WithCancellation(ct).ConfigureAwait(false))
+                {
+                    firstRow = row;
+                    break;
+                }
+
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = execSql;
-                if (hasNamedParams)
-                    AddNamedParameters(cmd, inputData[0], provider);
-                else
-                    AddPositionalParameters(cmd, inputData[0].Values.ToList(), provider);
-
-                await ReadIntoAsync(cmd, result, ct);
-                progress.Report($"{provider.LogPrefix} Input (パラメータ実行): {result.Count}行 読み込み完了");
+                if (firstRow != null)
+                {
+                    if (hasNamedParams) AddNamedParameters(cmd, firstRow, provider);
+                    else                AddPositionalParameters(cmd, firstRow.Values.ToList(), provider);
+                }
+                await foreach (var outRow in ReadRowsAsync(cmd, ct).ConfigureAwait(false))
+                {
+                    totalRows++;
+                    yield return outRow;
+                }
+                progress.Report($"{provider.LogPrefix} Input (パラメータ実行): {totalRows}行 読み込み完了");
             }
             else
             {
+                // パラメータなし: 入力は無視して 1 回だけ実行
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = sql;
-                await ReadIntoAsync(cmd, result, ct);
-                progress.Report($"{provider.LogPrefix} Input: {result.Count}行 読み込み完了");
+                await foreach (var outRow in ReadRowsAsync(cmd, ct).ConfigureAwait(false))
+                {
+                    totalRows++;
+                    yield return outRow;
+                }
+                progress.Report($"{provider.LogPrefix} Input: {totalRows}行 読み込み完了");
             }
-
-            return result;
         }
 
         private static string RewriteNamedParams(string sql, DbProvider provider)
@@ -113,18 +178,17 @@ namespace SampleELT.Engine
             }
         }
 
-        private static async Task ReadIntoAsync(
+        private static async IAsyncEnumerable<Dictionary<string, object?>> ReadRowsAsync(
             DbCommand cmd,
-            List<Dictionary<string, object?>> dest,
-            CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct)
         {
-            using var reader = await cmd.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
+            using var reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+            while (await reader.ReadAsync(ct).ConfigureAwait(false))
             {
-                var row = new Dictionary<string, object?>();
+                var row = new Dictionary<string, object?>(reader.FieldCount);
                 for (int i = 0; i < reader.FieldCount; i++)
                     row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                dest.Add(row);
+                yield return row;
             }
         }
     }

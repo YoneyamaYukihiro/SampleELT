@@ -20,6 +20,13 @@ namespace SampleELT.Tests.Steps
             return result;
         }
 
+        private static async IAsyncEnumerable<Dictionary<string, object?>> AsAsync(
+            List<Dictionary<string, object?>> source)
+        {
+            foreach (var r in source) yield return r;
+            await Task.CompletedTask;
+        }
+
         private static async Task<List<Dictionary<string, object?>>> Join(
             List<Dictionary<string, object?>> left,
             List<Dictionary<string, object?>> right,
@@ -28,7 +35,7 @@ namespace SampleELT.Tests.Steps
             var step = new MergeJoinStep();
             step.Settings["JoinType"]  = joinType;
             step.Settings["KeyFields"] = keyFields;
-            step.AllInputStreams = new List<List<Dictionary<string, object?>>> { left, right };
+            step.AllInputStreams = new List<IAsyncEnumerable<Dictionary<string, object?>>> { AsAsync(left), AsAsync(right) };
             return await step.ExecuteAsync(left, new SyncProgress(), CancellationToken.None);
         }
 
@@ -90,7 +97,7 @@ namespace SampleELT.Tests.Steps
             var step = new MergeJoinStep();
             step.Settings["JoinType"]  = "INNER";
             step.Settings["KeyFields"] = "";
-            step.AllInputStreams = new List<List<Dictionary<string, object?>>> { left, right };
+            step.AllInputStreams = new List<IAsyncEnumerable<Dictionary<string, object?>>> { AsAsync(left), AsAsync(right) };
             var result = await step.ExecuteAsync(left, new SyncProgress(), CancellationToken.None);
 
             Assert.Equal(4, result.Count); // 2×2 cross join
