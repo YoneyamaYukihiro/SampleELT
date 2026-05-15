@@ -8,9 +8,9 @@ using Microsoft.Win32;
 using MySqlConnector;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class ConnectionManagerDialog : Window
     {
@@ -589,7 +589,7 @@ namespace SampleELT.Dialogs
 
         private static void ParseOracleDataSource(
             string dataSource, out string host, out string port, out string service)
-            => SampleELT.Tools.OracleDataSourceParser.Parse(dataSource, out host, out port, out service);
+            => BreezeFlow.Tools.OracleDataSourceParser.Parse(dataSource, out host, out port, out service);
 
         private async void TestConnection_Click(object sender, RoutedEventArgs e)
         {

@@ -6,9 +6,9 @@ using Microsoft.Data.Sqlite;
 using MySqlConnector;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Engine
+namespace BreezeFlow.Engine
 {
     /// <summary>
     /// DB ごとの差分（接続ファクトリ、プレースホルダー記法、INSERT/UPSERT 構文、識別子クォート）を隠蔽する抽象。

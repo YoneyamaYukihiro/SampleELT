@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace SampleELT.Tools.Ktr
+namespace BreezeFlow.Tools.Ktr
 {
     /// <summary>
     /// 「RowGenerator → ScriptValueMod (→ SelectValues)」が

@@ -1,6 +1,6 @@
 using System;
 
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     public class PipelineConnection
     {

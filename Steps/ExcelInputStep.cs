@@ -5,9 +5,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using OfficeOpenXml;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Steps
+namespace BreezeFlow.Steps
 {
     /// <summary>
     /// ファイル入力ステップ (Excel / CSV / TSV / TXT)。
@@ -59,7 +59,7 @@ namespace SampleELT.Steps
             string filePath, string sheetName, bool hasHeader, int maxRows,
             IProgress<string> progress, CancellationToken ct)
         {
-            ExcelPackage.License.SetNonCommercialPersonal("SampleELT");
+            ExcelPackage.License.SetNonCommercialPersonal("BreezeFlow");
             var result = new List<Dictionary<string, object?>>();
 
             await Task.Run(() =>

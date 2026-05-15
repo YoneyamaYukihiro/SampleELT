@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-using SampleELT.Engine;
-using SampleELT.Models;
+using BreezeFlow.Engine;
+using BreezeFlow.Models;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     // ListView 表示用ラッパー
     internal class JobStepViewModel

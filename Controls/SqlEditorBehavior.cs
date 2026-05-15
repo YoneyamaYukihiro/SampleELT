@@ -1,7 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace SampleELT.Controls
+namespace BreezeFlow.Controls
 {
     /// <summary>
     /// SQL 編集 TextBox 共通の Tab キー挙動。Tab キーで半角スペース 4 個を挿入する。

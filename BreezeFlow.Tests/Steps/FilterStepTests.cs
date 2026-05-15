@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Steps;
+using BreezeFlow.Steps;
 using Xunit;
 
-namespace SampleELT.Tests.Steps
+namespace BreezeFlow.Tests.Steps
 {
     public class FilterStepTests
     {

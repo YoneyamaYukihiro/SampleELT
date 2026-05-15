@@ -4,11 +4,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using SampleELT.Engine;
-using SampleELT.Steps;
+using BreezeFlow.Engine;
+using BreezeFlow.Steps;
 using Xunit;
 
-namespace SampleELT.Tests.Engine
+namespace BreezeFlow.Tests.Engine
 {
     /// <summary>
     /// SQLite を使って DbInputExecutor / DbOutputExecutor のエンドツーエンド動作を検証する。
@@ -21,7 +21,7 @@ namespace SampleELT.Tests.Engine
 
         public DbExecutorSqliteTests()
         {
-            _dbPath = Path.Combine(Path.GetTempPath(), $"sampleelt_test_{Guid.NewGuid():N}.db");
+            _dbPath = Path.Combine(Path.GetTempPath(), $"breezeflow_test_{Guid.NewGuid():N}.db");
             _connectionString = $"Data Source={_dbPath}";
 
             using var conn = new SqliteConnection(_connectionString);

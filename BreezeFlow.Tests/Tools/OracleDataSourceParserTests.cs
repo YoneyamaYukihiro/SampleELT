@@ -1,7 +1,7 @@
-using SampleELT.Tools;
+using BreezeFlow.Tools;
 using Xunit;
 
-namespace SampleELT.Tests.Tools
+namespace BreezeFlow.Tests.Tools
 {
     public class OracleDataSourceParserTests
     {

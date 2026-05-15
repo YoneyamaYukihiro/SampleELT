@@ -1,8 +1,8 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.ViewModels
+namespace BreezeFlow.ViewModels
 {
     public partial class ConnectionViewModel : ObservableObject
     {

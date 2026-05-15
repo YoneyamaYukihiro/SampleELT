@@ -2,11 +2,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using SampleELT.Models;
-using SampleELT.Models.Serialization;
-using SampleELT.Steps;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Serialization;
+using BreezeFlow.Steps;
 
-namespace SampleELT.Engine
+namespace BreezeFlow.Engine
 {
     /// <summary>
     /// JSON ファイルからパイプラインを復元する共有ユーティリティ。

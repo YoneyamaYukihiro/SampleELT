@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Engine;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Engine;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Steps
+namespace BreezeFlow.Steps
 {
     /// <summary>
     /// 入力データをキーで検索し、一致すれば UPDATE、なければ INSERT するステップ (UPSERT)。

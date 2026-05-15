@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Steps
+namespace BreezeFlow.Steps
 {
     /// <summary>
     /// 条件に一致する行のみを通過させるステップ。

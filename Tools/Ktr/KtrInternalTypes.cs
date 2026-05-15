@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Tools.Ktr
+namespace BreezeFlow.Tools.Ktr
 {
     /// <summary>KTR XML 上の <c>&lt;step&gt;</c> 要素のパース結果。</summary>
     internal class KtrStep

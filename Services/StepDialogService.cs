@@ -1,10 +1,10 @@
 using System;
 using System.Windows;
-using SampleELT.Dialogs;
-using SampleELT.Models;
-using SampleELT.ViewModels;
+using BreezeFlow.Dialogs;
+using BreezeFlow.Models;
+using BreezeFlow.ViewModels;
 
-namespace SampleELT.Services
+namespace BreezeFlow.Services
 {
     /// <summary>
     /// 各ステップタイプの設定ダイアログ表示を一手に引き受けるサービス。

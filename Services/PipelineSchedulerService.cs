@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using SampleELT.Engine;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Engine;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Services
+namespace BreezeFlow.Services
 {
     /// <summary>
     /// アプリ内で 1 分ごとにスケジュールエントリを評価し、期限が来たジョブ／パイプラインを実行する。

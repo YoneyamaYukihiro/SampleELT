@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SampleELT.Tests
+namespace BreezeFlow.Tests
 {
     /// <summary>
     /// Progress&lt;T&gt; は非同期ポストのため await 後でもコールバック未実行の場合がある。

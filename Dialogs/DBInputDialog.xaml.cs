@@ -10,10 +10,10 @@ using Microsoft.Data.Sqlite;
 using MySqlConnector;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
-using SampleELT.Models;
+using BreezeFlow.Models;
 using DataTable = System.Data.DataTable;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class DBInputDialog : Window
     {

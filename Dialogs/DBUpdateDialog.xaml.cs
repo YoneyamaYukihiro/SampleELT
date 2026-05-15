@@ -9,9 +9,9 @@ using Microsoft.Data.Sqlite;
 using MySqlConnector;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class DBUpdateDialog : Window
     {

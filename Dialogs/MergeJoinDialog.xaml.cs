@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class MergeJoinDialog : Window
     {

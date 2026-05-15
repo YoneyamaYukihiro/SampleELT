@@ -5,12 +5,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using SampleELT.Models;
-using SampleELT.Steps;
-using SampleELT.Models.Stores;
-using SampleELT.Tools;
+using BreezeFlow.Models;
+using BreezeFlow.Steps;
+using BreezeFlow.Models.Stores;
+using BreezeFlow.Tools;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class SelectValuesDialog : Window
     {

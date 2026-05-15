@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 using Xunit;
 
-namespace SampleELT.Tests.Models.Stores
+namespace BreezeFlow.Tests.Models.Stores
 {
     /// <summary>
     /// IConnectionStore.Default にモックを差し替えてテストできることを確認する。

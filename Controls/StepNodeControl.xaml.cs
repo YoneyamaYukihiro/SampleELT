@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace SampleELT.Controls
+namespace BreezeFlow.Controls
 {
     public partial class StepNodeControl : UserControl
     {

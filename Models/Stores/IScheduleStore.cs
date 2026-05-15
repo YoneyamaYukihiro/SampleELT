@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SampleELT.Models.Stores
+namespace BreezeFlow.Models.Stores
 {
     /// <summary>スケジュール設定の永続化／実行時刻計算インターフェイス。実体は <see cref="ScheduleRegistry"/>。</summary>
     public interface IScheduleStore

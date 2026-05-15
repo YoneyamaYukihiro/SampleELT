@@ -1,4 +1,4 @@
-<Window x:Class="SampleELT.Dialogs.DummyStepDialog"
+<Window x:Class="BreezeFlow.Dialogs.DummyStepDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Dummy 設定"

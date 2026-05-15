@@ -8,10 +8,10 @@ using Microsoft.Data.Sqlite;
 using MySqlConnector;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Steps
+namespace BreezeFlow.Steps
 {
     /// <summary>
     /// 入力データの各行をキーとしてDBのレコードを削除するステップ。

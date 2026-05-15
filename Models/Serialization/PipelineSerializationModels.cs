@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SampleELT.Models.Serialization
+namespace BreezeFlow.Models.Serialization
 {
     /// <summary>パイプライン JSON のルート DTO。</summary>
     public class PipelineSerializationModel

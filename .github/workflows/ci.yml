@@ -20,15 +20,15 @@ jobs:
 
       - name: Restore
         run: |
-          dotnet restore SampleELT.csproj
-          dotnet restore SampleELT.Tests/SampleELT.Tests.csproj
+          dotnet restore BreezeFlow.csproj
+          dotnet restore BreezeFlow.Tests/BreezeFlow.Tests.csproj
 
       - name: Build (main project)
-        run: dotnet build SampleELT.csproj --no-restore -c Release
+        run: dotnet build BreezeFlow.csproj --no-restore -c Release
 
       - name: Test
         run: >
-          dotnet test SampleELT.Tests/SampleELT.Tests.csproj
+          dotnet test BreezeFlow.Tests/BreezeFlow.Tests.csproj
           --no-restore
           -c Release
           --verbosity normal

@@ -1,8 +1,8 @@
 using System;
-using SampleELT.Models;
+using BreezeFlow.Models;
 using Xunit;
 
-namespace SampleELT.Tests.Models
+namespace BreezeFlow.Tests.Models
 {
     public class ScheduleRegistryTests
     {

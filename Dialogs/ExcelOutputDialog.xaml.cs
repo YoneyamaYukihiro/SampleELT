@@ -3,9 +3,9 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
-using SampleELT.Steps;
+using BreezeFlow.Steps;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class ExcelOutputDialog : Window
     {

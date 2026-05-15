@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Engine
+namespace BreezeFlow.Engine
 {
     /// <summary>
     /// DB Update (UPDATE のみ) ステップの共通実装。

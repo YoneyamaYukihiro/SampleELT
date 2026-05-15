@@ -4,24 +4,24 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace SampleELT.Tools.Ktr
+namespace BreezeFlow.Tools.Ktr
 {
     /// <summary>
-    /// 1 つの KTR ステップ種別を SampleELT の <see cref="JsonStep"/> に変換するストラテジ。
+    /// 1 つの KTR ステップ種別を BreezeFlow の <see cref="JsonStep"/> に変換するストラテジ。
     /// <see cref="HandledKtrType"/> を <see cref="KtrStepConverterRegistry"/> がディスパッチに使う。
     /// </summary>
     internal interface IKtrStepConverter
     {
         string HandledKtrType { get; }
         void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx);
-        string SampleEltStepType { get; }
+        string BreezeFlowStepType { get; }
     }
 
     /// <summary>未対応 / フォールバック用のコンバータ。Dummy 化して原 XML を保持する。</summary>
     internal class FallbackDummyConverter : IKtrStepConverter
     {
         public string HandledKtrType => "*";
-        public string SampleEltStepType => "Dummy";
+        public string BreezeFlowStepType => "Dummy";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -36,21 +36,21 @@ namespace SampleELT.Tools.Ktr
     {
         private readonly string _ktrType;
         public string HandledKtrType => _ktrType;
-        public string SampleEltStepType => "Dummy";
+        public string BreezeFlowStepType => "Dummy";
         public UnconvertedScriptConverter(string ktrType) { _ktrType = ktrType; }
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
             dst.Settings["OriginalKtrType"] = src.Type;
             dst.Settings["OriginalXml"] = src.Element.ToString(SaveOptions.DisableFormatting);
-            ctx.Warnings.Add($"ステップ '{src.Name}' (type={src.Type}) は SampleELT に対応する種別が無いため Dummy に置換しました。");
+            ctx.Warnings.Add($"ステップ '{src.Name}' (type={src.Type}) は BreezeFlow に対応する種別が無いため Dummy に置換しました。");
         }
     }
 
     internal class TableInputConverter : IKtrStepConverter
     {
         public string HandledKtrType => "TableInput";
-        public string SampleEltStepType => "DBInput";
+        public string BreezeFlowStepType => "DBInput";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -83,7 +83,7 @@ namespace SampleELT.Tools.Ktr
     internal class TableOutputConverter : IKtrStepConverter
     {
         public string HandledKtrType => "TableOutput";
-        public string SampleEltStepType => "DBOutput";
+        public string BreezeFlowStepType => "DBOutput";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -101,7 +101,7 @@ namespace SampleELT.Tools.Ktr
     internal class InsertUpdateKtrConverter : IKtrStepConverter
     {
         public string HandledKtrType => "InsertUpdate";
-        public string SampleEltStepType => "InsertUpdate";
+        public string BreezeFlowStepType => "InsertUpdate";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -132,7 +132,7 @@ namespace SampleELT.Tools.Ktr
     internal class UpdateConverter : IKtrStepConverter
     {
         public string HandledKtrType => "Update";
-        public string SampleEltStepType => "DBUpdate";
+        public string BreezeFlowStepType => "DBUpdate";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -163,7 +163,7 @@ namespace SampleELT.Tools.Ktr
     internal class DeleteConverter : IKtrStepConverter
     {
         public string HandledKtrType => "Delete";
-        public string SampleEltStepType => "DBDelete";
+        public string BreezeFlowStepType => "DBDelete";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -188,7 +188,7 @@ namespace SampleELT.Tools.Ktr
     {
         private readonly string _ktrType;
         public string HandledKtrType => _ktrType;
-        public string SampleEltStepType => "ExecSQL";
+        public string BreezeFlowStepType => "ExecSQL";
         public ExecSqlConverter(string ktrType) { _ktrType = ktrType; }
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
@@ -213,7 +213,7 @@ namespace SampleELT.Tools.Ktr
     internal class MergeJoinConverter : IKtrStepConverter
     {
         public string HandledKtrType => "MergeJoin";
-        public string SampleEltStepType => "MergeJoin";
+        public string BreezeFlowStepType => "MergeJoin";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -233,7 +233,7 @@ namespace SampleELT.Tools.Ktr
             {
                 ctx.Warnings.Add(
                     $"MergeJoin '{src.Name}': 左右で異なるキー (left={string.Join(",", keys1)} / right={string.Join(",", keys2)}) " +
-                    "が指定されています。SampleELT は単一の KeyFields のみサポートのため左側 (keys_1) を採用しました。");
+                    "が指定されています。BreezeFlow は単一の KeyFields のみサポートのため左側 (keys_1) を採用しました。");
             }
         }
     }
@@ -241,7 +241,7 @@ namespace SampleELT.Tools.Ktr
     internal class SelectValuesConverter : IKtrStepConverter
     {
         public string HandledKtrType => "SelectValues";
-        public string SampleEltStepType => "SelectValues";
+        public string BreezeFlowStepType => "SelectValues";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -260,11 +260,11 @@ namespace SampleELT.Tools.Ktr
     internal class CalculatorConverter : IKtrStepConverter
     {
         public string HandledKtrType => "Calculator";
-        public string SampleEltStepType => "Calculation";
+        public string BreezeFlowStepType => "Calculation";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
-            // KTR Calculator は複数式を持つが、SampleELT は1式しか持てないので最初の有効計算のみ取り込む。
+            // KTR Calculator は複数式を持つが、BreezeFlow は1式しか持てないので最初の有効計算のみ取り込む。
             var calc = src.Element.Element("calculation")?.Elements("calculation").FirstOrDefault()
                        ?? src.Element.Elements("calculation").FirstOrDefault();
             if (calc == null)
@@ -306,7 +306,7 @@ namespace SampleELT.Tools.Ktr
     internal class FormulaConverter : IKtrStepConverter
     {
         public string HandledKtrType => "Formula";
-        public string SampleEltStepType => "Calculation";
+        public string BreezeFlowStepType => "Calculation";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
@@ -358,11 +358,11 @@ namespace SampleELT.Tools.Ktr
     internal class FilterRowsConverter : IKtrStepConverter
     {
         public string HandledKtrType => "FilterRows";
-        public string SampleEltStepType => "Filter";
+        public string BreezeFlowStepType => "Filter";
 
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx)
         {
-            // KTR の <condition> はネスト可能だが、SampleELT は単純比較のみ。簡易対応。
+            // KTR の <condition> はネスト可能だが、BreezeFlow は単純比較のみ。簡易対応。
             var cond = src.Element.Element("condition");
             var leftField = cond?.Element("leftvalue")?.Value?.Trim() ?? "";
             var op = (cond?.Element("function")?.Value ?? "=").Trim();
@@ -392,7 +392,7 @@ namespace SampleELT.Tools.Ktr
     internal class DummyConverter : IKtrStepConverter
     {
         public string HandledKtrType => "Dummy";
-        public string SampleEltStepType => "Dummy";
+        public string BreezeFlowStepType => "Dummy";
         public void Fill(KtrStep src, JsonStep dst, KtrConvertContext ctx) { /* 設定なし */ }
     }
 

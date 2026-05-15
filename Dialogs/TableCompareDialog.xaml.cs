@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class TableCompareDialog : Window
     {

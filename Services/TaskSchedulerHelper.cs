@@ -1,15 +1,15 @@
 using System;
 using System.Diagnostics;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Services
+namespace BreezeFlow.Services
 {
     /// <summary>
     /// schtasks.exe を使って Windows タスクスケジューラへのタスク登録・削除を行うヘルパー。
     /// </summary>
     public static class TaskSchedulerHelper
     {
-        private const string TaskFolder = "SampleELT";
+        private const string TaskFolder = "BreezeFlow";
 
         // Windows タスク名で使用できない文字: \ / : * ? " < > | （加えて先頭/末尾の空白とドット）
         private static readonly char[] InvalidTaskNameChars =

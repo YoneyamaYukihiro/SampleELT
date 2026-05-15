@@ -1,6 +1,6 @@
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.ViewModels
+namespace BreezeFlow.ViewModels
 {
     /// <summary>
     /// Provides static StepType values for use in XAML CommandParameter bindings.

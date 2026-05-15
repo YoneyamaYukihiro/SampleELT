@@ -1,13 +1,13 @@
 using System.Linq;
 using System.Text.Json;
-using SampleELT.Tools;
+using BreezeFlow.Tools;
 using Xunit;
 
-namespace SampleELT.Tests.Tools
+namespace BreezeFlow.Tests.Tools
 {
     /// <summary>
     /// Strategy 化リファクタ後の KtrToJsonConverter が代表的な KTR ステップを
-    /// 正しい SampleELT パイプライン JSON に変換することを確認する。
+    /// 正しい BreezeFlow パイプライン JSON に変換することを確認する。
     /// </summary>
     public class KtrToJsonConverterTests
     {

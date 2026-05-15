@@ -6,10 +6,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
-using SampleELT.Models;
-using SampleELT.Services;
+using BreezeFlow.Models;
+using BreezeFlow.Services;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class ScheduleManagerDialog : Window
     {
@@ -392,7 +392,7 @@ namespace SampleELT.Dialogs
                             "未ログオン時にも実行したい場合は、以下の手順で手動変更してください:\n\n" +
                             "  1. タスクスケジューラを開く\n" +
                             "     ([Win]+R → 「taskschd.msc」)\n" +
-                            "  2. 左ペインで「タスク スケジューラ ライブラリ」→「SampleELT」フォルダを選択\n" +
+                            "  2. 左ペインで「タスク スケジューラ ライブラリ」→「BreezeFlow」フォルダを選択\n" +
                             "  3. 対象タスクを右クリック →「プロパティ」\n" +
                             "  4. 「全般」タブで\n" +
                             "     「ユーザーがログオンしているかどうかにかかわらず実行する」を選択\n" +

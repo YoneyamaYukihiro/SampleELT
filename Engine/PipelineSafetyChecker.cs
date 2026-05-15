@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Engine
+namespace BreezeFlow.Engine
 {
     /// <summary>
     /// パイプライン実行前に DB 接続まわりの安全性を検査するヘルパー。

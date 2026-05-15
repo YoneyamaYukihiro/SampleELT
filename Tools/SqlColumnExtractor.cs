@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace SampleELT.Tools
+namespace BreezeFlow.Tools
 {
     /// <summary>
     /// SELECT 文の出力カラム名を構文解析で抽出するベストエフォートのヘルパー。

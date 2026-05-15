@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SampleELT.Engine;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
-using SampleELT.Steps;
+using BreezeFlow.Engine;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
+using BreezeFlow.Steps;
 using Xunit;
 
-namespace SampleELT.Tests.Engine
+namespace BreezeFlow.Tests.Engine
 {
     /// <summary>
     /// PipelineSafetyChecker が「未解決接続 / Read-only 接続への書き込み / Production 書き込み」を

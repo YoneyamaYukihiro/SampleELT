@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using OfficeOpenXml;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Steps
+namespace BreezeFlow.Steps
 {
     /// <summary>
     /// ファイル出力ステップ (Excel / CSV / TSV / TXT)。
@@ -65,7 +65,7 @@ namespace SampleELT.Steps
             List<Dictionary<string, object?>> inputData,
             IProgress<string> progress, CancellationToken ct)
         {
-            ExcelPackage.License.SetNonCommercialPersonal("SampleELT");
+            ExcelPackage.License.SetNonCommercialPersonal("BreezeFlow");
 
             await Task.Run(() =>
             {

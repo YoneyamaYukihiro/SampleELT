@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Models;
+using BreezeFlow.Models;
 
-namespace SampleELT.Engine
+namespace BreezeFlow.Engine
 {
     /// <summary>
     /// 複数のパイプラインを順次実行するジョブエグゼキュータ。

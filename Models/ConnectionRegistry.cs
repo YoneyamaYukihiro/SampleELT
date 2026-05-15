@@ -4,9 +4,9 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using SampleELT.Models.Stores;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     public class ConnectionRegistry : IConnectionStore
     {

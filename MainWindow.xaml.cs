@@ -9,15 +9,15 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Microsoft.Win32;
-using SampleELT.Controls;
-using SampleELT.Dialogs;
-using SampleELT.Models;
-using SampleELT.Services;
-using SampleELT.Steps;
-using SampleELT.Tools;
-using SampleELT.ViewModels;
+using BreezeFlow.Controls;
+using BreezeFlow.Dialogs;
+using BreezeFlow.Models;
+using BreezeFlow.Services;
+using BreezeFlow.Steps;
+using BreezeFlow.Tools;
+using BreezeFlow.ViewModels;
 
-namespace SampleELT
+namespace BreezeFlow
 {
     public partial class MainWindow : Window
     {
@@ -760,7 +760,7 @@ namespace SampleELT
         private void About_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(
-                $"SampleELT\nVersion {App.AppVersion}",
+                $"BreezeFlow\nVersion {App.AppVersion}",
                 "バージョン情報",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);

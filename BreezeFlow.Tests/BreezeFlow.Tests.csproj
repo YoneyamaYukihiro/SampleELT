@@ -15,6 +15,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SampleELT.csproj" />
+    <ProjectReference Include="..\BreezeFlow.csproj" />
   </ItemGroup>
 </Project>

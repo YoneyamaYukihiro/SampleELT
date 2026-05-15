@@ -1,4 +1,4 @@
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     public enum StepType
     {

@@ -1,4 +1,4 @@
-<Window x:Class="SampleELT.Dialogs.ExcelInputDialog"
+<Window x:Class="BreezeFlow.Dialogs.ExcelInputDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="File Input 設定"

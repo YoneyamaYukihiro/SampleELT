@@ -1,4 +1,4 @@
-<Window x:Class="SampleELT.Dialogs.SetVariableDialog"
+<Window x:Class="BreezeFlow.Dialogs.SetVariableDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="変数セット 設定"

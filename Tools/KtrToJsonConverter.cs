@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
-using SampleELT.Models;
-using SampleELT.Tools.Ktr;
+using BreezeFlow.Models;
+using BreezeFlow.Tools.Ktr;
 
-namespace SampleELT.Tools
+namespace BreezeFlow.Tools
 {
     public class KtrConvertResult
     {
@@ -17,7 +17,7 @@ namespace SampleELT.Tools
     }
 
     /// <summary>
-    /// Pentaho Kettle Transformation (.ktr / XML) を SampleELT のパイプライン JSON に変換する。
+    /// Pentaho Kettle Transformation (.ktr / XML) を BreezeFlow のパイプライン JSON に変換する。
     /// 各 KTR ステップ種別の変換ロジックは <see cref="Ktr.IKtrStepConverter"/> 実装に Strategy パターンで分離されている。
     /// </summary>
     public static class KtrToJsonConverter
@@ -72,7 +72,7 @@ namespace SampleELT.Tools
                 var json = new JsonStep
                 {
                     Name = step.Name,
-                    StepType = converter.SampleEltStepType,
+                    StepType = converter.BreezeFlowStepType,
                     CanvasX = step.X,
                     CanvasY = step.Y,
                     NodeWidth = 170,

@@ -1,8 +1,8 @@
-using SampleELT.Engine;
-using SampleELT.Models;
+using BreezeFlow.Engine;
+using BreezeFlow.Models;
 using Xunit;
 
-namespace SampleELT.Tests.Engine
+namespace BreezeFlow.Tests.Engine
 {
     public class DbProviderTests
     {

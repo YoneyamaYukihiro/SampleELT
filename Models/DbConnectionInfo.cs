@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     public enum DbType
     {

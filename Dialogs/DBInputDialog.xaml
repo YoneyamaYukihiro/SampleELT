@@ -1,4 +1,4 @@
-<Window x:Class="SampleELT.Dialogs.DBInputDialog"
+<Window x:Class="BreezeFlow.Dialogs.DBInputDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="DB Input 設定"

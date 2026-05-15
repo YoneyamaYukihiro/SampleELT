@@ -1,4 +1,4 @@
-<Window x:Class="SampleELT.Dialogs.CalculationDialog"
+<Window x:Class="BreezeFlow.Dialogs.CalculationDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Calculation 設定"

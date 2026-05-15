@@ -1,4 +1,4 @@
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     /// <summary>
     /// CLI ヘッドレス実行 (--run / --run-job) でのログファイル出力モード。

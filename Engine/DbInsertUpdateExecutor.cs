@@ -4,10 +4,10 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Engine
+namespace BreezeFlow.Engine
 {
     /// <summary>
     /// Insert/Update (UPSERT) ステップの共通実装。プロバイダ越しに各 DB の UPSERT 構文を発行する。

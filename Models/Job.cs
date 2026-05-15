@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     public class Job
     {

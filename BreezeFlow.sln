@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.2.11415.280
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleELT", "SampleELT.csproj", "{6296B619-23DB-E3CE-A628-7112BEDF8EAF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreezeFlow", "BreezeFlow.csproj", "{6296B619-23DB-E3CE-A628-7112BEDF8EAF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleELT.Tests", "SampleELT.Tests\SampleELT.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BreezeFlow.Tests", "BreezeFlow.Tests\BreezeFlow.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

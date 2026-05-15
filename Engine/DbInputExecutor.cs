@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Engine
+namespace BreezeFlow.Engine
 {
     /// <summary>
     /// DB Input ステップの共通実装。プロバイダ越しに ADO.NET にアクセスする。

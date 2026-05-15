@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  SampleELT app icon (256x256). Canonical source for the design.
+  BreezeFlow app icon (256x256). Canonical source for the design.
   Render to multi-size .ico via Assets/build-icon.ps1.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">

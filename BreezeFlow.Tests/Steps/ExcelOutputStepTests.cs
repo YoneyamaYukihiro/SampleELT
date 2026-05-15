@@ -1,8 +1,8 @@
 using System;
-using SampleELT.Steps;
+using BreezeFlow.Steps;
 using Xunit;
 
-namespace SampleELT.Tests.Steps
+namespace BreezeFlow.Tests.Steps
 {
     public class ExcelOutputStepTests
     {

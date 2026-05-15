@@ -1,1 +1,1 @@
-global using SampleELT.Tests;
+global using BreezeFlow.Tests;

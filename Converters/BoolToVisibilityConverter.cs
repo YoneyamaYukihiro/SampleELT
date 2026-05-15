@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace SampleELT.Converters
+namespace BreezeFlow.Converters
 {
     public class BoolToVisibilityConverter : IValueConverter
     {

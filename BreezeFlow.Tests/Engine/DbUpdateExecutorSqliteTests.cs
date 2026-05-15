@@ -4,10 +4,10 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using SampleELT.Engine;
+using BreezeFlow.Engine;
 using Xunit;
 
-namespace SampleELT.Tests.Engine
+namespace BreezeFlow.Tests.Engine
 {
     public class DbUpdateExecutorSqliteTests : IDisposable
     {
@@ -16,7 +16,7 @@ namespace SampleELT.Tests.Engine
 
         public DbUpdateExecutorSqliteTests()
         {
-            _dbPath = Path.Combine(Path.GetTempPath(), $"sampleelt_upd_{Guid.NewGuid():N}.db");
+            _dbPath = Path.Combine(Path.GetTempPath(), $"breezeflow_upd_{Guid.NewGuid():N}.db");
             _connectionString = $"Data Source={_dbPath}";
 
             using var conn = new SqliteConnection(_connectionString);

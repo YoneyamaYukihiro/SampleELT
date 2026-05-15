@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SampleELT.Models.Stores
+namespace BreezeFlow.Models.Stores
 {
     /// <summary>
     /// 接続情報の参照系インターフェイス。

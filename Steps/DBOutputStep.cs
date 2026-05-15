@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Engine;
-using SampleELT.Models;
-using SampleELT.Models.Stores;
+using BreezeFlow.Engine;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Stores;
 
-namespace SampleELT.Steps
+namespace BreezeFlow.Steps
 {
     /// <summary>
     /// 接続の DbType に応じて適切な <see cref="DbProvider"/> を選択し、共通 Executor に委譲する統合 DB 出力ステップ。

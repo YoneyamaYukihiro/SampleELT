@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using SampleELT.Steps;
+using BreezeFlow.Steps;
 using Xunit;
 
-namespace SampleELT.Tests.Steps
+namespace BreezeFlow.Tests.Steps
 {
     /// <summary>
     /// TableCompareStep の差分判定と出力スキーマを検証する。

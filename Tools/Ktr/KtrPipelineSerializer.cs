@@ -3,9 +3,9 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 
-namespace SampleELT.Tools.Ktr
+namespace BreezeFlow.Tools.Ktr
 {
-    /// <summary>変換結果のステップとホップを SampleELT のパイプライン JSON にシリアライズする。</summary>
+    /// <summary>変換結果のステップとホップを BreezeFlow のパイプライン JSON にシリアライズする。</summary>
     internal static class KtrPipelineSerializer
     {
         public static string Serialize(string name, IEnumerable<JsonStep> steps, IEnumerable<JsonHop> hops)

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     public class Pipeline
     {

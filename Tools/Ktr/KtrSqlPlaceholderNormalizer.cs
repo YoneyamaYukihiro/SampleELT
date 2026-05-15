@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SampleELT.Tools.Ktr
+namespace BreezeFlow.Tools.Ktr
 {
     /// <summary>
-    /// KTR の <c>?</c> プレースホルダを SampleELT の <c>:{name}</c> 形式に置換する。
+    /// KTR の <c>?</c> プレースホルダを BreezeFlow の <c>:{name}</c> 形式に置換する。
     /// 前段 SetVariable のフィールド名が判明していれば出現順に当てはめ、
     /// 不明な分は <c>:{p1}, :{p2}, ...</c> のフォールバックを使い警告を出す。
     /// </summary>

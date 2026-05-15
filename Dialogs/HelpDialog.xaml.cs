@@ -2,7 +2,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class HelpDialog : Window
     {

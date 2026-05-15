@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace SampleELT.Models
+namespace BreezeFlow.Models
 {
     /// <summary>
     /// DB 接続の安全性に関わる横断的なヘルパー。

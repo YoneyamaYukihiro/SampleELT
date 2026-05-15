@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
-using SampleELT.Engine;
-using SampleELT.Models;
-using SampleELT.Models.Serialization;
-using SampleELT.Services;
-using SampleELT.Steps;
+using BreezeFlow.Engine;
+using BreezeFlow.Models;
+using BreezeFlow.Models.Serialization;
+using BreezeFlow.Services;
+using BreezeFlow.Steps;
 
-namespace SampleELT.ViewModels
+namespace BreezeFlow.ViewModels
 {
     public partial class MainViewModel : ObservableObject
     {
@@ -38,7 +38,7 @@ namespace SampleELT.ViewModels
         private string _statusMessage = "準備完了";
 
         [ObservableProperty]
-        private string _windowTitle = "SampleELT";
+        private string _windowTitle = "BreezeFlow";
 
         [ObservableProperty]
         private bool _isModified;
@@ -180,14 +180,14 @@ namespace SampleELT.ViewModels
             if (IsRunning) return;
 
             // 実行前安全検査: 未解決接続 / Read-only / Production 書き込みをチェック
-            var issues = SampleELT.Engine.PipelineSafetyChecker.Check(CurrentPipeline);
-            var blockers = issues.Where(i => i.Severity == SampleELT.Engine.PipelineSafetyChecker.IssueSeverity.Block).ToList();
-            var confirms = issues.Where(i => i.Severity == SampleELT.Engine.PipelineSafetyChecker.IssueSeverity.Confirm).ToList();
+            var issues = BreezeFlow.Engine.PipelineSafetyChecker.Check(CurrentPipeline);
+            var blockers = issues.Where(i => i.Severity == BreezeFlow.Engine.PipelineSafetyChecker.IssueSeverity.Block).ToList();
+            var confirms = issues.Where(i => i.Severity == BreezeFlow.Engine.PipelineSafetyChecker.IssueSeverity.Confirm).ToList();
 
             if (blockers.Count > 0)
             {
                 var msg = "以下の理由で実行できません:\n\n"
-                    + SampleELT.Engine.PipelineSafetyChecker.Format(blockers);
+                    + BreezeFlow.Engine.PipelineSafetyChecker.Format(blockers);
                 System.Windows.MessageBox.Show(msg, "実行ブロック",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 AddLog("===== 実行ブロック (事前検査エラー) =====");
@@ -198,7 +198,7 @@ namespace SampleELT.ViewModels
             if (confirms.Count > 0)
             {
                 var msg = "Production 接続に対する書き込み操作が含まれます。実行してよろしいですか？\n\n"
-                    + SampleELT.Engine.PipelineSafetyChecker.Format(confirms);
+                    + BreezeFlow.Engine.PipelineSafetyChecker.Format(confirms);
                 var result = System.Windows.MessageBox.Show(msg, "Production 書き込みの最終確認",
                     System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
                 if (result != System.Windows.MessageBoxResult.Yes)
@@ -600,7 +600,7 @@ namespace SampleELT.ViewModels
                 ? (string.IsNullOrWhiteSpace(CurrentPipeline.Name) ? "新しいパイプライン" : CurrentPipeline.Name)
                 : Path.GetFileName(CurrentFilePath);
 
-            WindowTitle = IsModified ? $"SampleELT - {fileLabel} *" : $"SampleELT - {fileLabel}";
+            WindowTitle = IsModified ? $"BreezeFlow - {fileLabel} *" : $"BreezeFlow - {fileLabel}";
 
             CurrentFileDisplay = string.IsNullOrEmpty(CurrentFilePath)
                 ? "(未保存)"

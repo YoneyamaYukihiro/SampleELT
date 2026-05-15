@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace SampleELT.Tools
+namespace BreezeFlow.Tools
 {
     /// <summary>
     /// Oracle の DataSource 文字列を host / port / service に分解する。

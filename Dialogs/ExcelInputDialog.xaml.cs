@@ -8,9 +8,9 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using OfficeOpenXml;
-using SampleELT.Steps;
+using BreezeFlow.Steps;
 
-namespace SampleELT.Dialogs
+namespace BreezeFlow.Dialogs
 {
     public partial class ExcelInputDialog : Window
     {
@@ -133,7 +133,7 @@ namespace SampleELT.Dialogs
         {
             try
             {
-                ExcelPackage.License.SetNonCommercialPersonal("SampleELT");
+                ExcelPackage.License.SetNonCommercialPersonal("BreezeFlow");
                 SheetNameCombo.Items.Clear();
                 using var package = new ExcelPackage(new FileInfo(filePath));
                 foreach (var ws in package.Workbook.Worksheets)

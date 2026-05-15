@@ -1,4 +1,4 @@
-<Window x:Class="SampleELT.Dialogs.SelectValuesDialog"
+<Window x:Class="BreezeFlow.Dialogs.SelectValuesDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Select Values 設定"

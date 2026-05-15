@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using SampleELT.Models;
+using BreezeFlow.Models;
 using Xunit;
 
-namespace SampleELT.Tests.Models
+namespace BreezeFlow.Tests.Models
 {
     /// <summary>
     /// ResolveConnectionString のサイレントフォールバック削除を検証する。
