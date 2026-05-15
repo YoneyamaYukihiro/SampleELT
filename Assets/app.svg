@@ -2,49 +2,63 @@
 <!--
   BreezeFlow app icon (256x256). Canonical source for the design.
   Render to multi-size .ico via Assets/build-icon.ps1.
+
+  Concept: tilted leaf (Breeze) with data dots scattered around (Flow).
+  Soft breeze streaks on the left suggest wind passing through.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F57C00"/>
-      <stop offset="1" stop-color="#D32F2F"/>
+      <stop offset="0" stop-color="#80DEEA"/>
+      <stop offset="1" stop-color="#00838F"/>
     </linearGradient>
-    <!-- shared cylinder shape: 52w x 64h -->
-    <g id="cyl">
-      <!-- back-of-top (slightly darker disc) -->
-      <ellipse cx="26" cy="10" rx="26" ry="10" fill="#FFFFFF"/>
-      <!-- body silhouette -->
-      <rect x="0" y="10" width="52" height="44" fill="#FFFFFF"/>
-      <!-- bottom curve -->
-      <ellipse cx="26" cy="54" rx="26" ry="10" fill="#FFFFFF"/>
-      <!-- top rim accent (open top look) -->
-      <ellipse cx="26" cy="10" rx="26" ry="10"
-               fill="none" stroke="#7C1C0E" stroke-width="3"/>
-      <!-- mid platter line (db cue) -->
-      <path d="M 0,30 A 26,8 0 0 0 52,30" fill="none"
-            stroke="#7C1C0E" stroke-width="3" stroke-linecap="round"/>
-    </g>
+    <linearGradient id="leaf" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#2E7D32"/>
+      <stop offset="1" stop-color="#8BC34A"/>
+    </linearGradient>
   </defs>
 
-  <!-- background rounded square -->
+  <!-- rounded square background -->
   <rect x="8" y="8" width="240" height="240" rx="40" ry="40" fill="url(#bg)"/>
 
-  <!-- "ELT" letters, bold white -->
-  <text x="128" y="120"
-        font-family="Segoe UI, Arial, sans-serif"
-        font-weight="900" font-size="96"
-        fill="#FFFFFF"
-        text-anchor="middle"
-        letter-spacing="2">ELT</text>
-
-  <!-- left DB cylinder -->
-  <use href="#cyl" x="20"  y="156"/>
-  <!-- right DB cylinder -->
-  <use href="#cyl" x="184" y="156"/>
-
-  <!-- flow arrow connecting the cylinders (shortened so it does not touch them) -->
-  <g stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <line x1="100" y1="188" x2="148" y2="188"/>
-    <polyline points="140,178 160,188 140,198"/>
+  <!-- breeze streaks -->
+  <g stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4">
+    <path d="M 24 84  Q 60 76  96 84"/>
+    <path d="M 20 124 Q 56 116 86 124"/>
+    <path d="M 36 168 Q 72 160 104 168"/>
   </g>
+
+  <!-- stem -->
+  <path d="M 50 222 Q 74 204 96 184"
+        stroke="#2E7D32" stroke-width="9" stroke-linecap="round" fill="none"/>
+
+  <!-- leaf body: base at (96,184), tip at (200,56) -->
+  <path d="M 96 184
+           C 50 130, 90 60, 200 56
+           C 180 130, 150 180, 96 184 Z"
+        fill="url(#leaf)"/>
+
+  <!-- midrib -->
+  <path d="M 96 184 Q 142 122 200 56"
+        stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.55"/>
+
+  <!-- side veins -->
+  <path d="M 118 156 Q 132 144 150 138"
+        stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.45"/>
+  <path d="M 142 124 Q 158 114 174 108"
+        stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.45"/>
+  <path d="M 132 168 Q 152 154 174 144"
+        stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.45"/>
+
+  <!-- data dots scattered around the leaf -->
+  <circle cx="218" cy="40"  r="6" fill="#FFFFFF"/>
+  <circle cx="232" cy="58"  r="4" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="206" cy="24"  r="3" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="40"  cy="48"  r="5" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="220" cy="218" r="5" fill="#FFFFFF" opacity="0.85"/>
+  <circle cx="32"  cy="200" r="4" fill="#FFFFFF" opacity="0.7"/>
+
+  <!-- accent dots in fresh yellow-green near the leaf body -->
+  <circle cx="170" cy="92"  r="3.5" fill="#DCEDC8"/>
+  <circle cx="124" cy="148" r="3"   fill="#DCEDC8" opacity="0.9"/>
 </svg>
