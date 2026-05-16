@@ -15,6 +15,7 @@
         <KeyBinding Key="Delete" Command="{Binding DeleteSelectedStepCommand}"/>
         <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SavePipelineCommand}"/>
         <KeyBinding Key="S" Modifiers="Ctrl+Shift" Command="{Binding SavePipelineAsCommand}"/>
+        <!-- Undo/Redo/Copy/Paste/Duplicate/Find は Window_KeyDown 側で処理 (TextBox との競合を制御するため) -->
     </Window.InputBindings>
 
     <DockPanel>
@@ -34,6 +35,33 @@
                 <Separator/>
                 <MenuItem Header="終了(_X)" Click="Exit_Click"/>
             </MenuItem>
+            <MenuItem Header="編集(_E)">
+                <MenuItem Header="取り消し(_U)" Command="{Binding UndoCommand}"
+                          InputGestureText="Ctrl+Z"
+                          ToolTip="{Binding UndoTooltip}"/>
+                <MenuItem Header="やり直し(_R)" Command="{Binding RedoCommand}"
+                          InputGestureText="Ctrl+Y"
+                          ToolTip="{Binding RedoTooltip}"/>
+                <Separator/>
+                <MenuItem Header="コピー(_C)" Command="{Binding CopyCommand}"
+                          InputGestureText="Ctrl+C"
+                          ToolTip="選択中のステップと内部接続をクリップボードへコピー"/>
+                <MenuItem Header="貼り付け(_V)" Command="{Binding PasteCommand}"
+                          InputGestureText="Ctrl+V"
+                          ToolTip="クリップボードのステップを貼り付け (新 Guid・位置オフセット)"/>
+                <MenuItem Header="複製(_D)" Command="{Binding DuplicateCommand}"
+                          InputGestureText="Ctrl+D"
+                          ToolTip="選択中のステップを即座に複製 (クリップボードは触らない)"/>
+                <MenuItem Header="削除(_L)" Command="{Binding DeleteSelectedStepCommand}"
+                          InputGestureText="Delete"/>
+                <Separator/>
+                <MenuItem Header="すべて選択(_A)" Command="{Binding SelectAllCommand}"
+                          InputGestureText="Ctrl+A"/>
+                <MenuItem Header="選択解除" Command="{Binding DeselectAllCommand}"/>
+                <Separator/>
+                <MenuItem Header="検索(_F)..." Command="{Binding FindOpenCommand}"
+                          InputGestureText="Ctrl+F"/>
+            </MenuItem>
             <MenuItem Header="実行(_R)">
                 <MenuItem Header="実行(_E)" Command="{Binding RunPipelineCommand}"
                           InputGestureText="F5"/>
@@ -45,6 +73,7 @@
                 <MenuItem Header="DB 接続設定(_C)..." Click="ConnectionManager_Click"/>
                 <MenuItem Header="スケジュール管理(_S)..." Click="ScheduleManager_Click"/>
                 <MenuItem Header="ジョブ管理(_J)..." Command="{Binding OpenJobManagerCommand}"/>
+                <MenuItem Header="実行履歴(_H)..." Click="RunHistory_Click"/>
             </MenuItem>
             <MenuItem Header="ヘルプ(_H)">
                 <MenuItem Header="使い方(_U)..." Click="HelpUsage_Click"/>
@@ -72,6 +101,15 @@
             <Button ToolTip="名前を付けて保存 (Ctrl+Shift+S)" Command="{Binding SavePipelineAsCommand}"
                     Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="2,0">
                 <TextBlock Text="📋 名前を付けて保存"/>
+            </Button>
+            <Separator/>
+            <Button ToolTip="{Binding UndoTooltip}" Command="{Binding UndoCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="2,0">
+                <TextBlock Text="↶ 取り消し"/>
+            </Button>
+            <Button ToolTip="{Binding RedoTooltip}" Command="{Binding RedoCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}" Padding="8,4" Margin="2,0">
+                <TextBlock Text="↷ やり直し"/>
             </Button>
             <Separator/>
             <Button ToolTip="パイプラインを実行 (F5)" Command="{Binding RunPipelineCommand}"
@@ -141,6 +179,20 @@
                     </Style>
                 </Button.Style>
                 <TextBlock Text="🔗 ジョブ"/>
+            </Button>
+            <Button ToolTip="実行履歴" Click="RunHistory_Click"
+                    Padding="8,4" Margin="2,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                        <Setter Property="Background" Value="#5D4037"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3E2723"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <TextBlock Text="📋 実行履歴"/>
             </Button>
             <Separator/>
             <TextBlock Text="ログ:" VerticalAlignment="Center" Margin="4,0,4,0" Foreground="#424242"/>
@@ -265,6 +317,11 @@
                                 MouseDoubleClick="PaletteButton_DoubleClick"
                                 ToolTip="ダブルクリックで追加"
                                 Style="{StaticResource PaletteButtonStyle}"/>
+                        <Button Content="🔀 Switch"
+                                Tag="{x:Static vm:StepTypeHelper.Switch}"
+                                MouseDoubleClick="PaletteButton_DoubleClick"
+                                ToolTip="フィールド値で複数の出力ポートに分岐"
+                                Style="{StaticResource PaletteButtonStyle}"/>
 
                         <!-- DB Operation Group -->
                         <Border Background="#FCE4EC" CornerRadius="4" Padding="6,4" Margin="0,10,0,6">
@@ -334,6 +391,23 @@
                                     MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
                                     MouseLeftButtonUp="Canvas_MouseLeftButtonUp"
                                     MouseMove="Canvas_MouseMove">
+                                <Canvas.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="📋 貼り付け"
+                                                  InputGestureText="Ctrl+V"
+                                                  Command="{Binding PasteCommand}"/>
+                                        <Separator/>
+                                        <MenuItem Header="すべて選択"
+                                                  InputGestureText="Ctrl+A"
+                                                  Command="{Binding SelectAllCommand}"/>
+                                        <MenuItem Header="選択解除"
+                                                  Command="{Binding DeselectAllCommand}"/>
+                                        <Separator/>
+                                        <MenuItem Header="🔍 検索..."
+                                                  InputGestureText="Ctrl+F"
+                                                  Command="{Binding FindOpenCommand}"/>
+                                    </ContextMenu>
+                                </Canvas.ContextMenu>
 
                                 <!-- Connection lines layer -->
                                 <ItemsControl x:Name="ConnectionsControl"
@@ -377,6 +451,30 @@
                                                         </TransformGroup>
                                                     </Polygon.RenderTransform>
                                                 </Polygon>
+                                                <!-- BranchKey ラベル (Filter pass/fail / Switch ケース名)。空文字なら非表示 -->
+                                                <Border Canvas.Left="{Binding LabelX}"
+                                                        Canvas.Top="{Binding LabelY}"
+                                                        Background="White"
+                                                        BorderBrush="#2196F3"
+                                                        BorderThickness="1"
+                                                        CornerRadius="3"
+                                                        Padding="3,1"
+                                                        IsHitTestVisible="False">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding BranchLabel}" Value="">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding BranchLabel}"
+                                                               FontSize="9"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#1565C0"/>
+                                                </Border>
                                             </Canvas>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -388,6 +486,51 @@
                                       StrokeDashArray="4,2"
                                       Visibility="Collapsed"
                                       IsHitTestVisible="False"/>
+
+                                <!-- 検索バー (Ctrl+F で表示。キャンバスの右上に固定) -->
+                                <Border x:Name="FindBar"
+                                        Canvas.Left="20" Canvas.Top="12"
+                                        Visibility="Collapsed"
+                                        Background="White"
+                                        BorderBrush="#2196F3"
+                                        BorderThickness="2"
+                                        CornerRadius="6"
+                                        Padding="8,6">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.2"/>
+                                    </Border.Effect>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="14"/>
+                                        <TextBox x:Name="FindBox"
+                                                 Width="260" Height="24" Padding="4,2"
+                                                 VerticalAlignment="Center"
+                                                 ToolTip="ステップ名 / 接続名 / SQL / 設定値に部分一致"
+                                                 TextChanged="FindBox_TextChanged"
+                                                 KeyDown="FindBox_KeyDown"/>
+                                        <TextBlock x:Name="FindResultText"
+                                                   VerticalAlignment="Center"
+                                                   Margin="8,0,8,0"
+                                                   FontSize="11"
+                                                   Foreground="#616161"/>
+                                        <Button Content="✕" Width="22" Height="22" Padding="0"
+                                                ToolTip="閉じる (Esc)"
+                                                Click="FindClose_Click">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Cursor" Value="Hand"/>
+                                                    <Setter Property="Foreground" Value="#616161"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Foreground" Value="#D32F2F"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
 
                                 <!-- Step nodes layer -->
                                 <ItemsControl x:Name="StepsControl"
@@ -424,7 +567,18 @@
                                                         <MenuItem Header="⚙ 設定"
                                                                   Click="StepSettings_Click"
                                                                   Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                        <Separator/>
+                                                        <MenuItem Header="📋 コピー"
+                                                                  InputGestureText="Ctrl+C"
+                                                                  Click="StepCopy_Click"
+                                                                  Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                        <MenuItem Header="🔁 複製"
+                                                                  InputGestureText="Ctrl+D"
+                                                                  Click="StepDuplicate_Click"
+                                                                  Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                        <Separator/>
                                                         <MenuItem Header="🗑 削除"
+                                                                  InputGestureText="Delete"
                                                                   Click="StepDelete_Click"
                                                                   Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                                     </ContextMenu>

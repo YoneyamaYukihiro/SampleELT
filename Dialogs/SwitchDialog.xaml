@@ -1,0 +1,114 @@
+<Window x:Class="BreezeFlow.Dialogs.SwitchDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Switch 設定"
+        Width="520"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Step Name -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="ステップ名" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="StepNameBox" Height="28" Padding="6,4"/>
+        </StackPanel>
+
+        <!-- Field Name -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Text="評価フィールド名" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="FieldNameBox" Height="28" Padding="6,4"/>
+            <TextBlock Text="このフィールドの値を Cases と完全一致 (Ordinal) で比較します。"
+                       FontSize="11" Foreground="Gray" Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <!-- Cases -->
+        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <TextBlock Text="Cases (1 行 1 ケース)" FontWeight="Bold" Margin="0,0,0,4"/>
+            <TextBox x:Name="CasesBox"
+                     Height="140"
+                     Padding="6,4"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto"
+                     FontFamily="Consolas"
+                     FontSize="12"/>
+            <Border Background="#F5F5F5" CornerRadius="4" Padding="8,4" Margin="0,4,0,0">
+                <StackPanel>
+                    <TextBlock FontSize="11" Foreground="#424242" TextWrapping="Wrap">
+                        書式: <Run FontWeight="Bold">値|BranchKey|表示名</Run> (BranchKey と表示名は省略可)
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#616161" TextWrapping="Wrap" Margin="0,2,0,0">
+                        例: <LineBreak/>
+                        <Run FontFamily="Consolas">東京|tokyo</Run> →  値「東京」の行を <Run FontFamily="Consolas">tokyo</Run> ポートへ<LineBreak/>
+                        <Run FontFamily="Consolas">大阪|osaka|大阪支店</Run> →  ポート Key=osaka、UI 表示名「大阪支店」<LineBreak/>
+                        <Run FontFamily="Consolas">名古屋</Run> →  BranchKey 省略時は値そのもの (名古屋) を Key として使用
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Include default port -->
+        <CheckBox Grid.Row="3"
+                  x:Name="IncludeDefaultCheck"
+                  Content="どの Case にも一致しない行を default ポートへ流す (オフなら破棄)"
+                  IsChecked="True"
+                  Margin="0,0,0,10"/>
+
+        <!-- 注意書き -->
+        <Border Grid.Row="4" Background="#FFF8E1" CornerRadius="4" Padding="8,6" Margin="0,0,0,10">
+            <TextBlock FontSize="11" Foreground="#5D4037" TextWrapping="Wrap">
+                ※ 値が複数 Case に一致する場合は <Run FontWeight="Bold">上から順に最初にヒットしたケースが採用</Run>されます。<LineBreak/>
+                ※ ノード上のポートは Cases に応じて自動生成されます。OK 後に出力ポートが更新されます。
+            </TextBlock>
+        </Border>
+
+        <!-- OK / Cancel -->
+        <StackPanel Grid.Row="5"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="OK"
+                    Width="80" Height="30"
+                    Margin="0,0,8,0"
+                    Click="OK_Click"
+                    Style="{StaticResource PrimaryButtonStyle}"/>
+            <Button Content="キャンセル"
+                    Width="80" Height="30"
+                    Click="Cancel_Click">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="#EEEEEE"/>
+                        <Setter Property="Foreground" Value="#333333"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="#CCCCCC"/>
+                        <Setter Property="Cursor" Value="Hand"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="4" Padding="12,6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#E0E0E0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

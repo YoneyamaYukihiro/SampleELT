@@ -26,5 +26,6 @@ namespace BreezeFlow.ViewModels
         public static StepType DBInput => StepType.DBInput;
         public static StepType DBOutput => StepType.DBOutput;
         public static StepType TableCompare => StepType.TableCompare;
+        public static StepType Switch => StepType.Switch;
     }
 }

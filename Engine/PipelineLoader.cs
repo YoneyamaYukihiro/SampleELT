@@ -48,6 +48,8 @@ namespace BreezeFlow.Engine
                     "SetVariable"  => new SetVariableStep(),
                     "DBInput"      => new DBInputStep(),
                     "DBOutput"     => new DBOutputStep(),
+                    "TableCompare" => new TableCompareStep(),
+                    "Switch"       => new SwitchStep(),
                     _              => null
                 };
 
@@ -70,12 +72,24 @@ namespace BreezeFlow.Engine
                 pipeline.Steps.Add(step);
             }
 
+            // 接続を復元しつつ、旧 JSON との後方互換マイグレーションを適用する:
+            // SourceBranchKey が未指定 (null) の接続について、ソースステップが Filter なら "pass" を補う。
+            // 旧 Filter は単一出力 (一致行のみ通過) だったため、それと等価な動作を維持する。
+            var stepLookup = pipeline.Steps.ToDictionary(s => s.Id);
             foreach (var connData in pipelineData.Connections)
             {
+                var branchKey = connData.SourceBranchKey;
+                if (branchKey == null
+                    && stepLookup.TryGetValue(connData.SourceStepId, out var src)
+                    && src is BreezeFlow.Steps.FilterStep)
+                {
+                    branchKey = BreezeFlow.Steps.FilterStep.PassBranchKey;
+                }
                 pipeline.Connections.Add(new PipelineConnection
                 {
                     SourceStepId = connData.SourceStepId,
-                    TargetStepId = connData.TargetStepId
+                    TargetStepId = connData.TargetStepId,
+                    SourceBranchKey = branchKey
                 });
             }
 

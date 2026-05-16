@@ -454,7 +454,7 @@ namespace BreezeFlow.Dialogs
                 });
 
                 var executor = new JobExecutor();
-                await executor.ExecuteAsync(_currentJob, progress, _runCts.Token);
+                await executor.ExecuteAsync(_currentJob, progress, _runCts.Token, trigger: "manual");
 
                 _externalLogger?.Report($"===== ジョブ実行完了: {_currentJob.Name} =====");
                 ShowStatus("実行完了");

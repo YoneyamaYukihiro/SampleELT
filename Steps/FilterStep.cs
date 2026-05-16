@@ -8,16 +8,33 @@ using BreezeFlow.Models;
 namespace BreezeFlow.Steps
 {
     /// <summary>
-    /// 条件に一致する行のみを通過させるステップ。
+    /// 条件に一致する行を pass ポート、不一致行を fail ポートへ振り分けるステップ。
     /// Settings["FieldName"]  : 左辺フィールド名
     /// Settings["Operator"]   : equals / notEquals / contains / greaterThan / greaterOrEqual / lessThan / lessOrEqual / isNull / isNotNull
     /// Settings["Value"]      : 比較する値（リテラル）
     /// Settings["RightField"] : 右辺フィールド名（設定時は Value より優先し、フィールド同士を比較する）
+    ///
+    /// pass / fail いずれかのポートに下流が無い場合、その側の行は engine 側で破棄される。
+    /// 旧バージョンの Filter は単一ポートで「一致行のみ通過」だったため、PipelineLoader が
+    /// 既存接続の SourceBranchKey を null → "pass" にマイグレーションして同等の挙動を維持する。
     /// </summary>
     public class FilterStep : StepBase
     {
         public override StepType StepType => StepType.Filter;
 
+        public const string PassBranchKey = "pass";
+        public const string FailBranchKey = "fail";
+
+        public override IReadOnlyList<OutputPort> OutputPorts { get; } = new[]
+        {
+            new OutputPort(PassBranchKey, "一致 (pass)"),
+            new OutputPort(FailBranchKey, "不一致 (fail)"),
+        };
+
+        /// <summary>
+        /// レガシー呼び出し用 (テスト等の <see cref="ExecuteAsync"/> 経由)。
+        /// 旧仕様に合わせて pass 行のみ返す。ExecutionEngine は <see cref="ExecuteRoutedAsync"/> を呼ぶ。
+        /// </summary>
         public override async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamingAsync(
             IAsyncEnumerable<Dictionary<string, object?>> input,
             IProgress<string> progress,
@@ -40,6 +57,33 @@ namespace BreezeFlow.Steps
                 }
             }
             progress.Report($"Filter: {matched}/{total}行 マッチ");
+        }
+
+        public override async IAsyncEnumerable<RoutedRow> ExecuteRoutedAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
+            IProgress<string> progress,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            var fieldName  = Settings.TryGetValue("FieldName",  out var fn) ? fn?.ToString()  ?? "" : "";
+            var op         = Settings.TryGetValue("Operator",   out var oper) ? oper?.ToString() ?? "equals" : "equals";
+            var value      = Settings.TryGetValue("Value",      out var v)  ? v?.ToString()   ?? "" : "";
+            var rightField = Settings.TryGetValue("RightField", out var rf) ? rf?.ToString()  ?? "" : "";
+
+            int matched = 0, unmatched = 0;
+            await foreach (var row in input.WithCancellation(ct).ConfigureAwait(false))
+            {
+                if (MatchesFilter(row, fieldName, op, value, rightField))
+                {
+                    matched++;
+                    yield return new RoutedRow(PassBranchKey, row);
+                }
+                else
+                {
+                    unmatched++;
+                    yield return new RoutedRow(FailBranchKey, row);
+                }
+            }
+            progress.Report($"Filter: pass={matched}, fail={unmatched}");
         }
 
         private static bool MatchesFilter(

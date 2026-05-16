@@ -76,6 +76,13 @@ namespace BreezeFlow.Services
             entry.LastRunTime = DateTime.Now;
 
             var cts = new CancellationTokenSource();
+            var store = RunHistoryStore.Instance;
+
+            // パイプライン単体実行時のみ自前で履歴を記録する (ジョブの場合は JobExecutor が記録する)
+            long runId = -1;
+            RunHistoryProgressWriter? historyWriter = null;
+            IProgress<string> progress = _logger;
+
             try
             {
                 if (entry.Target == ScheduleTarget.Job)
@@ -87,7 +94,7 @@ namespace BreezeFlow.Services
 
                     var job = JobLoader.LoadFromFile(entry.JobFilePath);
                     var executor = new JobExecutor();
-                    await executor.ExecuteAsync(job, _logger, cts.Token);
+                    await executor.ExecuteAsync(job, _logger, cts.Token, trigger: "schedule");
                 }
                 else
                 {
@@ -95,8 +102,24 @@ namespace BreezeFlow.Services
                         throw new FileNotFoundException($"パイプラインファイルが見つかりません: {entry.PipelineFilePath}");
 
                     var pipeline = PipelineLoader.LoadFromFile(entry.PipelineFilePath);
+                    if (store != null)
+                    {
+                        runId = store.BeginRun(new RunRecord
+                        {
+                            PipelinePath = entry.PipelineFilePath,
+                            PipelineName = pipeline.Name,
+                            Trigger = "schedule",
+                            StartedAt = DateTime.Now
+                        });
+                        historyWriter = new RunHistoryProgressWriter(store, runId, _logger);
+                        progress = historyWriter;
+                    }
+
                     var engine = new ExecutionEngine();
-                    await engine.ExecuteAsync(pipeline, _logger, cts.Token);
+                    await engine.ExecuteAsync(pipeline, progress, cts.Token);
+                    if (runId > 0 && store != null)
+                        store.EndRun(runId, RunStatus.Success, null, historyWriter?.LastReportedRowCount);
+                    runId = -1; // 二重 End を防ぐ
                 }
 
                 entry.LastRunSuccess = true;
@@ -107,6 +130,9 @@ namespace BreezeFlow.Services
             {
                 entry.LastRunSuccess = false;
                 entry.LastRunMessage = ex.Message;
+                historyWriter?.FinishUnclosedSteps(RunStatus.Failed, ex.Message);
+                if (runId > 0 && store != null)
+                    store.EndRun(runId, RunStatus.Failed, ex.Message, historyWriter?.LastReportedRowCount);
                 _logger.Report($"===== スケジュール実行エラー [{entry.Name}]: {ex.Message} =====");
             }
             finally

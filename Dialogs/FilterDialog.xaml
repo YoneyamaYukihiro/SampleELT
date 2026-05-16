@@ -62,6 +62,15 @@
             <TextBlock Text="右辺フィールド名（フィールド比較）" FontWeight="Bold" Margin="0,0,0,4"/>
             <TextBox x:Name="RightFieldBox" Height="28" Padding="6,4"/>
             <TextBlock Text="※ 入力時は「値」より優先されます" Foreground="Gray" FontSize="11" Margin="0,2,0,0"/>
+
+            <!-- 多ポート対応の注意書き -->
+            <Border Background="#E8F5E9" CornerRadius="4" Padding="8,6" Margin="0,8,0,0">
+                <TextBlock FontSize="11" Foreground="#1B5E20" TextWrapping="Wrap">
+                    ※ Filter は <Run FontWeight="Bold">pass (一致)</Run> / <Run FontWeight="Bold">fail (不一致)</Run> の 2 つの出力ポートを持ちます。<LineBreak/>
+                    fail ポートに接続が無い場合、不一致行は破棄されます (旧バージョンと同じ挙動)。<LineBreak/>
+                    ノードの右側に <Run Foreground="#43A047" FontWeight="Bold">緑</Run> = pass、<Run Foreground="#FB8C00" FontWeight="Bold">オレンジ</Run> = fail の丸として表示されます。
+                </TextBlock>
+            </Border>
         </StackPanel>
 
         <!-- OK / Cancel -->

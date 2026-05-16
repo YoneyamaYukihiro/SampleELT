@@ -34,6 +34,7 @@ namespace BreezeFlow
         // Connection drawing state (port drag)
         private bool _isConnecting;
         private StepNodeViewModel? _connectionSourceStep;
+        private string? _connectionSourceBranchKey; // ドラッグ開始ポートの Key (多ポート対応)
         private StepNodeViewModel? _connectionTargetStep;
 
         // Resize state
@@ -54,6 +55,7 @@ namespace BreezeFlow
             _vm.OpenScheduleManagerRequested += OpenScheduleManagerDialog;
             _vm.OpenJobManagerRequested += OpenJobManagerDialog;
             _vm.ScheduleStatusChanged += () => Dispatcher.InvokeAsync(RefreshSchedulePanel);
+            _vm.OpenFindRequested += OpenFindBar;
 
             RefreshSchedulePanel();
         }
@@ -81,12 +83,28 @@ namespace BreezeFlow
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
 
-            // Select this step
-            if (_vm.SelectedStep != null && _vm.SelectedStep != stepVm)
-                _vm.SelectedStep.IsSelected = false;
-
-            _vm.SelectedStep = stepVm;
-            stepVm.IsSelected = true;
+            // 選択ロジック (Ctrl で複数選択)
+            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            if (ctrl)
+            {
+                // Ctrl+Click: 選択をトグル。primary は最後にクリックしたもの
+                stepVm.IsSelected = !stepVm.IsSelected;
+                if (stepVm.IsSelected)
+                    _vm.SelectedStep = stepVm;
+                else if (_vm.SelectedStep == stepVm)
+                    _vm.SelectedStep = _vm.Steps.FirstOrDefault(s => s.IsSelected);
+            }
+            else
+            {
+                // 通常クリック: クリックしたステップが既に選択中なら何もしない (drag に進む)
+                // それ以外は他の選択を解除して 1 つだけ選択
+                if (!stepVm.IsSelected)
+                {
+                    foreach (var s in _vm.Steps) s.IsSelected = false;
+                    stepVm.IsSelected = true;
+                }
+                _vm.SelectedStep = stepVm;
+            }
 
             if (e.ClickCount == 2)
             {
@@ -156,7 +174,23 @@ namespace BreezeFlow
                 _resizingStep = null;
                 fe.ReleaseMouseCapture();
                 if (stepVm.NodeWidth != _resizeStartWidth || stepVm.NodeHeight != _resizeStartHeight)
+                {
+                    // Undo 用に開始時のサイズとドラッグ完了時のサイズを記録
+                    var target = stepVm;
+                    var oldW = _resizeStartWidth;
+                    var oldH = _resizeStartHeight;
+                    var newW = target.NodeWidth;
+                    var newH = target.NodeHeight;
+                    using (_vm.UndoManager.Suppress())
+                    {
+                        // ここでサイズはすでに新値。再代入をスキップしつつ履歴だけ積む
+                    }
+                    _vm.UndoManager.Execute(
+                        $"サイズ変更: {target.DisplayName}",
+                        doAction: () => { target.NodeWidth = newW; target.NodeHeight = newH; },
+                        undoAction: () => { target.NodeWidth = oldW; target.NodeHeight = oldH; });
                     _vm.MarkModified();
+                }
                 e.Handled = true;
                 return;
             }
@@ -168,8 +202,10 @@ namespace BreezeFlow
 
                 if (targetStep != null)
                 {
-                    _vm.ConnectStepsCommand.Execute(
-                        new Tuple<Guid, Guid>(_connectionSourceStep.Step.Id, targetStep.Step.Id));
+                    _vm.ConnectStepsFromPort(
+                        _connectionSourceStep.Step.Id,
+                        _connectionSourceBranchKey,
+                        targetStep.Step.Id);
                 }
 
                 ClearConnectionMode();
@@ -184,7 +220,19 @@ namespace BreezeFlow
                 _draggingStep = null;
                 fe.ReleaseMouseCapture();
                 if (stepVm.X != _dragStartNodeX || stepVm.Y != _dragStartNodeY)
+                {
+                    // 開始位置と終了位置を覚えて Undo 履歴に積む
+                    var target = stepVm;
+                    var oldX = _dragStartNodeX;
+                    var oldY = _dragStartNodeY;
+                    var newX = target.X;
+                    var newY = target.Y;
+                    _vm.UndoManager.Execute(
+                        $"移動: {target.DisplayName}",
+                        doAction: () => { target.X = newX; target.Y = newY; },
+                        undoAction: () => { target.X = oldX; target.Y = oldY; });
                     _vm.MarkModified();
+                }
                 e.Handled = true;
             }
         }
@@ -222,12 +270,9 @@ namespace BreezeFlow
 
         private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Click on empty canvas = deselect
-            if (_vm.SelectedStep != null)
-            {
-                _vm.SelectedStep.IsSelected = false;
-                _vm.SelectedStep = null;
-            }
+            // Click on empty canvas = deselect 全件
+            foreach (var s in _vm.Steps) s.IsSelected = false;
+            _vm.SelectedStep = null;
         }
 
         private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -265,28 +310,90 @@ namespace BreezeFlow
             }
         }
 
+        private void StepCopy_Click(object sender, RoutedEventArgs e)
+        {
+            // コンテキストメニューで開いたステップが選択されていなければ単独選択にしてからコピー
+            if (sender is MenuItem mi && mi.Tag is StepNodeViewModel stepVm)
+            {
+                if (!stepVm.IsSelected)
+                {
+                    foreach (var s in _vm.Steps) s.IsSelected = false;
+                    stepVm.IsSelected = true;
+                    _vm.SelectedStep = stepVm;
+                }
+                _vm.CopySelected();
+            }
+        }
+
+        private void StepDuplicate_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem mi && mi.Tag is StepNodeViewModel stepVm)
+            {
+                if (!stepVm.IsSelected)
+                {
+                    foreach (var s in _vm.Steps) s.IsSelected = false;
+                    stepVm.IsSelected = true;
+                    _vm.SelectedStep = stepVm;
+                }
+                _vm.DuplicateSelected();
+            }
+        }
+
         // ==================== SETTINGS DIALOG ====================
 
         private void OpenStepSettingsDialog(StepNodeViewModel stepVm)
         {
             var step = stepVm.Step;
 
-            // ダイアログ前の状態をスナップショット（キャンセル時に dirty にしないため）
-            var snapshotName = step.Name;
-            var snapshotSettings = step.Settings.ToDictionary(
+            // ダイアログ前の状態をスナップショット（キャンセル時に dirty にしないため、また Undo 用）
+            var oldName = step.Name;
+            var oldSettings = step.Settings.ToDictionary(
                 kv => kv.Key,
                 kv => kv.Value?.ToString());
 
             _dialogService.ShowSettingsDialog(this, stepVm, _vm.CurrentPipeline);
 
-            // 実際に値が変わった時だけ dirty にする
-            bool changed = step.Name != snapshotName
-                || step.Settings.Count != snapshotSettings.Count
+            // 実際に値が変わった時だけ dirty + Undo に積む
+            bool changed = step.Name != oldName
+                || step.Settings.Count != oldSettings.Count
                 || step.Settings.Any(kv =>
-                       !snapshotSettings.TryGetValue(kv.Key, out var prev)
+                       !oldSettings.TryGetValue(kv.Key, out var prev)
                        || prev != kv.Value?.ToString());
-            if (changed)
-                _vm.MarkModified();
+            if (!changed) return;
+
+            var newName = step.Name;
+            var newSettings = step.Settings.ToDictionary(
+                kv => kv.Key,
+                kv => kv.Value?.ToString());
+
+            _vm.UndoManager.Execute(
+                $"設定変更: {newName}",
+                doAction: () =>
+                {
+                    step.Name = newName;
+                    ApplySettings(step, newSettings);
+                    stepVm.NotifyNameChanged();
+                    stepVm.NotifyConnectionChanged();
+                    stepVm.NotifyOutputPortsChanged();
+                },
+                undoAction: () =>
+                {
+                    step.Name = oldName;
+                    ApplySettings(step, oldSettings);
+                    stepVm.NotifyNameChanged();
+                    stepVm.NotifyConnectionChanged();
+                    stepVm.NotifyOutputPortsChanged();
+                });
+            _vm.MarkModified();
+        }
+
+        private static void ApplySettings(
+            BreezeFlow.Models.StepBase step,
+            System.Collections.Generic.IDictionary<string, string?> source)
+        {
+            step.Settings.Clear();
+            foreach (var kv in source)
+                step.Settings[kv.Key] = kv.Value;
         }
 
         // ==================== HELPER METHODS ====================
@@ -310,12 +417,16 @@ namespace BreezeFlow
             if (sender is not FrameworkElement fe) return;
             if (fe.DataContext is not StepNodeViewModel stepVm) return;
 
+            // どのポートからドラッグが始まったか (多ポート対応)
+            var branchKey = (e as OutputPortDragEventArgs)?.BranchKey ?? string.Empty;
+
             _isConnecting = true;
             _connectionSourceStep = stepVm;
+            _connectionSourceBranchKey = branchKey;
 
-            // 接続線の始点 = ステップ右端の中央
+            // 接続線の始点 = ステップ右端 + ポート位置 (Y はポートインデックスで均等分配)
             var startX = stepVm.X + stepVm.NodeWidth;
-            var startY = stepVm.Y + stepVm.NodeHeight / 2;
+            var startY = stepVm.Y + stepVm.NodeHeight * stepVm.GetPortRelativeY(branchKey);
 
             TempConnectionLine.X1 = startX;
             TempConnectionLine.Y1 = startY;
@@ -349,6 +460,7 @@ namespace BreezeFlow
         {
             _isConnecting = false;
             _connectionSourceStep = null;
+            _connectionSourceBranchKey = null;
             TempConnectionLine.Visibility = Visibility.Collapsed;
 
             if (_connectionTargetStep != null)
@@ -595,14 +707,97 @@ namespace BreezeFlow
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Escape && _isConnecting)
+            // Esc: 接続モード解除 or 検索ボックス閉じ
+            if (e.Key == Key.Escape)
             {
-                ClearConnectionMode();
-                // マウスキャプチャを解放
-                Mouse.Captured?.ReleaseMouseCapture();
+                if (_isConnecting)
+                {
+                    ClearConnectionMode();
+                    Mouse.Captured?.ReleaseMouseCapture();
+                    e.Handled = true;
+                    return;
+                }
+                if (FindBar.Visibility == Visibility.Visible)
+                {
+                    CloseFindBar();
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+
+            // Ctrl+F: 検索バー
+            if (ctrl && e.Key == Key.F)
+            {
+                OpenFindBar();
                 e.Handled = true;
+                return;
+            }
+
+            // Ctrl+C / Ctrl+V / Ctrl+D / Ctrl+A: コピー / 貼り付け / 複製 / 全選択
+            // ※ TextBox 等のフォーカス中はそれぞれの編集動作を優先する
+            if (ctrl && !IsEditingTextBox())
+            {
+                if (e.Key == Key.C) { _vm.CopySelected();        e.Handled = true; return; }
+                if (e.Key == Key.V) { _vm.PasteFromClipboard();  e.Handled = true; return; }
+                if (e.Key == Key.D) { _vm.DuplicateSelected();   e.Handled = true; return; }
+                if (e.Key == Key.A) { _vm.SelectAll();           e.Handled = true; return; }
+            }
+
+            // 矢印キー: 選択ステップを 1px (Shift=10px) 動かす
+            if (!IsEditingTextBox() && _vm.GetSelectedSteps().Count > 0)
+            {
+                double step = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift ? 10 : 1;
+                switch (e.Key)
+                {
+                    case Key.Left:  _vm.MoveSelectedSteps(-step, 0); e.Handled = true; return;
+                    case Key.Right: _vm.MoveSelectedSteps( step, 0); e.Handled = true; return;
+                    case Key.Up:    _vm.MoveSelectedSteps(0, -step); e.Handled = true; return;
+                    case Key.Down:  _vm.MoveSelectedSteps(0,  step); e.Handled = true; return;
+                }
             }
         }
+
+        /// <summary>フォーカス中の要素が TextBox なら true。</summary>
+        private bool IsEditingTextBox()
+        {
+            var focused = Keyboard.FocusedElement;
+            return focused is TextBox or PasswordBox;
+        }
+
+        // ==================== 検索バー (Ctrl+F) ====================
+
+        private void OpenFindBar()
+        {
+            FindBar.Visibility = Visibility.Visible;
+            FindBox.Focus();
+            FindBox.SelectAll();
+        }
+
+        private void CloseFindBar()
+        {
+            FindBar.Visibility = Visibility.Collapsed;
+            FindBox.Text = "";
+            FindResultText.Text = "";
+        }
+
+        private void FindBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var q = FindBox.Text;
+            int hits = _vm.FindInPipeline(q);
+            FindResultText.Text = string.IsNullOrWhiteSpace(q)
+                ? ""
+                : $"{hits} 件";
+        }
+
+        private void FindBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape) { CloseFindBar(); e.Handled = true; }
+            if (e.Key == Key.Enter)  { CloseFindBar(); e.Handled = true; }
+        }
+
+        private void FindClose_Click(object sender, RoutedEventArgs e) => CloseFindBar();
 
         private void ConnectionManager_Click(object sender, RoutedEventArgs e)
         {
@@ -730,6 +925,18 @@ namespace BreezeFlow
         private void RefreshSchedule_Click(object sender, RoutedEventArgs e)
         {
             RefreshSchedulePanel();
+        }
+
+        private void RunHistory_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new RunHistoryDialog { Owner = this };
+            var ok = dialog.ShowDialog();
+            // 「ファイルを開く」が押されていた場合はメインウィンドウで読み込む
+            if (ok == true && !string.IsNullOrEmpty(dialog.SelectedPipelinePath))
+            {
+                if (!_vm.ConfirmDiscardChanges()) return;
+                _vm.LoadPipelineFromFile(dialog.SelectedPipelinePath);
+            }
         }
 
         private void DeleteConnection_Click(object sender, RoutedEventArgs e)

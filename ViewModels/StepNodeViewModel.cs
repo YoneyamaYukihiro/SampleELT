@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using BreezeFlow.Models;
 
@@ -6,6 +7,42 @@ namespace BreezeFlow.ViewModels
     public partial class StepNodeViewModel : ObservableObject
     {
         public StepBase Step { get; }
+
+        /// <summary>
+        /// このステップの出力ポート一覧 (Switch ステップで動的に変わる)。
+        /// 多ポート対応の StepNodeControl が ItemsControl で描画する。
+        /// </summary>
+        public IReadOnlyList<OutputPort> OutputPorts => Step.OutputPorts;
+
+        /// <summary>
+        /// 指定 BranchKey のポートがノード内の縦方向どの位置 (0..1) にあるかを返す。
+        /// ConnectionViewModel が Y1 を計算するときに使う。
+        /// 該当するポートが無ければ中央 (0.5) を返す。
+        /// </summary>
+        public double GetPortRelativeY(string? branchKey)
+        {
+            var ports = OutputPorts;
+            if (ports.Count <= 1) return 0.5;
+            var key = branchKey ?? string.Empty;
+            for (int i = 0; i < ports.Count; i++)
+            {
+                if (string.Equals(ports[i].Key, key, System.StringComparison.Ordinal))
+                    return (i + 0.5) / ports.Count;
+            }
+            return 0.5;
+        }
+
+        /// <summary>
+        /// OutputPorts が変化した場合に XAML バインディングと接続線位置を再評価させる。
+        /// Switch ダイアログで Cases が編集された後に呼ぶ。
+        /// </summary>
+        public void NotifyOutputPortsChanged()
+        {
+            OnPropertyChanged(nameof(OutputPorts));
+            // ConnectionViewModel.Y1 の再計算用 (NodeHeight と OutputPorts が組み合わさる)
+            OnPropertyChanged(nameof(NodeHeight));
+            OnPropertyChanged(nameof(NodeWidth));
+        }
 
         [ObservableProperty]
         private double _x;
@@ -46,6 +83,7 @@ namespace BreezeFlow.ViewModels
             StepType.DBUpdate     => "DB Update",
             StepType.SetVariable  => "Set Variable",
             StepType.TableCompare => "Table Compare",
+            StepType.Switch       => "Switch",
             _ => Step.StepType.ToString()
         };
 

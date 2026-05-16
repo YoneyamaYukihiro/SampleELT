@@ -29,5 +29,7 @@ namespace BreezeFlow.Models.Serialization
         public Guid Id { get; set; }
         public Guid SourceStepId { get; set; }
         public Guid TargetStepId { get; set; }
+        /// <summary>出力元ステップのポート Key (多ポート対応)。null/空 = 既定の単一ポート。</summary>
+        public string? SourceBranchKey { get; set; }
     }
 }

@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Cursor="SizeAll">
     <Grid>
-        <!-- カード本体 (右16pxを出力ポート用に空ける) -->
+        <!-- カード本体 (右18pxを出力ポート用に空ける) -->
         <Border x:Name="RootBorder"
                 Margin="0,0,18,0"
                 Background="White"
@@ -118,23 +118,53 @@
                 Visibility="Collapsed"
                 IsHitTestVisible="False"/>
 
-        <!-- 出力ポート (右端・常時表示) -->
-        <Border x:Name="OutputPort"
-                Width="18" Height="18"
-                Background="#2196F3"
-                CornerRadius="9"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                Margin="0,0,0,0"
-                Cursor="Cross"
-                ToolTip="ここからドラッグして次のステップへ接続"
-                MouseLeftButtonDown="OutputPort_MouseLeftButtonDown"
-                MouseEnter="OutputPort_MouseEnter"
-                MouseLeave="OutputPort_MouseLeave">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.3" Color="#2196F3"/>
-            </Border.Effect>
-        </Border>
+        <!-- 出力ポート (右端・OutputPorts を縦に均等配置) -->
+        <ItemsControl x:Name="OutputPortsHost"
+                      ItemsSource="{Binding OutputPorts}"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Stretch"
+                      Width="18">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="1"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Width="18" Height="18"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            CornerRadius="9"
+                            Cursor="Cross"
+                            ToolTip="{Binding Label}"
+                            Tag="{Binding Key}"
+                            MouseLeftButtonDown="OutputPort_MouseLeftButtonDown"
+                            MouseEnter="OutputPort_MouseEnter"
+                            MouseLeave="OutputPort_MouseLeave">
+                        <Border.Style>
+                            <!-- 既定 (Key=="" の単一ポート) は従来通り青、特定の Key は色を変えて識別性を上げる -->
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#2196F3"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Key}" Value="pass">
+                                        <Setter Property="Background" Value="#43A047"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Key}" Value="fail">
+                                        <Setter Property="Background" Value="#FB8C00"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Key}" Value="default">
+                                        <Setter Property="Background" Value="#9E9E9E"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.3" Color="#2196F3"/>
+                        </Border.Effect>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
         <!-- 入力ポート (左端・接続ドラッグ中のみ強調表示) -->
         <Ellipse x:Name="InputPort"

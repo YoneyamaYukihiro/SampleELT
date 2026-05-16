@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BreezeFlow.Engine;
 using BreezeFlow.Models;
+using BreezeFlow.Services;
 using BreezeFlow.Tools;
 
 namespace BreezeFlow
@@ -23,11 +24,27 @@ namespace BreezeFlow
         [DllImport("kernel32.dll")]
         private static extern bool AttachConsole(int dwProcessId);
 
+        /// <summary>
+        /// 実行履歴 (runs.db) の保持ポリシー。
+        /// 起動時に古いレコードを削除する (UI / CLI / スケジュール いずれの起動経路でも適用)。
+        /// </summary>
+        private const int RunHistoryRetentionDays = 30;
+        private const int RunHistoryRetentionMaxRows = 5000;
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             ConnectionRegistry.Instance.Load();
+
+            // 実行履歴ストア (SQLite) を初期化。失敗しても起動は継続する。
+            try
+            {
+                var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runs.db");
+                RunHistoryStore.InitializeDefault(dbPath);
+                RunHistoryStore.Instance?.ApplyRetention(RunHistoryRetentionDays, RunHistoryRetentionMaxRows);
+            }
+            catch { /* 履歴記録失敗はパイプライン実行を妨げない */ }
 
             // CLI ヘッドレスモード: --run <pipeline.json>
             var args = e.Args;
@@ -85,6 +102,11 @@ namespace BreezeFlow
             }
 
             string? logFile = null;
+            long runId = -1;
+            RunHistoryProgressWriter? historyWriter = null;
+            RunStatus finalStatus = RunStatus.Failed;
+            string? finalError = null;
+
             try
             {
                 pipelineFile = Path.GetFullPath(pipelineFile);
@@ -101,19 +123,42 @@ namespace BreezeFlow
 
                 var pipeline = PipelineLoader.LoadFromFile(pipelineFile);
                 logMode = pipeline.LogMode;
-                var progress = new Progress<string>(Log);
-                var engine = new ExecutionEngine();
 
+                var rawProgress = new Progress<string>(Log);
+                IProgress<string> progress = rawProgress;
+
+                if (RunHistoryStore.Instance != null)
+                {
+                    runId = RunHistoryStore.Instance.BeginRun(new RunRecord
+                    {
+                        PipelinePath = pipelineFile,
+                        PipelineName = pipeline.Name,
+                        Trigger = "cli",
+                        StartedAt = DateTime.Now
+                    });
+                    historyWriter = new RunHistoryProgressWriter(RunHistoryStore.Instance, runId, rawProgress);
+                    progress = historyWriter;
+                }
+
+                var engine = new ExecutionEngine();
                 await engine.ExecuteAsync(pipeline, progress, CancellationToken.None);
+                finalStatus = RunStatus.Success;
                 Log("===== 実行完了 =====");
             }
             catch (Exception ex)
             {
                 Log($"===== エラー: {ex.Message} =====");
                 exitCode = 1;
+                finalStatus = RunStatus.Failed;
+                finalError = ex.Message;
             }
             finally
             {
+                historyWriter?.FinishUnclosedSteps(finalStatus, finalError);
+                if (runId > 0 && RunHistoryStore.Instance != null)
+                    RunHistoryStore.Instance.EndRun(runId, finalStatus, finalError,
+                        historyWriter?.LastReportedRowCount);
+
                 if (ShouldWriteLog(logMode, exitCode != 0) && logFile != null)
                 {
                     try { File.WriteAllLines(logFile, logs); }
@@ -171,7 +216,7 @@ namespace BreezeFlow
                 var progress = new Progress<string>(Log);
                 var executor = new JobExecutor();
 
-                await executor.ExecuteAsync(job, progress, CancellationToken.None);
+                await executor.ExecuteAsync(job, progress, CancellationToken.None, trigger: "cli");
                 Log("===== ジョブ実行完了 =====");
             }
             catch (Exception ex)

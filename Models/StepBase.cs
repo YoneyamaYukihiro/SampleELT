@@ -18,6 +18,13 @@ namespace BreezeFlow.Models
         public Dictionary<string, object?> Settings { get; set; } = new();
 
         /// <summary>
+        /// このステップの出力ポート一覧。既定は単一ポート ("") のみ。
+        /// 分岐ステップ (Filter / Switch 等) はこれをオーバーライドして複数ポートを宣言し、
+        /// <see cref="ExecuteRoutedAsync"/> でポートごとに行を振り分ける。
+        /// </summary>
+        public virtual IReadOnlyList<OutputPort> OutputPorts => OutputPort.SinglePort;
+
+        /// <summary>
         /// ExecutionEngine が実行前にセットする複数入力ストリーム (IAsyncEnumerable のまま)。
         /// AllInputStreams[0] = 最初に接続されたストリーム (Left)
         /// AllInputStreams[1] = 2番目のストリーム (Right) ← MergeJoin / TableCompare で使用
@@ -65,6 +72,25 @@ namespace BreezeFlow.Models
                 ct.ThrowIfCancellationRequested();
                 yield return row;
             }
+        }
+
+        /// <summary>
+        /// 多ポート対応のストリーミング実行 API。出力行を <see cref="RoutedRow.BranchKey"/> でタグ付けする。
+        /// ExecutionEngine は常にこちらを呼ぶ。
+        ///
+        /// - 単一ポートのステップは既定実装でよい (<see cref="ExecuteStreamingAsync"/> の出力に "" タグを付ける)。
+        /// - 分岐ステップ (Filter / Switch) はこのメソッドをオーバーライドし、行ごとに対応するポート Key を返す。
+        ///   ただし分岐ステップは <see cref="ExecuteStreamingAsync"/> も別途オーバーライドしないと、
+        ///   レガシー <see cref="ExecuteAsync"/> 経由で呼ばれた時にスタックオーバーフローする。
+        ///   (Filter は pass のみ通過 / Switch は全行通過、のような後方互換動作にする)
+        /// </summary>
+        public virtual async IAsyncEnumerable<RoutedRow> ExecuteRoutedAsync(
+            IAsyncEnumerable<Dictionary<string, object?>> input,
+            IProgress<string> progress,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            await foreach (var row in ExecuteStreamingAsync(input, progress, ct).WithCancellation(ct).ConfigureAwait(false))
+                yield return new RoutedRow(string.Empty, row);
         }
 
         public virtual string GetDisplayIcon()

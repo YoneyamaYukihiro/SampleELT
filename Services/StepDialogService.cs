@@ -41,6 +41,29 @@ namespace BreezeFlow.Services
                 case StepType.DBUpdate:      OpenDBUpdateDialog(owner, stepVm); break;
                 case StepType.SetVariable:   OpenSetVariableDialog(owner, stepVm); break;
                 case StepType.TableCompare:  OpenTableCompareDialog(owner, stepVm); break;
+                case StepType.Switch:        OpenSwitchDialog(owner, stepVm); break;
+            }
+        }
+
+        private static void OpenSwitchDialog(Window owner, StepNodeViewModel stepVm)
+        {
+            var step = stepVm.Step;
+            var dialog = new SwitchDialog { Owner = owner };
+
+            dialog.Initialize(
+                step.Name,
+                GetString(step.Settings, "FieldName"),
+                GetString(step.Settings, "Cases"),
+                includeDefault: GetBool(step.Settings, "IncludeDefault", true));
+
+            if (dialog.ShowDialog() == true)
+            {
+                step.Name = dialog.StepName;
+                step.Settings["FieldName"]      = dialog.FieldName;
+                step.Settings["Cases"]          = dialog.Cases;
+                step.Settings["IncludeDefault"] = dialog.IncludeDefault ? "true" : "false";
+                stepVm.NotifyNameChanged();
+                stepVm.NotifyOutputPortsChanged();
             }
         }
 

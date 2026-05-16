@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using BreezeFlow.Models;
 
 namespace BreezeFlow.Controls
 {
@@ -90,6 +91,9 @@ namespace BreezeFlow.Controls
         }
 
         // ==================== OutputPortDragStarted (カスタムイベント) ====================
+        //
+        // 引数は OutputPortDragEventArgs を渡し、どのポート (BranchKey) からドラッグが始まったかを伝える。
+        // 単一ポートステップでは BranchKey="" になる。
 
         public static readonly RoutedEvent OutputPortDragStartedEvent =
             EventManager.RegisterRoutedEvent(
@@ -113,23 +117,31 @@ namespace BreezeFlow.Controls
 
         private void OutputPort_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // ドラッグ開始イベントを親へ通知 (ルーティング: Bubble)
-            RaiseEvent(new RoutedEventArgs(OutputPortDragStartedEvent));
-            e.Handled = true; // StepNodeのドラッグ開始を抑制
+            // DataContext は ItemTemplate 由来の OutputPort インスタンス
+            var branchKey = string.Empty;
+            if (sender is FrameworkElement fe && fe.DataContext is OutputPort port)
+                branchKey = port.Key;
+
+            RaiseEvent(new OutputPortDragEventArgs(OutputPortDragStartedEvent, this, branchKey));
+            e.Handled = true; // StepNode のドラッグ開始を抑制
         }
 
         private void OutputPort_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
         {
-            OutputPort.Width = 21;
-            OutputPort.Height = 21;
-            OutputPort.Background = new SolidColorBrush(Color.FromRgb(0x42, 0xA5, 0xF5));
+            if (sender is Border b)
+            {
+                b.Width = 21;
+                b.Height = 21;
+            }
         }
 
         private void OutputPort_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
         {
-            OutputPort.Width = 18;
-            OutputPort.Height = 18;
-            OutputPort.Background = new SolidColorBrush(Color.FromRgb(0x21, 0x96, 0xF3));
+            if (sender is Border b)
+            {
+                b.Width = 18;
+                b.Height = 18;
+            }
         }
     }
 }
